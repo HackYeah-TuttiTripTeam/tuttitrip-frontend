@@ -1,6 +1,7 @@
 import createFetchClient, { type Middleware } from 'openapi-fetch'
 import createClient from 'openapi-react-query'
 import { getLocale } from '@/paraglide/runtime'
+import { ApiError } from './errors'
 import type { components, paths } from './schema'
 
 export type Schemas = components['schemas']
@@ -43,11 +44,26 @@ const languageMiddleware: Middleware = {
   },
 }
 
+/** Turns every non-2xx answer into an ApiError, so error handling reads the status. */
+const errorMiddleware: Middleware = {
+  async onResponse({ response }) {
+    if (response.ok) return undefined
+    const body: unknown = await response
+      .clone()
+      .json()
+      .catch(() => undefined)
+    const detail =
+      typeof body === 'object' && body !== null && 'detail' in body ? body.detail : undefined
+    throw new ApiError(response.status, detail)
+  },
+}
+
 // Same origin: the paths in schema.d.ts start with /api/v1, and /api/* is proxied
 // to the backend by the Worker (deployed) or the Vite dev server (local).
 export const fetchClient = createFetchClient<paths>()
 fetchClient.use(languageMiddleware)
 fetchClient.use(authMiddleware)
+fetchClient.use(errorMiddleware)
 
 /** Type-safe TanStack Query bindings for every endpoint in schema.d.ts. */
 export const $api = createClient(fetchClient)

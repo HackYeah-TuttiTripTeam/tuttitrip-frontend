@@ -134,8 +134,8 @@
   "trip_plan_title": "Plan dzień po dniu",
   "trip_plan_body": "Plan pojawi się, gdy wywiad zbierze preferencje wszystkich osób.",
   "trip_login_required_title": "Zaloguj się, żeby zobaczyć wyjazd",
-  "trip_not_found_title": "Nie znaleziono podróży",
-  "trip_not_found_body": "Ta podróż nie istnieje albo nie masz do niej dostępu.",
+  "trip_not_found_title": "Nie znaleziono wyjazdu",
+  "trip_not_found_body": "Ten wyjazd nie istnieje albo nie masz do niego dostępu.",
   "trip_not_found_back": "Wróć do wyjazdów",
   "trip_load_failed_title": "Nie udało się wczytać wyjazdu"
 }

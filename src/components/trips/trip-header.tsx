@@ -48,10 +48,11 @@ export function TripHeader({ trip }: { trip: Trip }) {
 
 export function TripHeaderSkeleton() {
   return (
-    <div aria-hidden="true" className="flex flex-col gap-3">
+    // Same heights as TripHeader (back link 44, title 36/40, meta 22) so nothing jumps on load.
+    <div aria-hidden="true" className="flex flex-col gap-2">
       <div className="h-11" />
-      <Skeleton className="h-9 w-2/3" />
-      <Skeleton className="h-4 w-1/2" />
+      <Skeleton className="h-9 w-2/3 md:h-10" />
+      <Skeleton className="h-[22px] w-1/2" />
     </div>
   )
 }

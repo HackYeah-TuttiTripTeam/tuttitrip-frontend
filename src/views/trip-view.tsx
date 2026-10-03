@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useSession } from '@/hooks/use-session'
 import { useTrip } from '@/hooks/use-trip'
 import { isDev } from '@/lib/env'
-import type { TripTab } from '@/loaders/trip'
+import type { TripTab } from '@/lib/trip-tabs'
 import { m } from '@/paraglide/messages'
 
 const route = getRouteApi('/trips_/$tripId')
@@ -119,7 +119,7 @@ function TripSkeleton() {
   return (
     <div className="flex flex-col gap-6">
       <TripHeaderSkeleton />
-      <Skeleton aria-hidden="true" className="h-13 w-full rounded-full md:max-w-md" />
+      <Skeleton aria-hidden="true" className="h-[54px] w-full rounded-full md:max-w-md" />
     </div>
   )
 }

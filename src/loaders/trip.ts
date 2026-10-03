@@ -1,10 +1,8 @@
 import { z } from 'zod'
 import { canCallProtectedApi } from '@/api/client'
 import { tripQueryOptions } from '@/api/queries/trips'
+import { TRIP_TABS, type TripTab } from '@/lib/trip-tabs'
 import type { RouterContext } from './router-context'
-
-export const TRIP_TABS = ['interview', 'people', 'plan'] as const
-export type TripTab = (typeof TRIP_TABS)[number]
 
 /** Values left out of the URL (see stripSearchParams in routes/trips_.$tripId.ts). */
 export const tripSearchDefaults = { tab: 'interview' } as const satisfies { tab: TripTab }
