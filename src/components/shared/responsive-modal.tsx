@@ -35,12 +35,16 @@ export function ResponsiveModal({
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
+        <DialogContent className="flex max-h-[90dvh] flex-col sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
-          {children}
+          {/* Only the body scrolls: the header and the close button stay in view. The side
+              padding keeps focus rings of the fields from being clipped. */}
+          <div className="-mx-1 min-h-0 overflow-x-hidden overflow-y-auto px-1 py-1">
+            {children}
+          </div>
         </DialogContent>
       </Dialog>
     )
@@ -53,9 +57,7 @@ export function ResponsiveModal({
           <DrawerTitle>{title}</DrawerTitle>
           <DrawerDescription>{description}</DrawerDescription>
         </DrawerHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-          {children}
-        </div>
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4">{children}</div>
       </DrawerContent>
     </Drawer>
   )
