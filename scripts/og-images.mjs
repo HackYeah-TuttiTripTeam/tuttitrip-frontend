@@ -45,7 +45,10 @@ ${[
   ['--m4', 58],
   ['--m5', 66],
 ]
-  .map(([c, x]) => `<div class="row"><i></i><u></u><b style="left:calc(${x}% - 24px);background:var(${c})"></b></div>`)
+  .map(
+    ([c, x]) =>
+      `<div class="row"><i></i><u></u><b style="left:calc(${x}% - 24px);background:var(${c})"></b></div>`,
+  )
   .join('')}
 </div>
 </body></html>`
