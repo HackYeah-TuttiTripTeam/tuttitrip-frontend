@@ -113,11 +113,11 @@ Frontend stoi na Cloudflare Workers (statyczne pliki z fallbackiem SPA, więc dz
 | --- | --- | --- |
 | `main` | https://tuttitrip.gburek.app | https://tuttitrip-api.gburek.app |
 | `develop` | https://tuttitrip-develop.gburek.app | https://tuttitrip-api-develop.gburek.app |
-| PR z innej gałęzi | `https://tuttitrip-preview-<slug>.<konto>.workers.dev` (link pojawia się w komentarzu pod PR) | patrz niżej |
+| PR z innej gałęzi | `https://tuttitrip-preview-<slug>.gburek.app` (link pojawia się w komentarzu pod PR) | patrz niżej |
 
 Wdraża GitHub Actions (`.github/workflows/frontend-ci.yml`) na runnerze `[self-hosted, hackathon]`: push do `main` lub `develop` wdraża dane środowisko, a każdy PR dostaje własny podgląd. Bot wrzuca link w komentarzu i przy kolejnych pushach aktualizuje ten sam komentarz, zamiast dodawać nowe.
 
-Po usunięciu gałęzi (np. po merge'u PR) workflow `frontend-cleanup.yml` kasuje Workera `tuttitrip-preview-<slug>` i zmienia komentarz w PR na „Podgląd usunięty”. To samo sprzątanie leci przy każdym wdrożeniu, gdyby zdarzenie usunięcia gałęzi nie dotarło. Skrypt rusza wyłącznie Workery o nazwach `tuttitrip-preview-*`, więc produkcja i develop są bezpieczne.
+Po usunięciu gałęzi (np. po merge'u PR) workflow `frontend-cleanup.yml` kasuje Workera `tuttitrip-preview-<slug>` razem z jego domeną i zmienia komentarz w PR na „Podgląd usunięty”. To samo sprzątanie leci przy każdym wdrożeniu, gdyby zdarzenie usunięcia gałęzi nie dotarło. Skrypt rusza wyłącznie Workery o nazwach `tuttitrip-preview-*`, więc produkcja i develop są bezpieczne.
 
 ## Która gałąź frontendu rozmawia z którym backendem
 
