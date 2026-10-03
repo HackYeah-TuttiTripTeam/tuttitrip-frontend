@@ -12,6 +12,7 @@ import {
   outing,
   type Plan,
   type Preferences,
+  PROFILE_IDS,
   type Profile,
   plan,
   type Trip,
@@ -32,6 +33,9 @@ export const scenarioNames = [
   'join-accept-dead',
   'demo-disabled',
   'demo-rate-limited',
+  'join-claimable',
+  'join-claim-taken',
+  'join-named',
 ] as const
 
 export type ScenarioName = (typeof scenarioNames)[number]
@@ -82,6 +86,12 @@ export interface World {
     /** The caller is on the trip already, so accepting is idempotent. */
     alreadyMember: boolean
     accept: 'ok' | 'dead'
+    /** Profiles without an account that the preview offers (`claimable_profiles`). */
+    claimable: string[]
+    /** Profiles somebody else takes first: accepting one answers 409 and drops it from the list. */
+    taken: string[]
+    /** A named invitation: accepting any other profile answers 409. */
+    namedFor: string | null
   }
 }
 
@@ -100,7 +110,14 @@ export function createWorld(name: ScenarioName): World {
     invitations: [invitation()],
     demoEnabled: true,
     demoRateLimited: false,
-    join: { preview: 'ok', alreadyMember: false, accept: 'ok' },
+    join: {
+      preview: 'ok',
+      alreadyMember: false,
+      accept: 'ok',
+      claimable: [],
+      taken: [],
+      namedFor: null,
+    },
   }
   switch (name) {
     case 'family-warsaw':
@@ -133,5 +150,25 @@ export function createWorld(name: ScenarioName): World {
       return { ...base, demoEnabled: false }
     case 'demo-rate-limited':
       return { ...base, demoRateLimited: true }
+    case 'join-claimable':
+      return { ...base, join: { ...base.join, claimable: [PROFILE_IDS.zosia, PROFILE_IDS.antek] } }
+    case 'join-claim-taken':
+      return {
+        ...base,
+        join: {
+          ...base.join,
+          claimable: [PROFILE_IDS.zosia, PROFILE_IDS.antek],
+          taken: [PROFILE_IDS.zosia],
+        },
+      }
+    case 'join-named':
+      return {
+        ...base,
+        join: {
+          ...base.join,
+          claimable: [PROFILE_IDS.zosia],
+          namedFor: PROFILE_IDS.zosia,
+        },
+      }
   }
 }

@@ -17,6 +17,10 @@ export function useJoinInvitation(token: string | null, signedIn: boolean) {
     // The answer holds no secret, but the request body does: keep nothing in the mutation cache.
     gcTime: 0,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: tripsQueryOptions().queryKey }),
+    // 409: somebody took the profile first. The list on screen is stale, so load it again.
+    onError: (error) => {
+      if (classifyApiError(error) === 'conflict') void preview.refetch()
+    },
   })
 
   return {
@@ -24,8 +28,11 @@ export function useJoinInvitation(token: string | null, signedIn: boolean) {
     isPending: preview.isPending && preview.fetchStatus !== 'idle',
     problem: previewProblem,
     refetch: () => void preview.refetch(),
-    accept: (displayName: string | null) => {
-      if (token) mutation.mutate({ body: { token, display_name: displayName } })
+    accept: (displayName: string | null, profileId: string | null = null) => {
+      if (!token) return
+      mutation.mutate({
+        body: profileId ? { token, profile_id: profileId } : { token, display_name: displayName },
+      })
     },
     joined: mutation.data,
     isJoining: mutation.isPending,

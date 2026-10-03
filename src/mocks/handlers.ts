@@ -355,6 +355,14 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
           trip_name: main?.name ?? '',
           destination: main?.destination ?? null,
           already_member: world.join.alreadyMember,
+          profile_id: world.join.namedFor,
+          claimable_profiles: world.profiles
+            .filter((p) => world.join.claimable.includes(p.id) && !p.user_sub)
+            .map((p) => ({
+              profile_id: p.id,
+              display_name: p.display_name,
+              age_group: p.age_group,
+            })),
         },
         { headers: NO_STORE },
       )
@@ -365,12 +373,24 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       const body = (await request.json()) as Schemas['InvitationAccept']
       if (!body.token || world.join.preview === 'dead' || world.join.accept === 'dead')
         return deadInvitation()
+      const claimed = body.profile_id ?? null
+      if (claimed) {
+        if (!world.profiles.some((p) => p.id === claimed)) return notFound('Profile not found')
+        const profile = world.profiles.find((p) => p.id === claimed)
+        const lost = world.join.taken.includes(claimed) || Boolean(profile?.user_sub)
+        const wrongName = world.join.namedFor !== null && world.join.namedFor !== claimed
+        if (lost || wrongName) {
+          world.join.claimable = world.join.claimable.filter((id) => id !== claimed)
+          return HttpResponse.json({ detail: 'Profile is taken' }, { status: 409 })
+        }
+      }
       return HttpResponse.json(
         {
           trip_id: world.trips[0]?.id ?? TRIP_ID,
-          profile_id: PROFILE_IDS.mama,
+          profile_id: claimed ?? PROFILE_IDS.mama,
           role: 'member',
           already_member: world.join.alreadyMember,
+          profile_claimed: claimed !== null,
         },
         { headers: NO_STORE },
       )

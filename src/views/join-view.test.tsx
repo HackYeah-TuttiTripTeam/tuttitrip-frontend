@@ -5,7 +5,7 @@ import { HttpResponse, http } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 import type { Session } from '@/hooks/use-session'
 import { clearJoinToken, peekJoinToken, stashJoinToken } from '@/lib/invite-link'
-import { MOCK_USER_NAME, TRIP_ID } from '@/mocks/fixtures'
+import { MOCK_USER_NAME, PROFILE_IDS, TRIP_ID } from '@/mocks/fixtures'
 import { server, useScenario } from '@/mocks/node'
 import { renderApp } from '@/mocks/render-app'
 import { m } from '@/paraglide/messages'
@@ -168,6 +168,89 @@ describe('JoinView, signed in', () => {
     openInvite('')
     expect(await screen.findByText(m.join_missing_title())).toBeTruthy()
     expect(seen).toHaveLength(0)
+  })
+})
+
+describe('JoinView, claiming a profile', () => {
+  const optionOf = (name: string) => screen.findByRole('radio', { name: new RegExp(name) })
+
+  it('offers the profiles, then claims the chosen one without sending a name', async () => {
+    useScenario('join-claimable')
+    session.current = sessionOf()
+    const seen = recordRequests()
+    const { router } = openInvite()
+    const user = userEvent.setup()
+
+    expect(await screen.findByText(m.join_claim_legend())).toBeTruthy()
+    const submit = screen.getByRole('button', { name: m.join_submit() }) as HTMLButtonElement
+    // Nothing is chosen yet: no name field, no way to continue.
+    expect(submit.disabled).toBe(true)
+    expect(screen.queryByLabelText(m.join_name_label())).toBeNull()
+
+    await user.click(await optionOf('Zosia'))
+    expect(await screen.findByRole('radio', { name: /Antek/ })).toBeTruthy()
+    await user.click(submit)
+
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/trips/${TRIP_ID}`))
+    expect(bodyOf(seen, '/invitations/accept')).toEqual({
+      token: TOKEN,
+      profile_id: PROFILE_IDS.zosia,
+    })
+    expect(everywhere()).not.toContain(TOKEN)
+  })
+
+  it('"none of these" asks for a name and joins as a new person', async () => {
+    useScenario('join-claimable')
+    session.current = sessionOf()
+    const seen = recordRequests()
+    const { router } = openInvite()
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('radio', { name: m.join_claim_new() }))
+    const name = await screen.findByLabelText(m.join_name_label())
+    await user.clear(name)
+    await user.type(name, 'Ola')
+    await user.click(screen.getByRole('button', { name: m.join_submit() }))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/trips/${TRIP_ID}`))
+    expect(bodyOf(seen, '/invitations/accept')).toEqual({ token: TOKEN, display_name: 'Ola' })
+  })
+
+  it('shows no step when nobody can be claimed', async () => {
+    session.current = sessionOf()
+    openInvite()
+    await screen.findByLabelText(m.join_name_label())
+    expect(screen.queryByText(m.join_claim_legend())).toBeNull()
+  })
+
+  it('explains a lost race, refreshes the list and lets the user choose again', async () => {
+    useScenario('join-claim-taken')
+    session.current = sessionOf()
+    const seen = recordRequests()
+    const user = userEvent.setup()
+    openInvite()
+
+    await user.click(await optionOf('Zosia'))
+    await user.click(screen.getByRole('button', { name: m.join_submit() }))
+
+    expect((await screen.findByRole('alert')).textContent).toBe(m.join_claim_taken())
+    // The list was loaded again: the lost profile is gone, the other one stays, nothing is chosen.
+    await waitFor(() => expect(screen.queryByRole('radio', { name: /Zosia/ })).toBeNull())
+    expect(screen.getByRole('radio', { name: /Antek/ })).toBeTruthy()
+    expect(seen.filter((call) => call.path.endsWith('/invitations/preview'))).toHaveLength(2)
+    expect(
+      (screen.getByRole('button', { name: m.join_submit() }) as HTMLButtonElement).disabled,
+    ).toBe(true)
+    expect(everywhere()).not.toContain(TOKEN)
+  })
+
+  it('a named invitation shows only its profile', async () => {
+    useScenario('join-named')
+    session.current = sessionOf()
+    openInvite()
+    expect(await optionOf('Zosia')).toBeTruthy()
+    expect(screen.queryByRole('radio', { name: /Antek/ })).toBeNull()
+    expect(screen.getByRole('radio', { name: m.join_claim_new() })).toBeTruthy()
   })
 })
 

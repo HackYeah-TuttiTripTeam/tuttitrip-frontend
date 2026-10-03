@@ -1,7 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { MapPin } from '@keyline-icons/react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import type { ClaimableProfile } from '@/api/queries/invitations'
+import { CLAIM_NEW, ClaimProfileChoice } from '@/components/trips/claim-profile-choice'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -22,11 +25,13 @@ interface JoinFormProps {
   tripName: string
   destination: string | null
   alreadyMember: boolean
+  /** People of the trip without an account; the joiner may be one of them. */
+  claimable: ClaimableProfile[]
   /** Pre-filled with the account's name. */
   defaultName: string
   isSubmitting: boolean
   submitError: string | null
-  onSubmit: (displayName: string | null) => void
+  onSubmit: (displayName: string | null, profileId: string | null) => void
 }
 
 /** Confirms the join: trip name, how you will be called, one button. */
@@ -34,6 +39,7 @@ export function JoinForm({
   tripName,
   destination,
   alreadyMember,
+  claimable,
   defaultName,
   isSubmitting,
   submitError,
@@ -44,10 +50,19 @@ export function JoinForm({
     defaultValues: { name: defaultName.slice(0, 100) },
   })
   const { errors } = form.formState
+  const [picked, setPicked] = useState('')
+  // A pick that is no longer offered (taken meanwhile, list refreshed) counts as no pick.
+  const choice =
+    picked === CLAIM_NEW || claimable.some((p) => p.profile_id === picked) ? picked : ''
+  const asking = !alreadyMember && claimable.length > 0
+  const claiming = asking && choice !== '' && choice !== CLAIM_NEW
+  const needsName = !alreadyMember && !claiming && (!asking || choice === CLAIM_NEW)
 
   return (
     <form
-      onSubmit={form.handleSubmit((values) => onSubmit(alreadyMember ? null : values.name || null))}
+      onSubmit={form.handleSubmit((values) =>
+        onSubmit(needsName ? values.name || null : null, claiming ? choice : null),
+      )}
       noValidate
       className="flex max-w-md flex-col gap-6"
     >
@@ -62,11 +77,15 @@ export function JoinForm({
         )}
       </header>
 
-      {alreadyMember ? (
+      {alreadyMember && (
         <p role="status" className="text-sm">
           {m.join_already_member()}
         </p>
-      ) : (
+      )}
+
+      {asking && <ClaimProfileChoice profiles={claimable} value={choice} onChange={setPicked} />}
+
+      {needsName && (
         <Field data-invalid={Boolean(errors.name)}>
           <Label htmlFor="join-name">{m.join_name_label()}</Label>
           <Input
@@ -87,7 +106,11 @@ export function JoinForm({
         </p>
       )}
 
-      <Button type="submit" disabled={isSubmitting} className="h-11 md:h-9">
+      <Button
+        type="submit"
+        disabled={isSubmitting || (asking && choice === '')}
+        className="h-11 md:h-9"
+      >
         {isSubmitting ? m.join_submitting() : alreadyMember ? m.join_open() : m.join_submit()}
       </Button>
     </form>
