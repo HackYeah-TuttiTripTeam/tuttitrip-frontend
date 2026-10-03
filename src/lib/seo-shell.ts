@@ -42,6 +42,18 @@ const HIDE_FOR_SIGNED_IN =
   `if((localStorage.key(i)||'').indexOf('@@auth0spajs@@')===0){` +
   `document.getElementById('seo-shell').style.display='none';break}}catch(e){}</script>`
 
+/**
+ * Preloads for the shell: the two fonts it is set in. With them in hand at the first paint the
+ * headline has its final size at once, so the app's own headline (same text, same size) is not a
+ * larger paint that moves the page's LCP to when the scripts finish.
+ */
+export const SHELL_PRELOADS = ['FunnelDisplay-Variable', 'AtkinsonHyperlegibleNext-Variable']
+  .map(
+    (font) =>
+      `<link data-seo rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/${font}.woff2">`,
+  )
+  .join('')
+
 export function shellHtml(path: SeoPath, locale: Locale): string {
   const o = { locale }
   if (path === '/') {
