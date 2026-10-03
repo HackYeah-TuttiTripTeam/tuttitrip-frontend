@@ -117,7 +117,7 @@ Frontend stoi na Cloudflare Workers (statyczne pliki z fallbackiem SPA, więc dz
 
 Wdraża GitHub Actions (`.github/workflows/frontend-ci.yml`) na runnerze `[self-hosted, hackathon]`: push do `main` lub `develop` wdraża dane środowisko, a każdy PR dostaje własny podgląd. Bot wrzuca link w komentarzu i przy kolejnych pushach aktualizuje ten sam komentarz, zamiast dodawać nowe.
 
-Po usunięciu gałęzi (np. po merge'u PR) workflow `frontend-cleanup.yml` kasuje Workera `tuttitrip-preview-<slug>` razem z jego domeną i zmienia komentarz w PR na „Podgląd usunięty”. To samo sprzątanie leci przy każdym wdrożeniu, gdyby zdarzenie usunięcia gałęzi nie dotarło. Skrypt rusza wyłącznie Workery o nazwach `tuttitrip-preview-*`, więc produkcja i develop są bezpieczne.
+Po usunięciu gałęzi (po merge'u PR uruchamia go workflow `Delete merged branch`) workflow `frontend-cleanup.yml` kasuje Workera `tuttitrip-preview-<slug>` razem z jego domeną i zmienia komentarz w PR na „Podgląd usunięty”. To samo sprzątanie leci przy każdym wdrożeniu, gdyby zdarzenie usunięcia gałęzi nie dotarło. Skrypt rusza wyłącznie Workery o nazwach `tuttitrip-preview-*`, więc produkcja i develop są bezpieczne.
 
 ## Która gałąź frontendu rozmawia z którym backendem
 
@@ -135,7 +135,7 @@ Slug gałęzi to jej nazwa małymi literami, z każdym ciągiem znaków spoza `a
 2. Kolejność pracy nad funkcją: zapytania i hooki → komponenty → widok → trasa.
 3. Przed commitem odpalasz weryfikację (patrz „Skrypty”).
 4. PR do `develop`, z opisem, listą zmian i zrzutami ekranu (desktop i telefon). Wydanie to PR z `develop` do `main`.
-5. Po merge'u gałąź usuwa się automatycznie, a razem z nią jej podgląd.
+5. Po merge'u gałąź usuwa workflow `Delete merged branch`, a razem z nią znika jej podgląd. `main` i `develop` nie są nigdy usuwane, więc PR wydania idzie prosto z `develop`.
 
 Do `main` i `develop` wchodzimy tylko przez PR z zielonym CI i nigdy nie robimy force-pusha. GitHub nie pozwala włączyć ochrony gałęzi w prywatnym repo organizacji na darmowym planie, więc na razie pilnujemy tego sami.
 
