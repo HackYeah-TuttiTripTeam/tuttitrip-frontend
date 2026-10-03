@@ -114,7 +114,7 @@ export function TripPlanView({ tripId, role }: TripPlanViewProps) {
           </Button>
         )}
       </div>
-      <div role="status" className="min-h-5 text-muted-foreground text-sm">
+      <div role="status" className={recalculating ? 'text-muted-foreground text-sm' : 'sr-only'}>
         {recalculating && m.plan_recomputing_status()}
       </div>
       {failure}
