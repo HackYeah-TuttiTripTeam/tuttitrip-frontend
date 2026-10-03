@@ -60,6 +60,8 @@ export function ThemeToggle({ state }: { state: ThemeState }) {
       <DropdownMenuTrigger
         className={cn(barItemClass, 'size-11 justify-center px-0 [&_svg]:size-5')}
         aria-label={`${m.theme_change()}: ${NAMES[state.theme]()}`}
+        title={NAMES[state.theme]()}
+        data-resolved={state.resolved}
       >
         {state.resolved === 'dark' ? <Moon aria-hidden="true" /> : <Sun aria-hidden="true" />}
       </DropdownMenuTrigger>

@@ -46,16 +46,29 @@ export function applyTheme(resolved: ResolvedTheme): void {
   if (meta && color) meta.content = color
 }
 
-let current: Theme = readStoredTheme()
+export interface ThemeSnapshot {
+  /** The saved choice. */
+  theme: Theme
+  /** The theme shown right now (differs from `theme` while it is `system`). */
+  resolved: ResolvedTheme
+}
+
 const listeners = new Set<() => void>()
 
+function snapshotOf(theme: Theme): ThemeSnapshot {
+  return { theme, resolved: resolveTheme(theme) }
+}
+
+let current: ThemeSnapshot = snapshotOf(readStoredTheme())
+
+/** A new object per commit, so subscribers re-render when only `resolved` changes. */
 function commit(theme: Theme): void {
-  current = theme
-  applyTheme(resolveTheme(theme))
+  current = snapshotOf(theme)
+  applyTheme(current.resolved)
   for (const listener of listeners) listener()
 }
 
-export const getTheme = (): Theme => current
+export const getThemeSnapshot = (): ThemeSnapshot => current
 
 export function setTheme(theme: Theme): void {
   storeTheme(theme)
@@ -67,13 +80,23 @@ export function subscribeTheme(listener: () => void): () => void {
   return () => listeners.delete(listener)
 }
 
-/** Applies the saved choice and follows the system setting and other tabs. Call once at startup. */
-export function initTheme(): void {
+/**
+ * Applies the saved choice and follows the system setting and other tabs.
+ * Call once at startup; the returned function removes the listeners.
+ */
+export function initTheme(): () => void {
   commit(readStoredTheme())
-  window.matchMedia?.(DARK_QUERY).addEventListener('change', () => {
-    if (current === 'system') commit('system')
-  })
-  window.addEventListener('storage', (event) => {
+  const media = window.matchMedia?.(DARK_QUERY)
+  const onSystem = () => {
+    if (current.theme === 'system') commit('system')
+  }
+  const onStorage = (event: StorageEvent) => {
     if (event.key === THEME_STORAGE_KEY || event.key === null) commit(readStoredTheme())
-  })
+  }
+  media?.addEventListener('change', onSystem)
+  window.addEventListener('storage', onStorage)
+  return () => {
+    media?.removeEventListener('change', onSystem)
+    window.removeEventListener('storage', onStorage)
+  }
 }

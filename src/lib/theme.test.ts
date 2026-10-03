@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import indexHtml from '../../index.html?raw'
 import {
-  getTheme,
+  getThemeSnapshot,
   initTheme,
   readStoredTheme,
   resolveTheme,
@@ -40,7 +40,12 @@ beforeEach(() => {
   mockMatchMedia()
 })
 
-afterEach(() => vi.restoreAllMocks())
+let stopTheme: (() => void) | undefined
+afterEach(() => {
+  stopTheme?.()
+  stopTheme = undefined
+  vi.restoreAllMocks()
+})
 
 describe('theme store', () => {
   it('defaults to system and ignores junk in storage', () => {
@@ -70,13 +75,18 @@ describe('theme store', () => {
   })
 
   it('follows the system setting only while the choice is system', () => {
-    initTheme()
+    stopTheme = initTheme()
     setSystem(true)
     expect(html.classList.contains('dark')).toBe(true)
     setTheme('light')
     setSystem(true)
-    expect(getTheme()).toBe('light')
+    expect(getThemeSnapshot().theme).toBe('light')
     expect(html.classList.contains('dark')).toBe(false)
+  })
+
+  it('stops following the system once the cleanup has run', () => {
+    initTheme()()
+    expect(mediaListeners.size).toBe(0)
   })
 
   it('keeps working when storage throws', () => {
@@ -131,4 +141,35 @@ describe('no-flash script in index.html', () => {
     run()
     expect(html.classList.contains('dark')).toBe(true)
   })
+})
+
+describe('inline script and theme.ts agree', () => {
+  const script = /<script>([\s\S]*?)<\/script>/.exec(indexHtml)?.[1] ?? ''
+  const state = () => ({
+    dark: html.classList.contains('dark'),
+    scheme: html.style.colorScheme,
+    color: document.querySelector<HTMLMetaElement>('meta[name=theme-color]')?.content,
+  })
+  const stored = [null, 'light', 'dark', 'system', 'purple']
+
+  it('reads the same storage key', () => {
+    expect(script).toContain(`'${THEME_STORAGE_KEY}'`)
+  })
+
+  for (const value of stored) {
+    for (const dark of [false, true]) {
+      it(`stored ${value ?? 'nothing'}, system ${dark ? 'dark' : 'light'}: same class, color-scheme and theme-color`, () => {
+        systemDark = dark
+        if (value) localStorage.setItem(THEME_STORAGE_KEY, value)
+        new Function(script)()
+        const fromScript = state()
+        html.className = ''
+        html.removeAttribute('style')
+        document.head.innerHTML =
+          '<meta name="theme-color" content="#light" data-light="#light" data-dark="#dark">'
+        initTheme()()
+        expect(state()).toEqual(fromScript)
+      })
+    }
+  }
 })

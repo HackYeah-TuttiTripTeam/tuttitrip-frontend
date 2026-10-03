@@ -66,7 +66,7 @@ export function AppShell({
 
           <div className="ml-auto flex items-center gap-1 md:gap-3">
             <LanguageMenu language={language} />
-            <div className="hidden md:block">
+            <div className={account.status === 'authenticated' ? 'hidden md:block' : undefined}>
               <ThemeToggle state={theme} />
             </div>
             <div className="hidden items-center gap-3 md:flex">

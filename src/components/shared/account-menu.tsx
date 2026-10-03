@@ -104,15 +104,13 @@ export function AccountMenu({
             </DropdownMenuItem>
           </>
         ) : (
-          <>
-            <DropdownMenuLabel className="font-normal text-muted-foreground leading-relaxed">
-              {account.status === 'loading'
-                ? m.account_checking_session()
-                : isDev
-                  ? m.account_auth_disabled_dev()
-                  : m.account_auth_disabled()}
-            </DropdownMenuLabel>
-          </>
+          <DropdownMenuLabel className="font-normal text-muted-foreground leading-relaxed">
+            {account.status === 'loading'
+              ? m.account_checking_session()
+              : isDev
+                ? m.account_auth_disabled_dev()
+                : m.account_auth_disabled()}
+          </DropdownMenuLabel>
         )}
       </DropdownMenuContent>
     </DropdownMenu>
