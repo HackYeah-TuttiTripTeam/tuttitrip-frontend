@@ -35,7 +35,7 @@ export function ResponsiveModal({
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
@@ -53,7 +53,9 @@ export function ResponsiveModal({
           <DrawerTitle>{title}</DrawerTitle>
           <DrawerDescription>{description}</DrawerDescription>
         </DrawerHeader>
-        <div className="px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          {children}
+        </div>
       </DrawerContent>
     </Drawer>
   )
