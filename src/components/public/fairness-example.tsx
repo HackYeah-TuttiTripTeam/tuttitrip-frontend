@@ -37,7 +37,7 @@ export function FairnessExample({ people, floor, metric, formatScore }: Fairness
 
   return (
     <figure className="flex flex-col gap-5 rounded-lg border bg-card p-5 md:p-6">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div>
           <p className="font-medium text-muted-foreground text-sm">{m.example_label()}</p>
           <p className="font-heading font-extrabold text-5xl tabular-nums leading-none tracking-tight">
