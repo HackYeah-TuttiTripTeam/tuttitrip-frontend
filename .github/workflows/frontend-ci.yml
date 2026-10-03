@@ -138,6 +138,14 @@ jobs:
             *) echo "command=deploy --env preview --name $PREVIEW_WORKER" >> "$GITHUB_OUTPUT" ;;
           esac
 
+      - name: Make sure the custom domain is ours to deploy
+        if: steps.creds.outputs.ok == 'true' && github.event_name == 'push'
+        run: |
+          case "${{ github.ref_name }}" in
+            main) node scripts/check-custom-domain.mjs tuttitrip-frontend tuttitrip.gburek.app ;;
+            develop) node scripts/check-custom-domain.mjs tuttitrip-frontend-develop tuttitrip-develop.gburek.app ;;
+          esac
+
       - name: Deploy to Cloudflare Workers
         id: wrangler
         if: steps.creds.outputs.ok == 'true'

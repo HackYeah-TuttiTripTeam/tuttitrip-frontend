@@ -68,6 +68,15 @@ export function TripsView() {
 
       {session.status === 'loading' || isPending ? (
         <TripsTableSkeleton />
+      ) : session.error && session.status === 'anonymous' ? (
+        <StatusMessage
+          role="alert"
+          icon={<TriangleAlert />}
+          title="Logowanie nie powiodło się"
+          action={<Button onClick={session.login}>Spróbuj ponownie</Button>}
+        >
+          {session.error}
+        </StatusMessage>
       ) : needsLogin ? (
         <StatusMessage
           icon={<KeyRound />}
