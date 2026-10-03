@@ -1,6 +1,5 @@
 import type { ExamplePerson } from '@/components/public/fairness-example'
 import { ClosingCta, HowItWorks, LandingHero, Proof } from '@/components/public/landing-sections'
-import { useDocumentTitle } from '@/hooks/use-document-title'
 import { useSession } from '@/hooks/use-session'
 import { formatPercent } from '@/lib/format'
 import { m } from '@/paraglide/messages'
@@ -30,7 +29,6 @@ function exampleData(): { floor: number; people: ExamplePerson[] } {
  * for a signed-in user (shellFor says "bare"), so it cannot flash before the redirect.
  */
 export function HomeView() {
-  useDocumentTitle()
   const session = useSession()
   const onSignup = session.status === 'anonymous' ? session.signup : undefined
 

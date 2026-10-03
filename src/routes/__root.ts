@@ -5,5 +5,7 @@ import { RootLayoutView } from '@/views/root-layout-view'
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootLayoutView,
+  // Pages without their own title (the app) show the site name.
+  head: () => ({ meta: [{ title: 'TuttiTrip' }] }),
   notFoundComponent: NotFoundView,
 })

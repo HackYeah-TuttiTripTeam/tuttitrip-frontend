@@ -344,5 +344,12 @@
   "contact_github": "The team on GitHub",
   "contact_about": "Read who we are",
   "example_metric": "lowest in the group, as a part of what the person could get alone",
-  "example_explainer": "Each value is the part of what that person would get planning the trip alone."
+  "example_explainer": "Each value is the part of what that person would get planning the trip alone.",
+  "seo_home_title": "TuttiTrip: a group trip plan nobody feels they lost on",
+  "seo_home_description": "A planner for family and group trips. Code works out the numbers, hours and prices; the language model only writes questions and explanations.",
+  "seo_about_title": "About TuttiTrip: code does the maths, the model explains",
+  "seo_about_description": "One person plans, and the plan has to fit the whole group. Code, not a language model, runs the fairness solver, the plan check and the expense settlement.",
+  "seo_contact_title": "Contact the TuttiTrip team",
+  "seo_contact_description": "The HackYeah-TuttiTripTeam is on GitHub. That is where you find the TuttiTrip project and us.",
+  "seo_image_alt": "TuttiTrip: a group trip plan nobody feels they lost on"
 }

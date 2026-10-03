@@ -1,9 +1,10 @@
-import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
+import { HeadContent, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { lazy, Suspense } from 'react'
 import { AppShell } from '@/components/shared/app-shell'
 import { BootScreen } from '@/components/shared/boot-screen'
 import { PublicShell } from '@/components/shared/public-shell'
 import { useApiAuthBridge } from '@/hooks/use-api-auth-bridge'
+import { useCleanServerHead } from '@/hooks/use-clean-server-head'
 import { useHomeRedirect } from '@/hooks/use-home-redirect'
 import { useLocale } from '@/hooks/use-locale'
 import { useSession } from '@/hooks/use-session'
@@ -31,6 +32,7 @@ const Devtools = import.meta.env.DEV
 
 export function RootLayoutView() {
   useApiAuthBridge()
+  useCleanServerHead()
   const session = useSession()
   const { locale, setLocale } = useLocale()
   const setCreateTripOpen = useUiStore((state) => state.setCreateTripOpen)
@@ -43,6 +45,7 @@ export function RootLayoutView() {
 
   return (
     <>
+      <HeadContent />
       {shell === 'bare' && <BootScreen />}
       {shell === 'public' && (
         <PublicShell

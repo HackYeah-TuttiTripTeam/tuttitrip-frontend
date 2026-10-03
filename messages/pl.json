@@ -354,5 +354,12 @@
   "contact_github": "Zespół na GitHubie",
   "contact_about": "Przeczytaj, kim jesteśmy",
   "example_metric": "najmniej w grupie, jako część tego, co osoba dostałaby sama",
-  "example_explainer": "Każda wartość to część tego, co dana osoba dostałaby, planując wyjazd sama."
+  "example_explainer": "Każda wartość to część tego, co dana osoba dostałaby, planując wyjazd sama.",
+  "seo_home_title": "TuttiTrip: plan wyjazdu, po którym nikt nie czuje, że przegrał",
+  "seo_home_description": "Planer wyjazdów rodzinnych i grupowych. Liczby, godziny i ceny liczy kod, a model językowy pisze tylko pytania i uzasadnienia.",
+  "seo_about_title": "O TuttiTrip: kod liczy, model opowiada",
+  "seo_about_description": "Jedna osoba planuje, a plan ma pasować całej grupie. Solver sprawiedliwości, sprawdzenie planu i rozliczenie wydatków liczy kod, nie model językowy.",
+  "seo_contact_title": "Kontakt z zespołem TuttiTrip",
+  "seo_contact_description": "Zespół HackYeah-TuttiTripTeam jest na GitHubie. Tam znajdziesz projekt TuttiTrip i nas.",
+  "seo_image_alt": "TuttiTrip: plan wyjazdu, po którym nikt nie czuje, że przegrał"
 }

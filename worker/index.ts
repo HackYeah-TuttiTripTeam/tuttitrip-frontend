@@ -6,6 +6,8 @@
 // Any other path reaches it only when no asset matched a non-navigation request
 // (curl, fetch); those go back to the assets, which apply the SPA fallback.
 
+import { pageSeo, requestLocale, robotsTxt, seoHeadHtml, seoPath, sitemapXml } from '../src/lib/seo'
+
 interface Env {
   /** Backend origin without a trailing slash, e.g. https://tuttitrip-api.gburek.app */
   API_ORIGIN: string
@@ -77,10 +79,60 @@ async function proxy(request: Request, env: Env): Promise<Response> {
   return response
 }
 
+// The subset of the Workers HTMLRewriter API used below (the DOM lib does not type it).
+interface ElementHandle {
+  remove(): void
+  append(content: string, options: { html: boolean }): void
+  setAttribute(name: string, value: string): void
+}
+declare class HTMLRewriter {
+  on(selector: string, handlers: { element(element: ElementHandle): void }): HTMLRewriter
+  transform(response: Response): Response
+}
+
+const text = (body: string, type: string) =>
+  new Response(body, {
+    headers: { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'public, max-age=3600' },
+  })
+
+/**
+ * The app shell with the metadata of one public page. The SPA is a single index.html, so bots
+ * that do not run JavaScript (link previews, crawlers) would all see the same tags; here the
+ * title, description, canonical, hreflang, Open Graph, Twitter and JSON-LD of the requested
+ * path and language are put in. The client keeps them right after navigation (loaders/seo.ts).
+ */
+async function publicPage(request: Request, env: Env, url: URL): Promise<Response> {
+  const response = await env.ASSETS.fetch(request)
+  const path = seoPath(url.pathname)
+  const isHtml = (response.headers.get('content-type') ?? '').includes('text/html')
+  if (!path || !response.ok || !isHtml) return response
+
+  const locale = requestLocale(url, request.headers.get('accept-language'))
+  const seo = pageSeo(url.origin, path, locale)
+  const page = new HTMLRewriter()
+    .on('html', { element: (element) => element.setAttribute('lang', locale) })
+    // The static title and description of index.html give way to the page's own.
+    .on('title', { element: (element) => element.remove() })
+    .on('meta[name="description"]', { element: (element) => element.remove() })
+    .on('head', { element: (element) => element.append(seoHeadHtml(seo), { html: true }) })
+    .transform(response)
+
+  // The answer depends on ?lang and on Accept-Language.
+  const headers = new Headers(page.headers)
+  headers.set('vary', 'Accept-Language')
+  if (url.hostname.includes('-develop.')) headers.set('x-robots-tag', 'noindex')
+  return new Response(page.body, { status: page.status, headers })
+}
+
 export default {
-  fetch(request: Request, env: Env): Promise<Response> {
-    const { pathname } = new URL(request.url)
-    if (pathname.startsWith('/api/')) return proxy(request, env)
+  fetch(request: Request, env: Env): Promise<Response> | Response {
+    const url = new URL(request.url)
+    if (url.pathname.startsWith('/api/')) return proxy(request, env)
+    if (request.method === 'GET' || request.method === 'HEAD') {
+      if (url.pathname === '/robots.txt') return text(robotsTxt(url.origin), 'text/plain')
+      if (url.pathname === '/sitemap.xml') return text(sitemapXml(url.origin), 'application/xml')
+      if (seoPath(url.pathname)) return publicPage(request, env, url)
+    }
     return env.ASSETS.fetch(request)
   },
 }
