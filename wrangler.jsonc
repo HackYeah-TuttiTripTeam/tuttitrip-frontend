@@ -18,7 +18,10 @@
     // Deep links (/trips?sort=name) get index.html; the router takes it from there.
     "not_found_handling": "single-page-application",
     // /api/* never hits the assets or the SPA fallback: the Worker proxies it.
-    "run_worker_first": ["/api/*"]
+    // /assets/* goes through it too: the assets layer answers a missing GET there with the
+    // SPA fallback itself (200 index.html, Worker not invoked, verified on a preview), so only
+    // the Worker can turn a chunk removed by a newer deploy into a 404 (worker/index.ts).
+    "run_worker_first": ["/api/*", "/assets/*"]
   },
   "workers_dev": false,
   "preview_urls": false,

@@ -2,10 +2,10 @@
 // backend of this environment (API_ORIGIN), so the browser only talks to its own
 // origin (no CORS, one URL per environment). See AGENTS.md "API proxy".
 //
-// wrangler.jsonc runs this script first for /api/* (assets.run_worker_first). Any other
-// path reaches it only when no asset matched a non-navigation request (curl, fetch,
-// script and module loads); those go back to the assets, which apply the SPA fallback,
-// except for missing files, which become a 404 (assetsOr404).
+// wrangler.jsonc runs this script first for /api/* and /assets/* (assets.run_worker_first).
+// Existing files under /assets/* are handed to the assets unchanged; a missing one would
+// get the SPA fallback (200 index.html), so it becomes a 404 (assetsOr404). Other paths
+// are served by the assets layer without this script.
 
 interface Env {
   /** Backend origin without a trailing slash, e.g. https://tuttitrip-api.gburek.app */
@@ -86,9 +86,8 @@ export default {
   },
 }
 
-// Reached for every path that is not /api/ and matched no static file (files in dist/ are
-// served by the assets layer and never get here), or is a non-navigation request. The SPA
-// fallback answers those with index.html and status 200. For a file that does not exist
+// Reached for /assets/* (run_worker_first). The assets layer answers a path without a file
+// with the SPA fallback: index.html and status 200. For a file that does not exist
 // (a chunk removed by a newer deploy, a stray .js) that means a MIME error and a blank
 // page in a returning browser, so a file-like path that comes back as HTML is a real 404
 // (the app reloads once on that error, see src/lib/stale-assets.ts). Extensionless paths

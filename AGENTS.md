@@ -302,15 +302,17 @@ paths in `schema.d.ts` start with `/api/v1`, so every call goes to its own
 origin. No CORS, and the same build works in every environment.
 
 - Deployed: `worker/index.ts` (typed by `tsconfig.worker.json`, plain Fetch API).
-  `assets.run_worker_first: ["/api/*"]` sends `/api/*` to it before the assets,
-  so the SPA fallback never answers an API path. It forwards method, headers
+  `assets.run_worker_first: ["/api/*", "/assets/*"]` sends `/api/*` to it before
+  the assets, so the SPA fallback never answers an API path, and `/assets/*` so a
+  missing build file is a 404 (the assets layer alone answers any missing GET with
+  `index.html`, 200, without invoking the Worker; verified on a preview). It forwards method, headers
   (incl. `Authorization`), body and query to `API_ORIGIN`, streams the response
   back, and rewrites API redirects to the same origin. It drops hop-by-hop
   headers, `Cookie`, `Forwarded`, `X-Real-IP` and every client `X-Forwarded-*`/`cf-*`
   header, then sets `X-Forwarded-For` (from `CF-Connecting-IP`), `-Host`, `-Proto`.
-  Other paths reach the script only for non-navigation requests without a
-  matching asset; it hands them to `env.ASSETS` (SPA fallback) and turns a
-  missing file-like path into a 404 (see "PWA updates and caching").
+  Under `/assets/*` it hands the request to `env.ASSETS` and turns an HTML answer
+  for a file-like path into a 404 (see "PWA updates and caching"). Other paths
+  are served by the assets layer without the script.
 - `API_ORIGIN` (Worker var): main `https://tuttitrip-api.gburek.app` and develop
   `https://tuttitrip-api-develop.gburek.app` in `wrangler.jsonc`; previews get
   the backend picked by `resolve-api.sh` via `--var` in `frontend-ci.yml`.
@@ -354,8 +356,8 @@ is not production.
   `sessionStorage`, so no loop) on `vite:preloadError` and, via the router's
   `defaultOnCatch`, on errors such as "Failed to fetch dynamically imported
   module". A missing file-like path (`/assets/x.js`, any extension but `.html`)
-  that the SPA fallback would answer with `index.html` is a real 404 from the
-  Worker (`assetsOr404` in `worker/index.ts`); extensionless paths stay 200.
+  under `/assets/*` that the SPA fallback would answer with `index.html` is a
+  real 404 from the Worker (`assetsOr404` in `worker/index.ts`).
   The deploy smoke test checks `/assets/smoke-missing.js` -> 404.
 - **Production (`main`):** navigations are `NetworkFirst` (3 s timeout,
   `app-shell` cache, one `/index.html` entry) so offline any deep link gets the
