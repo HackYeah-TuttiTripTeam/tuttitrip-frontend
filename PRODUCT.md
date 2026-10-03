@@ -28,8 +28,10 @@ web
 Plan a trip nobody feels they lost on, and show that it is fair. The host starts with one sentence and
 answers an assistant with cards instead of a form. A deterministic algorithm turns everyone's preferences,
 weights, constraints and budget into a plan; a plan check counts what a chatbot plan gets wrong; an
-accommodation contract checks pasted offers against requirements; replanning swaps the rest of the day
-when it rains. Success: the host gets a first plan within minutes and every person can see what they got.
+accommodation contract checks pasted offers against requirements. The algorithm is the core of the
+product and is specified in `docs/algorytm.md` in tuttitrip-backend (fairness algorithm v1.0); everything
+else follows it. Success: the host gets a first plan within minutes and every person can see what they
+got: their share of what they could get alone (`r`), the group's lowest share and the Jain index.
 
 ## Positioning
 
@@ -43,7 +45,8 @@ the same plan.
 
 - A phone first, as an installable PWA; laptop for longer planning sessions.
 - Live 3-minute demo on stage: interview from one sentence, plan with the fairness measure and the weight
-  slider, a veto from a voting link, the plan check on a chatbot plan, and the "rain" replanning.
+  slider, a veto from a voting link, the plan check on a chatbot plan, and the host's consent to a budget
+  overrun with the price per point, next to the plan hash that proves the same input gives the same plan.
 - Prices and opening hours shown as "verified" come only from the team's own sheet (Warszawa, Berlin,
   Kraków, Londyn) and OpenStreetMap, with a source and a date; anything else is marked unverified.
 - The map is Google Maps; Google place details appear only as a Places UI Kit card for the reader.
@@ -59,6 +62,9 @@ the same plan.
   books anything.
 - Hackathon: 24 hours, 5 people; the live demo must not fail. Judging includes Design 20% and Usability
   20%.
+- Outside algorithm v1.0 and therefore not in the core: rain replanning, splitting the group during a day,
+  a different accommodation base per night, per-day weights. They may come later as extensions that do not
+  change the algorithm.
 - Undecided: the demo script city (one of the four), the exact wording of the pitch claims.
 
 ## Brand Commitments
