@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { screen, waitFor, within } from '@testing-library/react'
+import { configure, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
@@ -9,6 +9,9 @@ import { MOCK_USER_NAME, TRIP_ID } from '@/mocks/fixtures'
 import { server, useScenario } from '@/mocks/node'
 import { renderApp } from '@/mocks/render-app'
 import { m } from '@/paraglide/messages'
+
+// The first render of a route loads its chunk; under a parallel run that can take over a second.
+configure({ asyncUtilTimeout: 5000 })
 
 const TOKEN = 'secret-invitation-token'
 

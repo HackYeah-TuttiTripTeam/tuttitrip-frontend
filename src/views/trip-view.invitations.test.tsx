@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
-import { screen, waitFor, within } from '@testing-library/react'
+import { configure, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { INVITATION_TOKEN, TRIP_ID } from '@/mocks/fixtures'
 import { server, useScenario } from '@/mocks/node'
 import { renderApp } from '@/mocks/render-app'
 import { m } from '@/paraglide/messages'
+
+// The first render of a route loads its chunk; under a parallel run that can take over a second.
+configure({ asyncUtilTimeout: 5000 })
 
 // The real component draws the SVG; here only what it was asked to encode matters.
 const qr = vi.hoisted(() => ({ props: null as Record<string, unknown> | null }))
