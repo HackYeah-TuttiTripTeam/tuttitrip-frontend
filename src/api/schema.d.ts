@@ -613,11 +613,100 @@ export interface paths {
          */
         get: operations["list_profiles_api_v1_trips__trip_id__profiles_get"];
         put?: never;
+        /**
+         * Create Profile
+         * @description Add a person; comfort fields not given come from their age.
+         *
+         *     Args:
+         *         data: Name, age, optional account link and comfort overrides.
+         *         membership: The caller's co-host (or higher) membership.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The created profile.
+         *
+         *     Wymagane uprawnienie: `profiles.core:WRITE`.
+         */
+        post: operations["create_profile_api_v1_trips__trip_id__profiles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/profiles/weights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Weights
+         * @description Set weights by a preset or a list (``max/min`` must stay at most 3).
+         *
+         *     Args:
+         *         data: A preset or explicit weights.
+         *         membership: The caller's co-host (or higher) membership.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         All profiles of the trip with the new weights.
+         *
+         *     Wymagane uprawnienie: `profiles.core:WRITE`.
+         */
+        put: operations["set_weights_api_v1_trips__trip_id__profiles_weights_put"];
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/profiles/{profile_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Profile
+         * @description Remove a person from the trip.
+         *
+         *     Args:
+         *         profile_id: Profile to delete.
+         *         membership: The caller's co-host (or higher) membership.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         An empty 204 response.
+         *
+         *     Wymagane uprawnienie: `profiles.core:WRITE`.
+         */
+        delete: operations["delete_profile_api_v1_trips__trip_id__profiles__profile_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Profile
+         * @description Edit your own profile, or any profile as a co-host or higher.
+         *
+         *     Args:
+         *         profile_id: Profile to edit.
+         *         data: Fields to change.
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The updated profile.
+         *
+         *     Wymagane uprawnienie: `profiles.core:WRITE`.
+         */
+        patch: operations["update_profile_api_v1_trips__trip_id__profiles__profile_id__patch"];
         trace?: never;
     };
     "/api/v1/planning/jobs": {
@@ -921,7 +1010,7 @@ export interface components {
          * @description Age group that drives default constraints (distance, naps, pace).
          * @enum {string}
          */
-        AgeGroup: "child" | "teen" | "adult" | "senior";
+        AgeGroup: "toddler" | "child" | "teen" | "adult" | "senior";
         /**
          * Amenity
          * @description Lodging amenity checked against the requirements contract.
@@ -1994,10 +2083,69 @@ export interface components {
          */
         PriceUnit: "person" | "night" | "group";
         /**
+         * ProfileCreate
+         * @description A new person; every comfort field defaults from the age.
+         */
+        ProfileCreate: {
+            /**
+             * User Sub
+             * @description Auth0 subject of a trip member this profile belongs to.
+             */
+            user_sub?: string | null;
+            /** Segment Km */
+            segment_km?: number | null;
+            /** Daily Km */
+            daily_km?: number | null;
+            /** Active Min */
+            active_min?: number | null;
+            /** Stairs Sensitivity */
+            stairs_sensitivity?: number | null;
+            /** Queue Patience Min */
+            queue_patience_min?: number | null;
+            /** Nap Start */
+            nap_start?: string | null;
+            /** Nap Minutes */
+            nap_minutes?: number | null;
+            /** Floor */
+            floor?: number | null;
+            /** Display Name */
+            display_name: string;
+            /** Age */
+            age: number;
+        };
+        /**
          * ProfileRead
          * @description A person on a trip.
          */
         ProfileRead: {
+            /**
+             * Segment Km
+             * @description Longest walk in one go.
+             */
+            segment_km: number;
+            /**
+             * Daily Km
+             * @description Daily walking distance.
+             */
+            daily_km: number;
+            /**
+             * Active Min
+             * @description Active minutes per day.
+             */
+            active_min: number;
+            /** Stairs Sensitivity */
+            stairs_sensitivity: number;
+            /** Queue Patience Min */
+            queue_patience_min: number;
+            /** Nap Start */
+            nap_start?: string | null;
+            /** Nap Minutes */
+            nap_minutes: number;
+            /**
+             * Floor
+             * @description Minimum welfare the person needs.
+             */
+            floor: number;
             /**
              * Id
              * Format: uuid
@@ -2010,13 +2158,56 @@ export interface components {
             trip_id: string;
             /** Display Name */
             display_name: string;
+            /** Age */
+            age: number;
             age_group: components["schemas"]["AgeGroup"];
+            /** User Sub */
+            user_sub: string | null;
             /**
              * Weight
              * @description Vote multiplier in the fairness solver.
              */
             weight: number;
         };
+        /**
+         * ProfileUpdate
+         * @description Partial update; omitted fields stay (or follow a new age group).
+         *
+         *     ``user_sub`` is for co-hosts and above.
+         */
+        ProfileUpdate: {
+            /**
+             * User Sub
+             * @description Auth0 subject of a trip member this profile belongs to.
+             */
+            user_sub?: string | null;
+            /** Segment Km */
+            segment_km?: number | null;
+            /** Daily Km */
+            daily_km?: number | null;
+            /** Active Min */
+            active_min?: number | null;
+            /** Stairs Sensitivity */
+            stairs_sensitivity?: number | null;
+            /** Queue Patience Min */
+            queue_patience_min?: number | null;
+            /** Nap Start */
+            nap_start?: string | null;
+            /** Nap Minutes */
+            nap_minutes?: number | null;
+            /** Floor */
+            floor?: number | null;
+            /** Display Name */
+            display_name?: string | null;
+            /** Age */
+            age?: number | null;
+        };
+        /**
+         * ProfileWeightPreset
+         * @description Ready-made weight settings.
+         * @enum {string}
+         */
+        ProfileWeightPreset: "po_rowno" | "pod_dzieci" | "dzien_babci";
         /**
          * Progress
          * @description Value of the ``progress`` event.
@@ -2341,11 +2532,41 @@ export interface components {
          */
         Weekday: "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
         /**
+         * WeightItem
+         * @description One person's weight.
+         */
+        WeightItem: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Weight */
+            weight: number;
+        };
+        /**
          * WeightPreset
          * @description Weight preset of the fairness solver.
          * @enum {string}
          */
         WeightPreset: "default" | "equal" | "weighted";
+        /**
+         * WeightsUpdate
+         * @description Set weights by a preset or by hand (exactly one of the two).
+         */
+        WeightsUpdate: {
+            preset?: components["schemas"]["ProfileWeightPreset"] | null;
+            /**
+             * Focus Profile Id
+             * @description The chosen person for preset dzien_babci.
+             */
+            focus_profile_id?: string | null;
+            /**
+             * Weights
+             * @description Weights of some people (each once); the rest keep theirs.
+             */
+            weights?: components["schemas"]["WeightItem"][] | null;
+        };
     };
     responses: never;
     parameters: never;
@@ -3337,6 +3558,198 @@ export interface operations {
                 content?: never;
             };
             /** @description Brak uprawnienia `profiles.core:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_profile_api_v1_trips__trip_id__profiles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_weights_api_v1_trips__trip_id__profiles_weights_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeightsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileRead"][];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_profile_api_v1_trips__trip_id__profiles__profile_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_profile_api_v1_trips__trip_id__profiles__profile_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.core:WRITE` */
             403: {
                 headers: {
                     [name: string]: unknown;
