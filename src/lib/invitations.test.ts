@@ -12,6 +12,7 @@ const invitation = (over: Partial<Invitation> = {}): Invitation => ({
   max_uses: 10,
   uses: 3,
   revoked_at: null,
+  profile_id: null,
   ...over,
 })
 
