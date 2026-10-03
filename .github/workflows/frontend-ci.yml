@@ -239,7 +239,17 @@ jobs:
             [ "$(curl -s -o /dev/null -w '%{http_code}' "$url/assets/smoke-missing.js")" = 404 ] &&
               curl -fsS "$url/" | grep -q '<div id="root">' &&
               curl -fsS -H 'Sec-Fetch-Mode: navigate' "$url/trips?sort=name" | grep -q '<div id="root">' &&
-              curl -fsS "$url/trips?sort=name" | grep -q '<div id="root">'
+              curl -fsS "$url/trips?sort=name" | grep -q '<div id="root">' &&
+              robots_ok
+          }
+          # Only main may be indexed: everywhere else robots.txt is closed and pages say noindex.
+          robots_ok() {
+            if [ "${{ github.ref_name }}" = main ]; then
+              curl -fsS "$url/robots.txt" | grep -q '^Allow: /'
+            else
+              curl -fsS "$url/robots.txt" | grep -q '^Disallow: /$' &&
+                curl -fsSI "$url/about" | grep -qi '^x-robots-tag: noindex'
+            fi
           }
           # /api must reach the backend, never the SPA fallback (index.html).
           api_ok() {

@@ -86,17 +86,6 @@ async function proxy(request: Request, env: Env): Promise<Response> {
   return response
 }
 
-// The subset of the Workers HTMLRewriter API used below (the DOM lib does not type it).
-interface ElementHandle {
-  remove(): void
-  append(content: string, options: { html: boolean }): void
-  setAttribute(name: string, value: string): void
-}
-declare class HTMLRewriter {
-  on(selector: string, handlers: { element(element: ElementHandle): void }): HTMLRewriter
-  transform(response: Response): Response
-}
-
 const text = (body: string, type: string) =>
   new Response(body, {
     headers: { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'public, max-age=3600' },
@@ -184,19 +173,26 @@ const REVALIDATED_ASSETS = ['/assets/photos/', '/assets/fonts/']
 async function assetsOr404(request: Request, env: Env): Promise<Response> {
   const response = await env.ASSETS.fetch(request)
   const { pathname } = new URL(request.url)
-  if (REVALIDATED_ASSETS.some((prefix) => pathname.startsWith(prefix)) && response.ok) {
+  const isHtml = response.headers.get('content-type')?.startsWith('text/html')
+  if (isFileLike(pathname) && isHtml) {
+    return new Response('Not found', {
+      status: 404,
+      headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
+    })
+  }
+  // Production only: other deployments keep the always-revalidate headers of the build.
+  if (
+    isProduction(env) &&
+    response.ok &&
+    !isHtml &&
+    REVALIDATED_ASSETS.some((prefix) => pathname.startsWith(prefix))
+  ) {
     // Same name, maybe new content after a deploy: a day, then a week of stale-while-revalidate.
     const revalidated = new Response(response.body, response)
     revalidated.headers.set('cache-control', 'public, max-age=86400, stale-while-revalidate=604800')
     return revalidated
   }
-  if (!isFileLike(pathname) || !response.headers.get('content-type')?.startsWith('text/html')) {
-    return response
-  }
-  return new Response('Not found', {
-    status: 404,
-    headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
-  })
+  return response
 }
 
 /** The last segment has an extension other than .html: /assets/a.js, /workbox-1.js. */

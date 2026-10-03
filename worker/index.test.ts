@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import worker from './index'
 
-// A minimal HTMLRewriter for Node: just the selectors the Worker uses, on plain strings.
+// A minimal HTMLRewriter for Node: just the selectors the Worker uses, on plain strings. It only
+// proves that the handlers are called and what they emit, not real HTMLRewriter semantics.
 class FakeHTMLRewriter {
   private handlers: [string, { element(el: unknown): void }][] = []
   on(selector: string, handler: { element(el: unknown): void }) {
@@ -187,6 +188,26 @@ describe('public pages', () => {
     )
     expect(js.headers.get('cache-control')).toContain('immutable')
     expect(js.headers.get('vary')).toBeNull()
+  })
+
+  it('keeps a missing photo or font a 404, never cached HTML', async () => {
+    for (const path of ['/assets/photos/missing.avif', '/assets/fonts/missing.woff2']) {
+      const response = await worker.fetch(new Request(`https://app.test${path}`), env(page))
+      expect(response.status).toBe(404)
+      expect(response.headers.get('cache-control')).toBe('no-store')
+    }
+  })
+
+  it('leaves the photo cache to the build outside production', async () => {
+    const photo = () =>
+      new Response('x', {
+        headers: { 'content-type': 'image/avif', 'cache-control': 'no-cache' },
+      })
+    const response = await worker.fetch(
+      new Request('https://dev.test/assets/photos/a-480.avif'),
+      env(photo, 'develop'),
+    )
+    expect(response.headers.get('cache-control')).toBe('no-cache')
   })
 
   it('does not touch other navigations', async () => {
