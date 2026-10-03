@@ -1,11 +1,25 @@
 import { delay, HttpResponse, http, type RequestHandler } from 'msw'
 import type { Schemas } from '@/api/client'
-import { me, type Plan, type Profile, plan, TRIP_ID, trip } from './fixtures'
+import {
+  INVITATION_TOKEN,
+  invitation,
+  me,
+  type Plan,
+  PROFILE_IDS,
+  type Profile,
+  plan,
+  TRIP_ID,
+  trip,
+} from './fixtures'
 import { createWorld, type ScenarioName, type World } from './scenarios'
 
 const API = '*/api/v1'
 
 const notFound = (detail: string) => HttpResponse.json({ detail }, { status: 404 })
+const NO_STORE = { 'Cache-Control': 'no-store' }
+/** One answer for every dead token, as the API gives: no hint whether it expired or never existed. */
+const deadInvitation = () =>
+  HttpResponse.json({ detail: 'Invitation not found' }, { status: 404, headers: NO_STORE })
 const forbidden = () =>
   HttpResponse.json({ detail: 'Brak uprawnienia do tej operacji' }, { status: 403 })
 
@@ -183,6 +197,76 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       const profile = world.profiles.find((p) => p.id === params.profileId)
       if (profile) profile.user_sub = null
       return new HttpResponse(null, { status: 204 })
+    }),
+
+    // Invitations. The token is shown once, in the 201 answer; every answer that touches it is
+    // no-store, like the real API.
+    http.get(`${API}/trips/:tripId/invitations`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!canWrite(params.tripId)) return forbidden()
+      return HttpResponse.json(world.invitations)
+    }),
+
+    http.post(`${API}/trips/:tripId/invitations`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!canWrite(params.tripId)) return forbidden()
+      const body = (await request.json()) as Schemas['InvitationCreate']
+      const created = invitation({
+        id: crypto.randomUUID(),
+        trip_id: String(params.tripId),
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + body.expires_in_days * 86_400_000).toISOString(),
+        max_uses: body.max_uses,
+        uses: 0,
+      })
+      world.invitations.unshift(created)
+      return HttpResponse.json(
+        { ...created, token: INVITATION_TOKEN },
+        { status: 201, headers: NO_STORE },
+      )
+    }),
+
+    http.delete(`${API}/trips/:tripId/invitations/:invitationId`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!canWrite(params.tripId)) return forbidden()
+      const found = world.invitations.find((candidate) => candidate.id === params.invitationId)
+      if (!found) return notFound('Invitation not found')
+      found.revoked_at ??= new Date().toISOString()
+      return HttpResponse.json(found)
+    }),
+
+    http.post(`${API}/invitations/preview`, async ({ request }) => {
+      await latency()
+      const body = (await request.json()) as Schemas['InvitationToken']
+      if (!body.token || world.join.preview === 'dead') return deadInvitation()
+      const main = world.trips[0]
+      return HttpResponse.json(
+        {
+          trip_name: main?.name ?? '',
+          destination: main?.destination ?? null,
+          already_member: world.join.alreadyMember,
+        },
+        { headers: NO_STORE },
+      )
+    }),
+
+    http.post(`${API}/invitations/accept`, async ({ request }) => {
+      await latency()
+      const body = (await request.json()) as Schemas['InvitationAccept']
+      if (!body.token || world.join.preview === 'dead' || world.join.accept === 'dead')
+        return deadInvitation()
+      return HttpResponse.json(
+        {
+          trip_id: world.trips[0]?.id ?? TRIP_ID,
+          profile_id: PROFILE_IDS.mama,
+          role: 'member',
+          already_member: world.join.alreadyMember,
+        },
+        { headers: NO_STORE },
+      )
     }),
 
     http.get(`${API}/trips/:tripId/plans/latest`, async ({ params }) => {

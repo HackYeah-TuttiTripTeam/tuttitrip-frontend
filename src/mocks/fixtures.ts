@@ -13,6 +13,7 @@ export type PersonFairness = Schemas['PersonFairness']
 export type PlanDomainCode = Schemas['PlanDomainCode']
 export type Me = Schemas['MeResponse']
 export type Member = Schemas['MemberRead']
+export type Invitation = Schemas['InvitationRead']
 
 /** The signed-in test user, the host of most scenarios. */
 export const MOCK_USER_SUB = 'auth0|mock-user'
@@ -387,4 +388,21 @@ export const me = (): Me => ({
   roles: [],
   is_admin: false,
   access: { trips: 'WRITE', 'trips.core': 'WRITE', 'profiles.core': 'WRITE' },
+})
+
+export const INVITATION_ID = 'c5d8e1a0-3b7f-4a29-9e64-0d2f6b8a1c33'
+/** The token of the invitation every scenario's host already holds (shown only once in reality). */
+export const INVITATION_TOKEN = 'mock-invitation-token'
+
+/** A working invitation: 3 of 10 places used, valid until far in the future. */
+export const invitation = (overrides: Partial<Invitation> = {}): Invitation => ({
+  id: INVITATION_ID,
+  trip_id: TRIP_ID,
+  created_by_sub: MOCK_USER_SUB,
+  created_at: '2026-10-01T10:00:00Z',
+  expires_at: '2036-10-08T10:00:00Z',
+  max_uses: 10,
+  uses: 3,
+  revoked_at: null,
+  ...overrides,
 })

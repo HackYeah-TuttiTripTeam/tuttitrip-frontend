@@ -7,9 +7,11 @@ import { useProfileActions } from '@/hooks/use-profile-actions'
 import { useProfiles } from '@/hooks/use-profiles'
 import { useSession } from '@/hooks/use-session'
 import { m } from '@/paraglide/messages'
+import { TripInvitationsView } from './trip-view.invitations'
 
 interface TripPeopleViewProps {
   tripId: string
+  tripName: string
   canManage: boolean
 }
 
@@ -17,11 +19,13 @@ interface TripPeopleViewProps {
  * The Osoby tab. Named `trip-view.people` because a view may only import views of its own
  * name (rule 1); TripView renders it and passes the trip id and the caller's rights.
  */
-export function TripPeopleView({ tripId, canManage }: TripPeopleViewProps) {
+export function TripPeopleView({ tripId, tripName, canManage }: TripPeopleViewProps) {
   const session = useSession()
   const { people, rolesFailed, isPending, problem, refetch } = useProfiles(tripId, session.status)
   const actions = useProfileActions(tripId)
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
+
+  const invitations = canManage ? <TripInvitationsView tripId={tripId} tripName={tripName} /> : null
 
   if (isPending) return <FamilyBuilderSkeleton />
 
@@ -43,14 +47,17 @@ export function TripPeopleView({ tripId, canManage }: TripPeopleViewProps) {
   }
 
   return (
-    <FamilyBuilder
-      people={people}
-      rolesFailed={rolesFailed}
-      canManage={canManage}
-      isDesktop={isDesktop}
-      onAdd={actions.add}
-      onEdit={actions.edit}
-      onRemove={actions.remove}
-    />
+    <div className="flex flex-col gap-6">
+      <FamilyBuilder
+        people={people}
+        rolesFailed={rolesFailed}
+        canManage={canManage}
+        isDesktop={isDesktop}
+        onAdd={actions.add}
+        onEdit={actions.edit}
+        onRemove={actions.remove}
+      />
+      {invitations}
+    </div>
   )
 }
