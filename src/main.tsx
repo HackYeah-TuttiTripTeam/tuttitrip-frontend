@@ -1,4 +1,4 @@
-import { type AppState, Auth0Provider } from '@auth0/auth0-react'
+import { type AppState, Auth0Provider, useAuth0 } from '@auth0/auth0-react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
@@ -17,6 +17,17 @@ const app = (
     <RouterProvider router={router} />
   </QueryClientProvider>
 )
+
+// Auth0 redirects back with ?code=&state= (or ?error=&state=). The router would
+// redirect / -> /trips and drop those params before Auth0Provider reads them, so on
+// a callback the app waits until Auth0 has handled it.
+const isAuthCallback =
+  /[?&](code|error)=/.test(window.location.search) && /[?&]state=/.test(window.location.search)
+
+function AfterAuthCallback() {
+  const { isLoading } = useAuth0()
+  return isAuthCallback && isLoading ? null : app
+}
 
 const onRedirectCallback = (appState?: AppState) => {
   router.history.replace(typeof appState?.returnTo === 'string' ? appState.returnTo : '/trips')
@@ -39,7 +50,7 @@ createRoot(rootElement).render(
         cacheLocation="localstorage"
         onRedirectCallback={onRedirectCallback}
       >
-        {app}
+        <AfterAuthCallback />
       </Auth0Provider>
     ) : (
       app

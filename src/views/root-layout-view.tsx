@@ -42,6 +42,8 @@ export function RootLayoutView() {
         }}
         envLabel={appEnv === 'main' ? null : appEnv}
         onCreateTrip={() => {
+          // Creating a trip needs an account; ask guests to sign in first.
+          if (session.status === 'anonymous') return session.login()
           void navigate({ to: '/trips', search: (prev) => prev })
           setCreateTripOpen(true)
         }}
