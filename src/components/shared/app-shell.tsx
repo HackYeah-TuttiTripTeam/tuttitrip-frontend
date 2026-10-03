@@ -8,10 +8,12 @@ import { BrandLogo } from './brand-mark'
 import { LanguageMenu, type LanguageState } from './language-menu'
 import { tabClass } from './nav-classes'
 import { SiteFooter } from './site-footer'
+import { type ThemeState, ThemeToggle } from './theme-toggle'
 
 interface AppShellProps {
   account: AccountState
   language: LanguageState
+  theme: ThemeState
   /** Deployment name; shown as a badge everywhere except production. */
   envLabel: string | null
   onCreateTrip: () => void
@@ -22,7 +24,14 @@ interface AppShellProps {
  * Desktop: one top bar with navigation, the primary action and the account.
  * Mobile: a slim top bar plus a bottom action bar within thumb reach.
  */
-export function AppShell({ account, language, envLabel, onCreateTrip, children }: AppShellProps) {
+export function AppShell({
+  account,
+  language,
+  theme,
+  envLabel,
+  onCreateTrip,
+  children,
+}: AppShellProps) {
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
       <a
@@ -57,6 +66,9 @@ export function AppShell({ account, language, envLabel, onCreateTrip, children }
 
           <div className="ml-auto flex items-center gap-1 md:gap-3">
             <LanguageMenu language={language} />
+            <div className="hidden md:block">
+              <ThemeToggle state={theme} />
+            </div>
             <div className="hidden items-center gap-3 md:flex">
               <Button onClick={onCreateTrip}>
                 <Plus />
@@ -97,7 +109,7 @@ export function AppShell({ account, language, envLabel, onCreateTrip, children }
               <Plus />
             </Button>
           </div>
-          <AccountMenu account={account} variant="tab" />
+          <AccountMenu account={account} variant="tab" theme={theme} />
         </div>
       </nav>
     </div>

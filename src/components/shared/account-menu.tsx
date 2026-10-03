@@ -11,6 +11,7 @@ import {
 import { isDev } from '@/lib/env'
 import { m } from '@/paraglide/messages'
 import { barItemClass, tabClass } from './nav-classes'
+import { ThemeRadioGroup, type ThemeState } from './theme-toggle'
 
 export interface AccountState {
   status: 'disabled' | 'loading' | 'anonymous' | 'authenticated'
@@ -53,10 +54,13 @@ export function AccountAvatar({
 export function AccountMenu({
   account,
   variant,
+  theme,
 }: {
   account: AccountState
   /** "bar": desktop top bar, "tab": mobile bottom action bar. */
   variant: 'bar' | 'tab'
+  /** Phones have no theme button in the top bar, so the tab menu carries the choice. */
+  theme?: ThemeState
 }) {
   const className = variant === 'bar' ? barItemClass : tabClass
 
@@ -85,6 +89,15 @@ export function AccountMenu({
           <>
             <DropdownMenuLabel className="truncate">{account.userName}</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            {theme && variant === 'tab' && (
+              <>
+                <DropdownMenuLabel className="font-normal text-muted-foreground text-xs">
+                  {m.theme_label()}
+                </DropdownMenuLabel>
+                <ThemeRadioGroup state={theme} />
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem onSelect={account.onLogout}>
               <Door />
               {m.account_logout()}

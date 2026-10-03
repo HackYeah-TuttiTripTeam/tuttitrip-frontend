@@ -7,6 +7,7 @@ import { useApiAuthBridge } from '@/hooks/use-api-auth-bridge'
 import { useHomeRedirect } from '@/hooks/use-home-redirect'
 import { useLocale } from '@/hooks/use-locale'
 import { useSession } from '@/hooks/use-session'
+import { useTheme } from '@/hooks/use-theme'
 import { appEnv } from '@/lib/env'
 import { shellFor } from '@/lib/shell'
 import { useUiStore } from '@/stores/ui-store'
@@ -33,6 +34,7 @@ export function RootLayoutView() {
   useApiAuthBridge()
   const session = useSession()
   const { locale, setLocale } = useLocale()
+  const { theme, resolved, setTheme } = useTheme()
   const setCreateTripOpen = useUiStore((state) => state.setCreateTripOpen)
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
@@ -65,6 +67,7 @@ export function RootLayoutView() {
             onLogout: session.logout,
           }}
           language={language}
+          theme={{ theme, resolved, onChange: setTheme }}
           envLabel={envLabel}
           onCreateTrip={() => {
             // Creating a trip needs an account; ask guests to sign in first.

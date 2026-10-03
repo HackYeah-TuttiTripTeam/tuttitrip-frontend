@@ -9,10 +9,12 @@ import { registerServiceWorker } from '@/lib/pwa'
 import { queryClient } from '@/lib/query-client'
 import { returnToPath } from '@/lib/return-to'
 import type * as MockEntry from '@/mocks/entry'
+import { initTheme } from '@/lib/theme'
 import { router } from './router'
 import '@/styles/index.css'
 
 syncDocumentLanguage()
+initTheme()
 
 // `pnpm dev:mock`: MSW answers the API and a fake user is signed in. __API_MOCK__ is replaced by
 // a literal at build time (vite.config.ts, the only place the condition is defined), so a
