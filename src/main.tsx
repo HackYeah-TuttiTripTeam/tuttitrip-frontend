@@ -7,6 +7,7 @@ import { authConfig } from '@/lib/env'
 import { getLocale, syncDocumentLanguage } from '@/lib/i18n'
 import { registerServiceWorker } from '@/lib/pwa'
 import { queryClient } from '@/lib/query-client'
+import { returnToPath } from '@/lib/return-to'
 import { router } from './router'
 import '@/styles/index.css'
 
@@ -21,9 +22,9 @@ const app = (
   </QueryClientProvider>
 )
 
-// Auth0 redirects back with ?code=&state= (or ?error=&state=). The router would
-// redirect / -> /trips and drop those params before Auth0Provider reads them, so on
-// a callback the app waits until Auth0 has handled it.
+// Auth0 redirects back with ?code=&state= (or ?error=&state=). The router could navigate
+// away and drop those params before Auth0Provider reads them (a signed-in `/` goes to
+// /trips), so on a callback the app waits until Auth0 has handled it.
 const isAuthCallback =
   /[?&](code|error)=/.test(window.location.search) && /[?&]state=/.test(window.location.search)
 
@@ -33,7 +34,7 @@ function AfterAuthCallback() {
 }
 
 const onRedirectCallback = (appState?: AppState) => {
-  router.history.replace(typeof appState?.returnTo === 'string' ? appState.returnTo : '/trips')
+  router.history.replace(returnToPath(appState?.returnTo))
 }
 
 createRoot(rootElement).render(
