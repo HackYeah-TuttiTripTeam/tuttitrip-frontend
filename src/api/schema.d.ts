@@ -773,8 +773,11 @@ export interface paths {
          *     The response is the only time the token is visible. The frontend builds
          *     `https://<frontend>/join#t=<token>` (and a QR code from it).
          *
+         *     With `profile_id` the invitation is named: whoever joins with it takes
+         *     over that profile (without an account) and the link works once.
+         *
          *     Args:
-         *         data: Lifetime and use limit.
+         *         data: Lifetime, use limit and an optional profile to hand over.
          *         membership: The caller's (co-host) membership of ``{trip_id}``.
          *         session: Database session.
          *
@@ -831,7 +834,10 @@ export interface paths {
         put?: never;
         /**
          * Preview Invitation
-         * @description Show the trip behind an invitation token (name and destination).
+         * @description Show the trip behind an invitation token and who can be taken over.
+         *
+         *     `claimable_profiles` lists the trip's people without an account (id, name,
+         *     age group, nothing else) so the joining person can point at themselves.
          *
          *     Args:
          *         body: The token from the link's `#t=` fragment.
@@ -839,7 +845,7 @@ export interface paths {
          *         session: Database session.
          *
          *     Returns:
-         *         The trip's name and destination.
+         *         The trip's name and destination and the claimable profiles.
          *
          *     Wymagane uprawnienie: `trips.invitations:READ`.
          */
@@ -863,11 +869,15 @@ export interface paths {
          * Accept Invitation
          * @description Join the trip as a member and get a profile linked to your account.
          *
-         *     Idempotent: if you are on the trip already you get your profile back
-         *     (`already_member: true`) and the link's use limit is not touched.
+         *     With `profile_id` you take over an existing profile without an account
+         *     (membership and profile link in one transaction) instead of getting a new
+         *     one; a named invitation does that by itself. Idempotent: if you are on the
+         *     trip already you get your profile back (`already_member: true`) and the
+         *     link's use limit is not touched.
          *
          *     Args:
-         *         body: The token and an optional profile name.
+         *         body: The token, an optional profile name and an optional profile to
+         *             take over.
          *         user: The authenticated caller.
          *         session: Database session.
          *
@@ -1854,6 +1864,22 @@ export interface components {
             bbox_east: number;
         };
         /**
+         * ClaimableProfile
+         * @description A person without an account that an invited account can take over.
+         *
+         *     Deliberately minimal: shown to anyone holding a working invitation token.
+         */
+        ClaimableProfile: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Display Name */
+            display_name: string;
+            age_group: components["schemas"]["AgeGroup"];
+        };
+        /**
          * ConflictCode
          * @description Why a conflict is reported; the UI writes the text (PL/EN).
          * @enum {string}
@@ -2214,9 +2240,14 @@ export interface components {
             token: string;
             /**
              * Display Name
-             * @description Name on the new profile; `Uczestnik` when omitted.
+             * @description Name on the new profile; `Uczestnik` when omitted. Not used when a profile is taken over.
              */
             display_name?: string | null;
+            /**
+             * Profile Id
+             * @description Take over this profile (from the preview's `claimable_profiles`) instead of creating a new one: your account is linked to it in the same transaction as the membership. 404 when it is not on the trip, 409 when it has an account, was taken a moment ago, or the invitation is named for a different profile. Ignored when you already have a profile on the trip.
+             */
+            profile_id?: string | null;
         };
         /**
          * InvitationCreate
@@ -2231,10 +2262,15 @@ export interface components {
             expires_in_days: number;
             /**
              * Max Uses
-             * @description How many people may join with this link.
+             * @description How many people may join with this link. A named invitation (`profile_id`) always has exactly 1.
              * @default 10
              */
             max_uses: number;
+            /**
+             * Profile Id
+             * @description Makes a named invitation: the person who joins takes over this profile. It must be on the trip and have no account (404 / 409).
+             */
+            profile_id?: string | null;
         };
         /**
          * InvitationCreated
@@ -2270,6 +2306,11 @@ export interface components {
             /** Revoked At */
             revoked_at: string | null;
             /**
+             * Profile Id
+             * @description Profile a named invitation hands over; None for a general link.
+             */
+            profile_id: string | null;
+            /**
              * Token
              * @description The secret. Shown once and not recoverable. The link is `https://<frontend>/join#t=<token>` (a fragment, never a path or query); the frontend sends the token in the body of `POST /invitations/preview` and `POST /invitations/accept`.
              */
@@ -2289,6 +2330,11 @@ export interface components {
              * @description The caller is on the trip already.
              */
             already_member: boolean;
+            /**
+             * Claimable Profiles
+             * @description People on the trip without an account that you may take over: id, name and age group only. For a named invitation only its profile. Empty when you are on the trip already.
+             */
+            claimable_profiles: components["schemas"]["ClaimableProfile"][];
         };
         /**
          * InvitationRead
@@ -2323,6 +2369,11 @@ export interface components {
             uses: number;
             /** Revoked At */
             revoked_at: string | null;
+            /**
+             * Profile Id
+             * @description Profile a named invitation hands over; None for a general link.
+             */
+            profile_id: string | null;
         };
         /**
          * InvitationToken
@@ -2399,6 +2450,12 @@ export interface components {
              * @description The caller was on the trip; nothing was created.
              */
             already_member: boolean;
+            /**
+             * Profile Claimed
+             * @description An existing profile was taken over by this request.
+             * @default false
+             */
+            profile_claimed: boolean;
         };
         /**
          * LintReport
@@ -5264,6 +5321,20 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description `profile_id` is not a profile of this trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 20 working invitations already, or `profile_id` has an account. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -5411,8 +5482,15 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Unknown, expired, revoked or used-up invitation. */
+            /** @description Unknown, expired, revoked or used-up invitation (`Invitation not found`), or `profile_id` is not on the invitation's trip (`Profile not found`). */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The profile already has an account or another person took it a moment ago, or a named invitation is for a different profile. Nothing changed: no membership, no use taken. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
