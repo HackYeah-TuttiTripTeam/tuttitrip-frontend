@@ -20,4 +20,9 @@ function readAuthConfig(): AuthConfig | null {
 }
 
 /** Auth0 settings, or null when VITE_AUTH0_DOMAIN / VITE_AUTH0_CLIENT_ID are missing. */
-export const authConfig = readAuthConfig()
+export let authConfig: AuthConfig | null = readAuthConfig()
+
+/** For `pnpm dev:mock` only: the mock entry says "a session exists" before the app renders. */
+export function setAuthConfig(config: AuthConfig | null): void {
+  authConfig = config
+}

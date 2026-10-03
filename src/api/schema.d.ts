@@ -696,6 +696,145 @@ export interface paths {
         patch: operations["update_member_api_v1_trips__trip_id__members__profile_id__patch"];
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Invitations
+         * @description List the trip's invitations without the secret, newest first.
+         *
+         *     Args:
+         *         membership: The caller's (co-host) membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         Invitations with their use counts and dates.
+         *
+         *     Wymagane uprawnienie: `trips.invitations:READ`.
+         */
+        get: operations["list_invitations_api_v1_trips__trip_id__invitations_get"];
+        put?: never;
+        /**
+         * Create Invitation
+         * @description Create an invitation link token (co-host or host).
+         *
+         *     The response is the only time the token is visible. The frontend builds
+         *     `https://<frontend>/join#t=<token>` (and a QR code from it).
+         *
+         *     Args:
+         *         data: Lifetime and use limit.
+         *         membership: The caller's (co-host) membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The invitation and its token.
+         *
+         *     Wymagane uprawnienie: `trips.invitations:WRITE`.
+         */
+        post: operations["create_invitation_api_v1_trips__trip_id__invitations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/invitations/{invitation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Invitation
+         * @description Revoke an invitation (idempotent); people who joined stay members.
+         *
+         *     Args:
+         *         invitation_id: Invitation id from creation or the list.
+         *         membership: The caller's (co-host) membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The invitation with `revoked_at`.
+         *
+         *     Wymagane uprawnienie: `trips.invitations:WRITE`.
+         */
+        delete: operations["revoke_invitation_api_v1_trips__trip_id__invitations__invitation_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Invitation
+         * @description Show the trip behind an invitation token (name and destination).
+         *
+         *     Args:
+         *         body: The token from the link's `#t=` fragment.
+         *         user: The authenticated caller.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The trip's name and destination.
+         *
+         *     Wymagane uprawnienie: `trips.invitations:READ`.
+         */
+        post: operations["preview_invitation_api_v1_invitations_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/invitations/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept Invitation
+         * @description Join the trip as a member and get a profile linked to your account.
+         *
+         *     Idempotent: if you are on the trip already you get your profile back
+         *     (`already_member: true`) and the link's use limit is not touched.
+         *
+         *     Args:
+         *         body: The token and an optional profile name.
+         *         user: The authenticated caller.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The trip, your profile and your role.
+         *
+         *     Wymagane uprawnienie: `trips.invitations:WRITE`.
+         */
+        post: operations["accept_invitation_api_v1_invitations_accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/profiles": {
         parameters: {
             query?: never;
@@ -1105,7 +1244,7 @@ export interface paths {
         put?: never;
         /**
          * Generate a plan with the fairness measure (STUB)
-         * @description STUB: until backend#50 the content is a fixed sample (section 7 of `docs/algorytm.md`); the shape is final.
+         * @description STUB: until backend#50 the content is a fixed sample (section 7 of `docs/algorytm.md`); the shape is final. The variant is chosen from the trip: `sha256(str(trip_id).encode())[0] % 3` (first byte of the digest) gives `group`, `solo` or `approval` (`needs_approval` with `kappa`), so one trip always returns the same plan and `plan_hash`. `group` and `approval` include an unverified price and a free stop; `solo` (two days) has neither; all variants have a stop without an hours source and transfers with and without a cost.
          *
          *     Generates a plan with the fairness measure, ledger, verdicts and budget. Repeating the call with the same `input_hash` returns 200 with the existing version instead of 201 (the stub always returns 201).
          *
@@ -1127,7 +1266,7 @@ export interface paths {
         };
         /**
          * Latest plan of the trip (STUB)
-         * @description STUB: until backend#50 the content is a fixed sample (section 7 of `docs/algorytm.md`); the shape is final.
+         * @description STUB: until backend#50 the content is a fixed sample (section 7 of `docs/algorytm.md`); the shape is final. The variant is chosen from the trip: `sha256(str(trip_id).encode())[0] % 3` (first byte of the digest) gives `group`, `solo` or `approval` (`needs_approval` with `kappa`), so one trip always returns the same plan and `plan_hash`. `group` and `approval` include an unverified price and a free stop; `solo` (two days) has neither; all variants have a stop without an hours source and transfers with and without a cost.
          *
          *     Returns 404 `No plan yet` when the trip has no plan (the empty state of the plan view); the stub always has one and never returns it.
          *
@@ -1840,6 +1979,139 @@ export interface components {
             worker_contract_version?: number | null;
         };
         /**
+         * InvitationAccept
+         * @description Body of accepting an invitation.
+         */
+        InvitationAccept: {
+            /**
+             * Token
+             * @description Token read from the `#t=` fragment of the link.
+             */
+            token: string;
+            /**
+             * Display Name
+             * @description Name on the new profile; `Uczestnik` when omitted.
+             */
+            display_name?: string | null;
+        };
+        /**
+         * InvitationCreate
+         * @description Payload for a new invitation link.
+         */
+        InvitationCreate: {
+            /**
+             * Expires In Days
+             * @description Days until the link stops working.
+             * @default 7
+             */
+            expires_in_days: number;
+            /**
+             * Max Uses
+             * @description How many people may join with this link.
+             * @default 10
+             */
+            max_uses: number;
+        };
+        /**
+         * InvitationCreated
+         * @description Response of creation: the only time the token is shown.
+         */
+        InvitationCreated: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /** Created By Sub */
+            created_by_sub: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Max Uses */
+            max_uses: number;
+            /** Uses */
+            uses: number;
+            /** Revoked At */
+            revoked_at: string | null;
+            /**
+             * Token
+             * @description The secret. Shown once and not recoverable. The link is `https://<frontend>/join#t=<token>` (a fragment, never a path or query); the frontend sends the token in the body of `POST /invitations/preview` and `POST /invitations/accept`.
+             */
+            token: string;
+        };
+        /**
+         * InvitationPreview
+         * @description What a person sees before joining.
+         */
+        InvitationPreview: {
+            /** Trip Name */
+            trip_name: string;
+            /** Destination */
+            destination: string | null;
+            /**
+             * Already Member
+             * @description The caller is on the trip already.
+             */
+            already_member: boolean;
+        };
+        /**
+         * InvitationRead
+         * @description A stored invitation's public data (the token itself is never stored).
+         */
+        InvitationRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /** Created By Sub */
+            created_by_sub: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Max Uses */
+            max_uses: number;
+            /** Uses */
+            uses: number;
+            /** Revoked At */
+            revoked_at: string | null;
+        };
+        /**
+         * InvitationToken
+         * @description Body that carries the token (it never goes in the path or query).
+         */
+        InvitationToken: {
+            /**
+             * Token
+             * @description Token read from the `#t=` fragment of the link.
+             */
+            token: string;
+        };
+        /**
          * JobAccepted
          * @description Returned when a job is enqueued.
          */
@@ -1880,6 +2152,29 @@ export interface components {
              */
             error_code?: string | null;
             progress?: components["schemas"]["Progress"] | null;
+        };
+        /**
+         * JoinResult
+         * @description Result of accepting an invitation.
+         */
+        JoinResult: {
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /**
+             * Profile Id
+             * Format: uuid
+             * @description The caller's profile on the trip.
+             */
+            profile_id: string;
+            role: components["schemas"]["TripRole"];
+            /**
+             * Already Member
+             * @description The caller was on the trip; nothing was created.
+             */
+            already_member: boolean;
         };
         /**
          * LintReport
@@ -4441,6 +4736,254 @@ export interface operations {
             };
             /** @description Brak uprawnienia `trips.members:WRITE` */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_invitations_api_v1_trips__trip_id__invitations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationRead"][];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.invitations:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_invitation_api_v1_trips__trip_id__invitations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvitationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationCreated"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.invitations:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_invitation_api_v1_trips__trip_id__invitations__invitation_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitation_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.invitations:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_invitation_api_v1_invitations_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvitationToken"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationPreview"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.invitations:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown, expired, revoked or used-up invitation. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_invitation_api_v1_invitations_accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvitationAccept"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JoinResult"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.invitations:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown, expired, revoked or used-up invitation. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
