@@ -1,0 +1,48 @@
+// Builds the app for a non-production and for the production environment and checks the
+// service worker that comes out (not just the options that go in).
+import { execFileSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterAll, describe, expect, it } from 'vitest'
+
+const dirs = []
+
+function build(appEnv) {
+  const out = mkdtempSync(join(tmpdir(), `tuttitrip-${appEnv}-`))
+  dirs.push(out)
+  execFileSync('pnpm', ['exec', 'vite', 'build', '--outDir', out, '--emptyOutDir'], {
+    env: { ...process.env, VITE_APP_ENV: appEnv },
+    stdio: 'pipe',
+  })
+  return {
+    sw: readFileSync(join(out, 'sw.js'), 'utf8'),
+    headers: readFileSync(join(out, '_headers'), 'utf8'),
+  }
+}
+
+afterAll(() => {
+  for (const dir of dirs) rmSync(dir, { recursive: true, force: true })
+})
+
+describe('built service worker', () => {
+  it('precaches nothing and has no app-shell cache on develop', () => {
+    const { sw, headers } = build('develop')
+    expect(sw).not.toContain('precacheAndRoute')
+    expect(sw).not.toContain('NetworkFirst')
+    expect(sw).not.toContain('app-shell')
+    expect(sw).toContain('skipWaiting')
+    expect(sw).toContain('sw-activate.js')
+    expect(headers).toContain('Cache-Control: no-cache')
+    expect(headers).not.toContain('immutable')
+  }, 120_000)
+
+  it('precaches the assets and asks the network first for navigations on main', () => {
+    const { sw, headers } = build('main')
+    expect(sw).toContain('precacheAndRoute')
+    expect(sw).toContain('manifest.webmanifest')
+    expect(sw).not.toContain('"index.html"')
+    expect(sw).toContain('NetworkFirst')
+    expect(headers).toContain('immutable')
+  }, 120_000)
+})

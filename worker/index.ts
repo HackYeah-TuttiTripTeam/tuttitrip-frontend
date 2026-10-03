@@ -2,9 +2,10 @@
 // backend of this environment (API_ORIGIN), so the browser only talks to its own
 // origin (no CORS, one URL per environment). See AGENTS.md "API proxy".
 //
-// wrangler.jsonc runs this script first for /api/* (assets.run_worker_first).
-// Any other path reaches it only when no asset matched a non-navigation request
-// (curl, fetch); those go back to the assets, which apply the SPA fallback.
+// wrangler.jsonc runs this script first for /api/* and /assets/* (assets.run_worker_first).
+// Existing files under /assets/* are handed to the assets unchanged; a missing one would
+// get the SPA fallback (200 index.html), so it becomes a 404 (assetsOr404). Other paths
+// are served by the assets layer without this script.
 
 interface Env {
   /** Backend origin without a trailing slash, e.g. https://tuttitrip-api.gburek.app */
@@ -81,6 +82,30 @@ export default {
   fetch(request: Request, env: Env): Promise<Response> {
     const { pathname } = new URL(request.url)
     if (pathname.startsWith('/api/')) return proxy(request, env)
-    return env.ASSETS.fetch(request)
+    return assetsOr404(request, env)
   },
+}
+
+// Reached for /assets/* (run_worker_first). The assets layer answers a path without a file
+// with the SPA fallback: index.html and status 200. For a file that does not exist
+// (a chunk removed by a newer deploy, a stray .js) that means a MIME error and a blank
+// page in a returning browser, so a file-like path that comes back as HTML is a real 404
+// (the app reloads once on that error, see src/lib/stale-assets.ts). Extensionless paths
+// (/trips/abc, /join, /about) and .html stay the SPA's: deep links keep answering 200.
+async function assetsOr404(request: Request, env: Env): Promise<Response> {
+  const response = await env.ASSETS.fetch(request)
+  const { pathname } = new URL(request.url)
+  if (!isFileLike(pathname) || !response.headers.get('content-type')?.startsWith('text/html')) {
+    return response
+  }
+  return new Response('Not found', {
+    status: 404,
+    headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
+  })
+}
+
+/** The last segment has an extension other than .html: /assets/a.js, /workbox-1.js. */
+function isFileLike(pathname: string): boolean {
+  const last = pathname.split('/').pop() ?? ''
+  return /\.[A-Za-z0-9]+$/.test(last) && !last.endsWith('.html')
 }

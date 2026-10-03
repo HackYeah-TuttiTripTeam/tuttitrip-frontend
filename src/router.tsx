@@ -1,5 +1,6 @@
 import { createRouter } from '@tanstack/react-router'
 import { queryClient } from '@/lib/query-client'
+import { routeErrorHandler } from '@/lib/stale-assets'
 import { routeTree } from './routeTree.gen'
 
 export const router = createRouter({
@@ -9,6 +10,8 @@ export const router = createRouter({
   // Let TanStack Query decide when data is stale
   defaultPreloadStaleTime: 0,
   scrollRestoration: true,
+  // A lazy route chunk removed by a newer deploy: reload once to get the current build.
+  defaultOnCatch: routeErrorHandler(),
 })
 
 declare module '@tanstack/react-router' {
