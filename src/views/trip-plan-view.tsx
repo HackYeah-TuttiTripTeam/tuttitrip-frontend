@@ -19,7 +19,7 @@ interface TripPlanViewProps {
 
 /** The Plan tab: the latest plan day by day, or the empty state with "Build plan". */
 export function TripPlanView({ tripId, role }: TripPlanViewProps) {
-  const { plan, isPending, isRefreshing, hasNoPlan, problem, refetch } = usePlan(tripId)
+  const { plan, isPending, hasNoPlan, problem, refetch } = usePlan(tripId)
   const creation = useCreatePlan(tripId)
   const [day, setDay] = useState(1)
   const canBuild = role !== 'member'
@@ -89,7 +89,7 @@ export function TripPlanView({ tripId, role }: TripPlanViewProps) {
     )
   }
 
-  const recalculating = isRefreshing || creation.isPending
+  const recalculating = creation.isPending
   // A recalculation can drop days; never point at one that is gone.
   const current = plan.days.some((candidate) => candidate.index === day)
     ? day

@@ -110,7 +110,8 @@ function Rail({ dot = false }: { dot?: boolean }) {
  * counts (base inflated by delta, from the API); no price at all is "no data", never a guess.
  */
 function PriceLine({ stop, currency }: PlanStopItemProps) {
-  const price = stop.price_base ?? stop.cost_per_person
+  // No base price or no source: "no data". A price never comes from anywhere but the data.
+  const price = stop.price_source_url ? stop.price_base : null
   if (price == null) {
     return <p className="text-muted-foreground text-sm leading-[22px]">{m.plan_price_none()}</p>
   }

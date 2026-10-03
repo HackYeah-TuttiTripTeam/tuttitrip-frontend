@@ -99,7 +99,7 @@ const plan = (): Plan =>
     id: '85696247-04f0-5d19-beb7-b80f2c6162e4',
     trip_id: TRIP_ID,
     version: 2,
-    plan_hash: '0ba4b2876b9dffff',
+    plan_hash: '0ba4b2876b9d',
     budget: { currency: 'PLN' },
     days: [
       {
@@ -118,7 +118,7 @@ const plan = (): Plan =>
             price_base: '500.00',
             price_inflated: '575.00',
             price_verified: false,
-            price_source_url: null,
+            price_source_url: 'https://cennik.example.com/indyjska',
             price_verified_at: null,
             hours_verified: false,
             hours_source_url: null,
@@ -246,6 +246,16 @@ describe('TripView', () => {
       expect(screen.getByText(m.plan_price_per_person({ amount: '500 zł' }))).toBeTruthy()
       const source = screen.getByRole('link', { name: /tickets.example.com/ })
       expect(source.getAttribute('href')).toBe('https://tickets.example.com/muzeum')
+    })
+
+    it('shows "no data" for a price without a source, never a number', async () => {
+      const noSource = plan()
+      const first = noSource.days[0]?.items[0]
+      if (first) first.price_source_url = null
+      api.plan = json(200, noSource)
+      openPlan()
+      expect(await screen.findByText(m.plan_price_none())).toBeTruthy()
+      expect(screen.queryByText(m.plan_price_per_person({ amount: '25 zł' }))).toBeNull()
     })
 
     it('shows the empty state and builds the plan on click', async () => {

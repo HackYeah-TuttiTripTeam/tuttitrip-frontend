@@ -6,7 +6,12 @@ import { planQueryOptions } from '@/api/queries/plans'
 export function useCreatePlan(tripId: string) {
   const queryClient = useQueryClient()
   const mutation = $api.useMutation('post', '/api/v1/trips/{trip_id}/plans', {
-    onSuccess: (plan) => queryClient.setQueryData(planQueryOptions(tripId).queryKey, plan),
+    onSuccess: async (plan) => {
+      const { queryKey } = planQueryOptions(tripId)
+      // A fetch of the old plan still in flight must not overwrite the new one.
+      await queryClient.cancelQueries({ queryKey })
+      queryClient.setQueryData(queryKey, plan)
+    },
   })
 
   return {

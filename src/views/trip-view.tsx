@@ -115,7 +115,7 @@ export function TripView() {
         tab={tab}
         onTabChange={setTab}
         role={trip.my_role}
-        planPanel={<TripPlanView tripId={trip.id} role={trip.my_role} />}
+        planPanel={<TripPlanView key={trip.id} tripId={trip.id} role={trip.my_role} />}
       />
     </div>
   )

@@ -164,7 +164,6 @@
   "plan_price_per_person": "{amount} na osobę",
   "plan_price_budgeted": "w budżecie {amount}",
   "plan_price_none": "Cena: brak danych",
-  "plan_hours_range": "{start}–{end}",
   "plan_price_verified": "Cena zweryfikowana",
   "plan_price_unverified": "Cena niezweryfikowana",
   "plan_hours_verified": "Godziny zweryfikowane",
