@@ -893,6 +893,146 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/profiles/{profile_id}/ratings/{place_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Rate Place
+         * @description Rate a catalog place: want, neutral, or do not want with a reason.
+         *
+         *     Your own profile, or any profile as a co-host or higher. Sending the same
+         *     rating again keeps a single row.
+         *
+         *     Args:
+         *         profile_id: Whose rating it is.
+         *         place_id: Catalog place.
+         *         data: Value and, for ``dont_want``, the reason code.
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The stored rating.
+         *
+         *     Wymagane uprawnienie: `profiles.feedback:WRITE`.
+         */
+        put: operations["rate_place_api_v1_trips__trip_id__profiles__profile_id__ratings__place_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/ratings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Ratings
+         * @description List every rating of the trip.
+         *
+         *     Args:
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         All ratings.
+         *
+         *     Wymagane uprawnienie: `profiles.feedback:READ`.
+         */
+        get: operations["list_ratings_api_v1_trips__trip_id__ratings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/vetoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Vetoes
+         * @description List the vetoes in force on the trip (revoked ones are left out).
+         *
+         *     Args:
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         Active vetoes with their authors.
+         *
+         *     Wymagane uprawnienie: `profiles.feedback:READ`.
+         */
+        get: operations["list_vetoes_api_v1_trips__trip_id__vetoes_get"];
+        put?: never;
+        /**
+         * Create Veto
+         * @description Veto a place for a person: a hard block, with the author recorded.
+         *
+         *     Your own profile, or any profile as a co-host or higher (then
+         *     ``on_behalf`` is true). The client should recompute the plan afterwards.
+         *
+         *     Args:
+         *         data: Whose veto and which place.
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The veto.
+         *
+         *     Wymagane uprawnienie: `profiles.feedback:WRITE`.
+         */
+        post: operations["create_veto_api_v1_trips__trip_id__vetoes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/vetoes/{veto_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Veto
+         * @description Revoke a veto: the place stops being blocked.
+         *
+         *     Args:
+         *         veto_id: Veto to revoke.
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         An empty 204 response.
+         *
+         *     Wymagane uprawnienie: `profiles.feedback:WRITE`.
+         */
+        delete: operations["revoke_veto_api_v1_trips__trip_id__vetoes__veto_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/planning/jobs": {
         parameters: {
             query?: never;
@@ -2557,7 +2697,7 @@ export interface components {
             /** Queue Patience Min */
             queue_patience_min: number;
             /** Nap Start */
-            nap_start?: string | null;
+            nap_start: string | null;
             /** Nap Minutes */
             nap_minutes: number;
             /**
@@ -2587,6 +2727,11 @@ export interface components {
              * @description Vote multiplier in the fairness solver.
              */
             weight: number;
+            /**
+             * Customized Fields
+             * @description Comfort fields that differ from the defaults of the person's age group, in schema order. Read-only, computed on read.
+             */
+            readonly customized_fields: string[];
         };
         /**
          * ProfileUpdate
@@ -2638,8 +2783,53 @@ export interface components {
             percent: number;
         };
         /**
+         * RatingRead
+         * @description A stored rating.
+         */
+        RatingRead: {
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            value: components["schemas"]["RatingValue"];
+            reason_code: components["schemas"]["ReasonCode"] | null;
+            /** Updated By Sub */
+            updated_by_sub: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * RatingUpdate
+         * @description Set the rating of one person for one place (upsert).
+         */
+        RatingUpdate: {
+            value: components["schemas"]["RatingValue"];
+            /** @description Required for dont_want, forbidden otherwise. */
+            reason_code?: components["schemas"]["ReasonCode"] | null;
+        };
+        /**
+         * RatingValue
+         * @description A person's vote on a place.
+         * @enum {string}
+         */
+        RatingValue: "want" | "dont_want" | "neutral";
+        /**
          * ReasonCode
-         * @description Why a person is against a place; shared with the verdict reasons.
+         * @description Why a person is against a place; shared with the plan verdict reasons.
          * @enum {string}
          */
         ReasonCode: "too_expensive" | "too_far" | "not_my_style" | "too_crowded" | "too_hard_for_child" | "other";
@@ -3000,6 +3190,61 @@ export interface components {
          * @enum {string}
          */
         VerdictKind: "must" | "fits" | "iconic_not_yours" | "skip";
+        /**
+         * VetoCreate
+         * @description A veto of one person on one place.
+         */
+        VetoCreate: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+        };
+        /**
+         * VetoRead
+         * @description A veto with its author; ``on_behalf`` when someone else filed it.
+         */
+        VetoRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            /** Created By Sub */
+            created_by_sub: string;
+            /** On Behalf */
+            on_behalf: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Revoked By Sub */
+            revoked_by_sub: string | null;
+        };
         /**
          * Violation
          * @description A single broken rule.
@@ -4575,6 +4820,240 @@ export interface operations {
                 content?: never;
             };
             /** @description Brak uprawnienia `profiles.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rate_place_api_v1_trips__trip_id__profiles__profile_id__ratings__place_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                place_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RatingUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RatingRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.feedback:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_ratings_api_v1_trips__trip_id__ratings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RatingRead"][];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.feedback:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_vetoes_api_v1_trips__trip_id__vetoes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VetoRead"][];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.feedback:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_veto_api_v1_trips__trip_id__vetoes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VetoCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VetoRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.feedback:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_veto_api_v1_trips__trip_id__vetoes__veto_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                veto_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.feedback:WRITE` */
             403: {
                 headers: {
                     [name: string]: unknown;

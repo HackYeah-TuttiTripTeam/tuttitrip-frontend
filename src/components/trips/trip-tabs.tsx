@@ -1,6 +1,5 @@
 import { Calendar, MessageSquare, Users } from '@keyline-icons/react'
 import type { ReactNode } from 'react'
-import type { Trip } from '@/api/queries/trips'
 import { StatusMessage } from '@/components/shared/status-message'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TRIP_TABS, type TripTab } from '@/lib/trip-tabs'
@@ -21,15 +20,14 @@ const TAB_ICONS: Record<TripTab, ReactNode> = {
 interface TripTabsProps {
   tab: TripTab
   onTabChange: (tab: TripTab) => void
-  /** Decides which actions the panels offer; passed down so panels never read the API. */
-  role: Trip['my_role']
+  /** The content of the Osoby tab: a view, so this component stays free of the data layer. */
+  people: ReactNode
   /** The content of the Plan tab: a view, so this component stays free of the data layer. */
   plan: ReactNode
 }
 
-/** Wywiad, Osoby, Plan: a three-segment switch. The Interview and People panels are placeholders for the next issues. */
-export function TripTabs({ tab, onTabChange, role, plan }: TripTabsProps) {
-  const canManage = role !== 'member'
+/** Wywiad, Osoby, Plan: a three-segment switch. The Interview panel is a placeholder for the next issue. */
+export function TripTabs({ tab, onTabChange, people, plan }: TripTabsProps) {
   return (
     <Tabs
       value={tab}
@@ -52,11 +50,7 @@ export function TripTabs({ tab, onTabChange, role, plan }: TripTabsProps) {
           {m.trip_interview_body()}
         </StatusMessage>
       </TabsContent>
-      <TabsContent value="people">
-        <StatusMessage icon={<Users />} title={m.trip_people_title()}>
-          {canManage ? m.trip_people_body_manage() : m.trip_people_body_member()}
-        </StatusMessage>
-      </TabsContent>
+      <TabsContent value="people">{people}</TabsContent>
       <TabsContent value="plan">{plan}</TabsContent>
     </Tabs>
   )

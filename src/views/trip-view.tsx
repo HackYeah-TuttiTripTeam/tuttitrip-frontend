@@ -10,6 +10,7 @@ import { useTrip } from '@/hooks/use-trip'
 import { isDev } from '@/lib/env'
 import type { TripTab } from '@/lib/trip-tabs'
 import { m } from '@/paraglide/messages'
+import { TripPeopleView } from './trip-view.people'
 import { TripPlanView } from './trip-view.plan'
 
 const route = getRouteApi('/trips_/$tripId')
@@ -114,7 +115,7 @@ export function TripView() {
       <TripTabs
         tab={tab}
         onTabChange={setTab}
-        role={trip.my_role}
+        people={<TripPeopleView tripId={trip.id} canManage={trip.my_role !== 'member'} />}
         plan={<TripPlanView key={trip.id} tripId={trip.id} role={trip.my_role} />}
       />
     </div>

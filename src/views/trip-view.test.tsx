@@ -217,20 +217,6 @@ describe('TripView', () => {
     expect(interview.getAttribute('aria-selected')).toBe('true')
   })
 
-  it('shows host-only text to a host but not to a member', async () => {
-    stubApi(json(200, trip('host')))
-    renderAt(`/trips/${TRIP_ID}?tab=people`)
-    expect(await screen.findByText(m.trip_people_body_manage())).toBeTruthy()
-    cleanup()
-    queryClient.clear()
-
-    stubApi(json(200, trip('member')))
-    renderAt(`/trips/${TRIP_ID}?tab=people`)
-    const panel = await screen.findByRole('tabpanel')
-    expect(within(panel).getByText(m.trip_people_body_member())).toBeTruthy()
-    expect(screen.queryByText(m.trip_people_body_manage())).toBeNull()
-  })
-
   describe('Plan tab', () => {
     const openPlan = (role: Trip['my_role'] = 'host') => {
       stubApi(json(200, trip(role)))
