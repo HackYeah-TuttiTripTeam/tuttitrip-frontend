@@ -1,5 +1,20 @@
+// @vitest-environment jsdom
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
+import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { isStaleChunkError, type ReloadDeps, reloadIfStaleChunk, reloadOnce } from './stale-assets'
+import {
+  isStaleChunkError,
+  type ReloadDeps,
+  reloadIfStaleChunk,
+  reloadOnce,
+  routeErrorHandler,
+} from './stale-assets'
 
 function setup(start = 1_000_000) {
   const store = new Map<string, string>()
@@ -76,4 +91,36 @@ describe('reloadIfStaleChunk', () => {
     ).toBe(true)
     expect(reloads()).toBe(1)
   })
+})
+
+describe('routeErrorHandler on a lazy route', () => {
+  function lazyRouterElement(onCatch: (error: unknown) => void) {
+    const rootRoute = createRootRoute()
+    const lazy = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/',
+      component: () => {
+        throw new TypeError('Failed to fetch dynamically imported module: /assets/trips-gone.js')
+      },
+    })
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([lazy]),
+      history: createMemoryHistory({ initialEntries: ['/'] }),
+      defaultOnCatch: onCatch,
+      defaultErrorComponent: () => <p>Błąd</p>,
+    })
+    return <RouterProvider router={router} />
+  }
+
+  it('reloads once for a stale chunk and shows the error boundary, not a blank page', async () => {
+    const { deps, reloads } = setup()
+    render(lazyRouterElement(routeErrorHandler(deps)))
+    expect(await screen.findByText('Błąd')).toBeTruthy()
+    expect(reloads()).toBe(1)
+  })
+
+  it('is what the app router uses', async () => {
+    const { router } = await import('@/router')
+    expect(typeof router.options.defaultOnCatch).toBe('function')
+  }, 30_000)
 })

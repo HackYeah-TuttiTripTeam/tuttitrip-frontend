@@ -11,7 +11,7 @@ function env(assets: (request: Request) => Response) {
   }
 }
 
-describe('build files', () => {
+describe('missing files', () => {
   it('turns the SPA fallback for a missing /assets file into a 404', async () => {
     const response = await worker.fetch(
       new Request('https://app.test/assets/gone-AbC123.js'),
@@ -39,8 +39,25 @@ describe('build files', () => {
     expect(await response.text()).toBe('export {}')
   })
 
-  it('leaves deep links to the SPA fallback', async () => {
-    const response = await worker.fetch(new Request('https://app.test/trips/abc'), env(html))
-    expect(response.status).toBe(200)
+  it('turns any missing file-like path into a 404', async () => {
+    for (const path of ['/gone.js', '/styles.css', '/assets/x.js.map']) {
+      const response = await worker.fetch(new Request(`https://app.test${path}`), env(html))
+      expect(response.status).toBe(404)
+    }
+  })
+
+  it('leaves deep links, join, demo and public pages to the SPA fallback', async () => {
+    for (const path of [
+      '/trips/abc-123',
+      '/join',
+      '/demo',
+      '/about',
+      '/contact',
+      '/',
+      '/index.html',
+    ]) {
+      const response = await worker.fetch(new Request(`https://app.test${path}`), env(html))
+      expect(response.status).toBe(200)
+    }
   })
 })

@@ -2,10 +2,10 @@
 // backend of this environment (API_ORIGIN), so the browser only talks to its own
 // origin (no CORS, one URL per environment). See AGENTS.md "API proxy".
 //
-// wrangler.jsonc runs this script first for /api/*, /assets/* and the Workbox
-// runtime (assets.run_worker_first). Any other path reaches it only when no asset
-// matched a non-navigation request (curl, fetch); those go back to the assets, which
-// apply the SPA fallback.
+// wrangler.jsonc runs this script first for /api/* (assets.run_worker_first). Any other
+// path reaches it only when no asset matched a non-navigation request (curl, fetch,
+// script and module loads); those go back to the assets, which apply the SPA fallback,
+// except for missing files, which become a 404 (assetsOr404).
 
 interface Env {
   /** Backend origin without a trailing slash, e.g. https://tuttitrip-api.gburek.app */
@@ -82,25 +82,31 @@ export default {
   fetch(request: Request, env: Env): Promise<Response> {
     const { pathname } = new URL(request.url)
     if (pathname.startsWith('/api/')) return proxy(request, env)
-    if (isBuildFile(pathname)) return buildFile(request, env)
-    return env.ASSETS.fetch(request)
+    return assetsOr404(request, env)
   },
 }
 
-/** Hashed bundle files and the service worker's Workbox runtime (root, hashed name). */
-function isBuildFile(pathname: string): boolean {
-  return pathname.startsWith('/assets/') || /^\/workbox-[\w-]+\.js$/.test(pathname)
-}
-
-// The SPA fallback answers every unknown path with index.html and status 200. For a
-// script that was removed by a newer deploy that means a MIME error and a blank page
-// in a returning browser, so a build file that is missing must be a real 404 (the app
-// reloads once on that error, see src/lib/stale-assets.ts).
-async function buildFile(request: Request, env: Env): Promise<Response> {
+// Reached for every path that is not /api/ and matched no static file (files in dist/ are
+// served by the assets layer and never get here), or is a non-navigation request. The SPA
+// fallback answers those with index.html and status 200. For a file that does not exist
+// (a chunk removed by a newer deploy, a stray .js) that means a MIME error and a blank
+// page in a returning browser, so a file-like path that comes back as HTML is a real 404
+// (the app reloads once on that error, see src/lib/stale-assets.ts). Extensionless paths
+// (/trips/abc, /join, /about) and .html stay the SPA's: deep links keep answering 200.
+async function assetsOr404(request: Request, env: Env): Promise<Response> {
   const response = await env.ASSETS.fetch(request)
-  if (!response.headers.get('content-type')?.startsWith('text/html')) return response
+  const { pathname } = new URL(request.url)
+  if (!isFileLike(pathname) || !response.headers.get('content-type')?.startsWith('text/html')) {
+    return response
+  }
   return new Response('Not found', {
     status: 404,
     headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
   })
+}
+
+/** The last segment has an extension other than .html: /assets/a.js, /workbox-1.js. */
+function isFileLike(pathname: string): boolean {
+  const last = pathname.split('/').pop() ?? ''
+  return /\.[A-Za-z0-9]+$/.test(last) && !last.endsWith('.html')
 }

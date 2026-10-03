@@ -302,15 +302,15 @@ paths in `schema.d.ts` start with `/api/v1`, so every call goes to its own
 origin. No CORS, and the same build works in every environment.
 
 - Deployed: `worker/index.ts` (typed by `tsconfig.worker.json`, plain Fetch API).
-  `assets.run_worker_first: ["/api/*", "/assets/*", "/workbox-*"]` sends `/api/*`
-  to it before the assets, so the SPA fallback never answers an API path (and a
-  missing build file is a 404, see "PWA updates and caching"). It forwards method, headers
+  `assets.run_worker_first: ["/api/*"]` sends `/api/*` to it before the assets,
+  so the SPA fallback never answers an API path. It forwards method, headers
   (incl. `Authorization`), body and query to `API_ORIGIN`, streams the response
   back, and rewrites API redirects to the same origin. It drops hop-by-hop
   headers, `Cookie`, `Forwarded`, `X-Real-IP` and every client `X-Forwarded-*`/`cf-*`
   header, then sets `X-Forwarded-For` (from `CF-Connecting-IP`), `-Host`, `-Proto`.
   Other paths reach the script only for non-navigation requests without a
-  matching asset; it hands them to `env.ASSETS` (SPA fallback).
+  matching asset; it hands them to `env.ASSETS` (SPA fallback) and turns a
+  missing file-like path into a 404 (see "PWA updates and caching").
 - `API_ORIGIN` (Worker var): main `https://tuttitrip-api.gburek.app` and develop
   `https://tuttitrip-api-develop.gburek.app` in `wrangler.jsonc`; previews get
   the backend picked by `resolve-api.sh` via `--var` in `frontend-ci.yml`.
@@ -324,31 +324,54 @@ origin. No CORS, and the same build works in every environment.
 ## PWA updates and caching
 
 Settings live in `pwa.config.ts` (used by `vite.config.ts`, tested in
-`pwa.config.test.ts`). `VITE_APP_ENV=main` is the production build, every other
-value (develop, PR previews, local) is not.
+`pwa.config.test.ts`; `scripts/pwa-build.test.mjs` builds develop and main and
+checks the generated `sw.js` and `_headers`). Production is `VITE_APP_ENV=main`:
+`scripts/resolve-api.sh` turns the branch (`github.head_ref || github.ref_name`)
+into `app_env`, which is `main` only for the push to `main`, and the `checks`
+job passes it to `vite build`. Every other value (develop, PR previews, local)
+is not production.
 
 - **Every build:** `skipWaiting` + `clientsClaim` are set explicitly. With
   `injectRegister: false` the plugin does not add them for `registerType:
   autoUpdate`, so a new service worker used to sit "waiting" until every tab was
   closed and returning browsers kept running an old build. `src/lib/pwa.ts`
-  reloads the page once on `controllerchange` (not on the first install), checks
-  for a new version on `visibilitychange` and hourly. `cleanupOutdatedCaches`
-  stays on. `index.html` is never precached and there is no `navigateFallback`:
-  navigations (except `/api/*`) go through a runtime route.
+  (`reloadOnControllerUpdate`) reloads the page once when a new worker takes
+  control: it tracks the controller live, so the first install (claiming a page
+  that had none) does not reload, every later `controllerchange` does, never twice.
+  It also checks for a new version on `visibilitychange` and hourly.
+  `cleanupOutdatedCaches` stays on. `index.html` is never precached and there
+  is no `navigateFallback`.
+- **Old installs:** `public/sw-activate.js` (imported by `sw.js`) runs on
+  `activate` and navigates each open window that the previous worker controlled
+  to its own URL once, so installs older than this fix get the fresh build on
+  their first refresh instead of needing a manual Unregister. The first install
+  has no controlled windows, so nothing reloads; a worker activates once per
+  version and the reloaded page is already served by it, so there is no loop.
+  A new-style page can be reloaded by both this and `controllerchange` in the
+  same moment; the later navigation wins and it is one load. Open tabs lose
+  unsaved form input on an update, same as with the page reload.
 - **Stale chunks:** `src/lib/stale-assets.ts` reloads once (guard: 30 s in
-  `sessionStorage`, so no loop) on `vite:preloadError` and on router errors
-  such as "Failed to fetch dynamically imported module". The Worker returns a
-  real 404 for a missing `/assets/*` or `/workbox-*.js` (`run_worker_first`
-  covers them); the SPA fallback would answer 200 `index.html` and a MIME error.
-- **Production (`main`):** navigations are `NetworkFirst` (3 s timeout) with a
-  single cached shell for offline, JS/CSS/icons are precached, `/assets/*` is
-  immutable for a year, `sw.js`, `index.html` and the manifest are `no-cache`.
+  `sessionStorage`, so no loop) on `vite:preloadError` and, via the router's
+  `defaultOnCatch`, on errors such as "Failed to fetch dynamically imported
+  module". A missing file-like path (`/assets/x.js`, any extension but `.html`)
+  that the SPA fallback would answer with `index.html` is a real 404 from the
+  Worker (`assetsOr404` in `worker/index.ts`); extensionless paths stay 200.
+  The deploy smoke test checks `/assets/smoke-missing.js` -> 404.
+- **Production (`main`):** navigations are `NetworkFirst` (3 s timeout,
+  `app-shell` cache, one `/index.html` entry) so offline any deep link gets the
+  shell; JS/CSS/icons/manifest are precached; `/assets/*` and `/workbox-*` are
+  immutable for a year; `sw.js`, `sw-activate.js`, `index.html` and the manifest
+  are `no-cache`.
 - **Non-production (develop, previews):** short caching on purpose, so every
-  deploy shows on the next load: no precache (icons only), navigations
-  `NetworkOnly` (no offline there), and `_headers` sets `Cache-Control:
-  no-cache` for every path. `_headers` is generated at build time (`vite.config.ts`),
-  there is no `public/_headers`.
-- Recovering a browser stuck on an old build: DevTools -> Application ->
+  deploy shows on the next load. The built `sw.js` has no `precacheAndRoute`
+  (`includeAssets`, manifest icons and the manifest entry are dropped), no
+  `app-shell` cache and no navigation route (offline does not work there); its
+  only route is a `NetworkOnly` pass-through for `/api/*` (Workbox refuses a worker
+  with nothing to do). `_headers` sets `Cache-Control: no-cache` for every path.
+  `_headers` is generated at build time (`vite.config.ts`), there is no
+  `public/_headers`.
+- Recovering a browser stuck on an old build (only needed for installs older
+  than `sw-activate.js` that never got a new worker): DevTools -> Application ->
   Service workers -> Unregister, then Storage -> Clear site data, reload.
 
 ## Deployment (Cloudflare Workers, static assets + API proxy)

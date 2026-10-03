@@ -1,6 +1,6 @@
 import { createRouter } from '@tanstack/react-router'
 import { queryClient } from '@/lib/query-client'
-import { reloadIfStaleChunk } from '@/lib/stale-assets'
+import { routeErrorHandler } from '@/lib/stale-assets'
 import { routeTree } from './routeTree.gen'
 
 export const router = createRouter({
@@ -11,7 +11,7 @@ export const router = createRouter({
   defaultPreloadStaleTime: 0,
   scrollRestoration: true,
   // A lazy route chunk removed by a newer deploy: reload once to get the current build.
-  defaultOnCatch: (error) => void reloadIfStaleChunk(error),
+  defaultOnCatch: routeErrorHandler(),
 })
 
 declare module '@tanstack/react-router' {

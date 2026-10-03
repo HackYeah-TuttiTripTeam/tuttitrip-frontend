@@ -47,12 +47,18 @@ function browserDeps(): ReloadDeps {
 
 /** Reload once when a lazy chunk is gone (Vite emits `vite:preloadError`). */
 export function installStaleAssetReload(deps: ReloadDeps = browserDeps()): void {
-  window.addEventListener('vite:preloadError', (event) => {
-    if (reloadOnce(deps)) event.preventDefault()
+  // Vite docs: reload and let the new build take over (no preventDefault needed).
+  window.addEventListener('vite:preloadError', () => {
+    reloadOnce(deps)
   })
 }
 
 /** For router error boundaries: reloads once for a stale-chunk error, else false. */
 export function reloadIfStaleChunk(error: unknown, deps: ReloadDeps = browserDeps()): boolean {
   return isStaleChunkError(error) && reloadOnce(deps)
+}
+
+/** `defaultOnCatch` for the router: a lazy route chunk that is gone reloads the page once. */
+export function routeErrorHandler(deps?: ReloadDeps): (error: unknown) => void {
+  return (error) => void reloadIfStaleChunk(error, deps)
 }

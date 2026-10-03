@@ -7,7 +7,7 @@ import { msw } from 'msw/vite'
 import { defineConfig, loadEnv } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { paraglideOptions } from './i18n.config.mjs'
-import { headersFile, isProductionBuild, workboxOptions } from './pwa.config.ts'
+import { headersFile, includeAssets, isProductionBuild, workboxOptions } from './pwa.config.ts'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode, command }) => {
@@ -23,6 +23,8 @@ export default defineConfig(({ mode, command }) => {
   // `define` makes it a literal in every module, so production drops the mock entry completely.
   const apiMock =
     loadEnv(mode, process.cwd(), 'VITE_').VITE_API_MOCK === '1' && mode !== 'production'
+
+  let pwaApi: { extendManifestEntries(fn: () => []): void } | undefined
 
   return {
     define: { __API_MOCK__: JSON.stringify(apiMock) },
@@ -46,12 +48,9 @@ export default defineConfig(({ mode, command }) => {
       VitePWA({
         registerType: 'autoUpdate',
         injectRegister: false, // registered in src/lib/pwa.ts
-        includeAssets: [
-          'favicon.ico',
-          'favicon.svg',
-          'icon-32.png',
-          'apple-touch-icon-180x180.png',
-        ],
+        // Outside production the service worker precaches nothing (pwa.config.ts).
+        includeAssets: production ? includeAssets : [],
+        includeManifestIcons: production,
         manifest: {
           id: '/',
           name: 'TuttiTrip',
@@ -78,6 +77,20 @@ export default defineConfig(({ mode, command }) => {
         },
         workbox: workboxOptions(production),
       }),
+      {
+        // The plugin always adds the web manifest to the precache list. Outside production
+        // the service worker precaches nothing (pwa.config.ts), so empty the list. Runs
+        // after VitePWA's own configResolved, which fills it.
+        name: 'tuttitrip:no-precache-outside-production',
+        configResolved(config) {
+          if (production) return
+          const pwa = config.plugins.find((plugin) => plugin.name === 'vite-plugin-pwa')
+          pwaApi = pwa?.api
+        },
+        buildStart() {
+          pwaApi?.extendManifestEntries(() => [])
+        },
+      },
     ],
     resolve: {
       alias: {

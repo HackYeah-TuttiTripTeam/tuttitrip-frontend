@@ -26,17 +26,14 @@ describe('workboxOptions', () => {
     })
   }
 
-  it('asks the network first in production, only the network elsewhere', () => {
-    const handler = (production: boolean) => workboxOptions(production).runtimeCaching?.[0]?.handler
-    expect(handler(true)).toBe('NetworkFirst')
-    expect(handler(false)).toBe('NetworkOnly')
-  })
-
-  it('sets a network timeout only with NetworkFirst (Workbox rejects it otherwise)', () => {
-    expect(workboxOptions(true).runtimeCaching?.[0]?.options?.networkTimeoutSeconds).toBe(3)
-    expect(
-      workboxOptions(false).runtimeCaching?.[0]?.options?.networkTimeoutSeconds,
-    ).toBeUndefined()
+  it('asks the network first in production, and has no navigation route elsewhere', () => {
+    const rules = (production: boolean) => workboxOptions(production).runtimeCaching ?? []
+    expect(rules(true)[0]?.handler).toBe('NetworkFirst')
+    expect(rules(true)[0]?.options?.networkTimeoutSeconds).toBe(3)
+    expect(rules(true)[0]?.options?.cacheName).toBe('app-shell')
+    // Outside production the only route is the API pass-through: nothing is cached.
+    expect(rules(false).map((rule) => rule.handler)).toEqual(['NetworkOnly'])
+    expect(rules(false)[0]?.options).toBeUndefined()
   })
 
   it('precaches nothing outside production', () => {
@@ -44,7 +41,7 @@ describe('workboxOptions', () => {
     expect(workboxOptions(true).globPatterns?.length).toBeGreaterThan(0)
   })
 
-  it('treats only non-API navigations as the app shell', () => {
+  it('treats only non-API navigations as the app shell in production', () => {
     const rule = workboxOptions(true).runtimeCaching?.[0]
     const match = rule?.urlPattern as (ctx: { request: Request; url: URL }) => boolean
     const ctx = (path: string, mode: string) => ({
@@ -54,6 +51,11 @@ describe('workboxOptions', () => {
     expect(match(ctx('/trips', 'navigate'))).toBe(true)
     expect(match(ctx('/api/v1/docs', 'navigate'))).toBe(false)
     expect(match(ctx('/assets/a.js', 'cors'))).toBe(false)
+  })
+
+  it('imports the activate script that reloads open windows of an older install', () => {
+    expect(workboxOptions(true).importScripts).toEqual(['sw-activate.js'])
+    expect(workboxOptions(false).importScripts).toEqual(['sw-activate.js'])
   })
 })
 

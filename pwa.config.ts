@@ -18,35 +18,54 @@ export function isProductionBuild(appEnv: string | undefined): boolean {
   return appEnv?.trim() === 'main'
 }
 
+/** Static files copied from public/ that the production service worker precaches. */
+export const includeAssets = [
+  'favicon.ico',
+  'favicon.svg',
+  'icon-32.png',
+  'apple-touch-icon-180x180.png',
+]
+
 export function workboxOptions(production: boolean): Workbox {
   return {
     skipWaiting: true,
     clientsClaim: true,
     cleanupOutdatedCaches: true,
+    // Runs on activate: open pages of an older install reload once (see public/sw-activate.js).
+    importScripts: ['sw-activate.js'],
     // No navigateFallback: it would answer navigations from the precache, i.e. a stale
-    // index.html that points at chunks the newest deploy no longer serves. The
-    // navigation route below asks the network first instead.
+    // index.html that points at chunks the newest deploy no longer serves.
     navigateFallback: undefined,
-    // index.html is never precached (see above); hashed assets and icons are.
+    // Outside production nothing is precached or cached at runtime, so the browser's own
+    // HTTP cache (revalidated, see headersFile) is the only cache.
+    // index.html is never precached; hashed assets and icons are in production.
     globPatterns: production ? ['**/*.{js,css,svg,png,ico,webmanifest}'] : [],
     // Share images are for crawlers only; no need to precache them.
     globIgnores: ['og-image-*.png'],
-    runtimeCaching: [
-      {
-        // Functions here are serialized into sw.js, so they must be self-contained.
-        // /api/* navigations (Swagger at /api/v1/docs) are not the app shell.
-        urlPattern: ({ request, url }: { request: Request; url: URL }) =>
-          request.mode === 'navigate' && !url.pathname.startsWith('/api/'),
-        handler: production ? 'NetworkFirst' : 'NetworkOnly',
-        options: {
-          cacheName: 'app-shell',
-          // Workbox only allows a timeout together with NetworkFirst.
-          ...(production && { networkTimeoutSeconds: 3 }),
-          // One entry for every route: the SPA shell. Offline, any deep link gets it.
-          plugins: [{ cacheKeyWillBeUsed: async () => '/index.html' }],
-        },
-      },
-    ],
+    runtimeCaching: production
+      ? [
+          {
+            // Functions here are serialized into sw.js, so they must be self-contained.
+            // /api/* navigations (Swagger at /api/v1/docs) are not the app shell.
+            urlPattern: ({ request, url }: { request: Request; url: URL }) =>
+              request.mode === 'navigate' && !url.pathname.startsWith('/api/'),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'app-shell',
+              networkTimeoutSeconds: 3,
+              // One entry for every route: the SPA shell. Offline, any deep link gets it.
+              plugins: [{ cacheKeyWillBeUsed: async () => '/index.html' }],
+            },
+          },
+        ]
+      : [
+          // Workbox refuses a service worker without any route or precache entry. This one
+          // caches nothing: the API always goes to the network.
+          {
+            urlPattern: ({ url }: { url: URL }) => url.pathname.startsWith('/api/'),
+            handler: 'NetworkOnly',
+          },
+        ],
   }
 }
 
@@ -73,6 +92,10 @@ export function headersFile(production: boolean): string {
   Cache-Control: no-cache
 /manifest.webmanifest
   Cache-Control: no-cache
+/sw-activate.js
+  Cache-Control: no-cache
+/workbox-*
+  Cache-Control: public, max-age=31536000, immutable
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 `
