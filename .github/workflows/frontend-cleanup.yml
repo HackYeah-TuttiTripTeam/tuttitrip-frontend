@@ -21,21 +21,21 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
 
       - name: Delete preview Workers without a branch
-        id: cleanup
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
             echo "::warning::Cloudflare credentials missing, nothing deleted."; exit 0
           fi
-          scripts/cleanup-previews.sh | tee "$RUNNER_TEMP/deleted.txt"
+          node scripts/cleanup-previews.mjs
 
       - name: Mark PR preview comments as removed
         if: github.event_name == 'delete'
         run: |
           branch="${{ github.event.ref }}"
-          printf '### Podgląd usunięty\n\nGałąź `%s` została usunięta, więc jej podgląd (`tuttitrip-preview-%s`) też.\n' \
+          printf '### Podgląd usunięty\n\nGałąź `%s` została usunięta, a razem z nią Worker podglądu `tuttitrip-preview-%s` (jeśli był wdrożony).\n' \
             "$branch" "$(scripts/slugify.sh "$branch")" > "$RUNNER_TEMP/comment.md"
-          for pr in $(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" --state all --json number --jq '.[].number'); do
-            scripts/pr-comment.sh "$pr" "$RUNNER_TEMP/comment.md" --update-only
-          done
+          node scripts/pr-comment.mjs --branch "$branch" --body "$RUNNER_TEMP/comment.md" --update-only
