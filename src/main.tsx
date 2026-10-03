@@ -1,15 +1,50 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
+import { type AppState, Auth0Provider } from '@auth0/auth0-react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { authConfig } from '@/lib/env'
+import { registerServiceWorker } from '@/lib/pwa'
 import { queryClient } from '@/lib/query-client'
 import { router } from './router'
-import './index.css'
+import '@/styles/index.css'
 
-createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root')
+if (!rootElement) throw new Error('Missing #root element')
+
+const app = (
+  <QueryClientProvider client={queryClient}>
+    <RouterProvider router={router} />
+  </QueryClientProvider>
+)
+
+const onRedirectCallback = (appState?: AppState) => {
+  router.history.replace(typeof appState?.returnTo === 'string' ? appState.returnTo : '/trips')
+}
+
+createRoot(rootElement).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
+    {authConfig ? (
+      <Auth0Provider
+        domain={authConfig.domain}
+        clientId={authConfig.clientId}
+        authorizationParams={{
+          redirect_uri: window.location.origin,
+          audience: authConfig.audience,
+        }}
+        // Refresh tokens + localStorage keep the session alive in installed PWAs
+        // and in Safari, which blocks the third-party cookies silent auth needs.
+        useRefreshTokens
+        useRefreshTokensFallback
+        cacheLocation="localstorage"
+        onRedirectCallback={onRedirectCallback}
+      >
+        {app}
+      </Auth0Provider>
+    ) : (
+      app
+    )}
   </StrictMode>,
 )
+
+registerServiceWorker()

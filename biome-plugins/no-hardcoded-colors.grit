@@ -1,0 +1,15 @@
+language js
+
+// Blocks hard-coded colors inside Tailwind arbitrary values, e.g. bg-[#fff],
+// text-[rgb(0,0,0)], border-[hsl(...)], [color:oklch(...)]. Checks every string
+// literal, JSX string and template chunk, so className, cn(), cva() are covered.
+// Raw palette colors (bg-red-500) are blocked by nursery/noTailwindRawColors.
+
+or {
+  JsStringLiteralExpression() as $s,
+  JsxString() as $s,
+  JsTemplateChunkElement() as $s
+} where {
+  $s <: r"(?s).*(?:-\[|\[[a-z-]+:)(?:#[0-9a-fA-F]{3,8}|(?:rgba?|hsla?|hwb|oklch|oklab|lab|lch|color|color-mix)\().*",
+  register_diagnostic(span=$s, message="Hard-coded color in a Tailwind class. Use a semantic shadcn token (bg-primary, text-muted-foreground, ...) defined in src/styles/index.css.", severity="error")
+}

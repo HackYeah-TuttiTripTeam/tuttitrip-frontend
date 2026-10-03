@@ -1,0 +1,41 @@
+name: Frontend preview cleanup
+
+# A deleted branch's preview Worker is removed right away and its PR comment is
+# updated. Every deploy in frontend-ci.yml runs the same cleanup as a safety net.
+on:
+  delete:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  cleanup:
+    if: github.event_name == 'workflow_dispatch' || github.event.ref_type == 'branch'
+    runs-on: [self-hosted, hackathon]
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Delete preview Workers without a branch
+        id: cleanup
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::Cloudflare credentials missing, nothing deleted."; exit 0
+          fi
+          scripts/cleanup-previews.sh | tee "$RUNNER_TEMP/deleted.txt"
+
+      - name: Mark PR preview comments as removed
+        if: github.event_name == 'delete'
+        run: |
+          branch="${{ github.event.ref }}"
+          printf '### Podgląd usunięty\n\nGałąź `%s` została usunięta, więc jej podgląd (`tuttitrip-preview-%s`) też.\n' \
+            "$branch" "$(scripts/slugify.sh "$branch")" > "$RUNNER_TEMP/comment.md"
+          for pr in $(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" --state all --json number --jq '.[].number'); do
+            scripts/pr-comment.sh "$pr" "$RUNNER_TEMP/comment.md" --update-only
+          done

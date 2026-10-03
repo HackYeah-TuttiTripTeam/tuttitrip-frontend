@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Builds and tool caches
+dev-dist
+.wrangler
+.tanstack
+.env
+.env.*
+!.env.example

@@ -1,111 +1,145 @@
-# TuttiTrip – frontend
+# 🌍 TuttiTrip Frontend
 
-Aplikacja frontendowa zespołu **TuttiTrip** tworzona na hackathon HackYeah.
+Cześć! To interfejs aplikacji TuttiTrip, zaprojektowany z myślą o płynnym, błyskawicznym planowaniu podróży na telefonie i komputerze.
 
-## Stack
+### ⚡ Szybki start lokalnie
 
-- [React 19](https://react.dev) + [TypeScript](https://www.typescriptlang.org)
-- [Vite](https://vite.dev) – bundler i serwer deweloperski
-- [Tailwind CSS v4](https://tailwindcss.com) + [shadcn/ui](https://ui.shadcn.com) (Radix UI, ikony lucide)
-- [TanStack Router](https://tanstack.com/router) – routing oparty na plikach, z automatycznym code splittingiem
-- [TanStack Query](https://tanstack.com/query) – pobieranie i cache'owanie danych z API
-- [oxlint](https://oxc.rs) – linter
+1. **Zainstaluj pnpm** (jeśli jeszcze nie masz):
+   ```bash
+   corepack enable && corepack prepare pnpm@latest --activate
+   ```
+2. **Pobierz zależności i przygotuj środowisko:**
+   ```bash
+   pnpm install
+   cp .env.example .env.local
+   ```
+3. **Zsynchronizuj endpointy z backendem i odpal dev-serwer:**
+   ```bash
+   pnpm run api:sync
+   pnpm dev
+   ```
+   Aplikacja wystartuje pod `http://localhost:5173`.
+
+### 📱 Instalacja na telefonie (PWA)
+Otwórz link aplikacji w Safari (iOS) lub Chrome (Android) i wybierz **"Dodaj do ekranu głównego"** – zyskasz pełnoekranową aplikację z obsługą gestów i trybem offline.
 
 ## Wymagania
 
-- Node.js 22+
-- [pnpm](https://pnpm.io) (`corepack enable` albo `npm i -g pnpm`)
+- Node.js 22 lub nowszy
+- pnpm (wersja jest przypięta w `package.json`, `corepack` dobierze ją sam)
+- Backend opcjonalnie. W repo leży wygenerowany kontrakt API (`src/api/schema.d.ts`), więc świeży klon zbuduje się bez backendu.
 
-## Uruchomienie
+## Zmienne środowiskowe
+
+Skopiuj `.env.example` do `.env.local` (ten plik nie trafia do gita) i uzupełnij to, czego potrzebujesz:
+
+| Zmienna | Co to jest | Domyślnie |
+| --- | --- | --- |
+| `VITE_API_URL` | adres backendu, bez `/` na końcu | `http://localhost:8000` |
+| `VITE_AUTH0_DOMAIN` | domena tenanta Auth0 | puste, logowanie wyłączone |
+| `VITE_AUTH0_CLIENT_ID` | client id aplikacji SPA w Auth0 | puste, logowanie wyłączone |
+| `VITE_AUTH0_AUDIENCE` | identyfikator API w Auth0 (np. `https://tuttitrip-api.gburek.app`) | puste |
+
+Wszystkie te wartości lądują w kodzie przeglądarki, więc nie wpisuj tu sekretów. Tenant Auth0 konfiguruje zespół backendu. Bez `VITE_AUTH0_*` aplikacja działa, a w miejscu logowania wyświetla informację, że jest wyłączone.
+
+Do pracy na wdrożonym API zamiast lokalnego ustaw `VITE_API_URL=https://tuttitrip-api-develop.gburek.app`.
+
+## Kontrakt API (`api:sync`)
+
+Typy endpointów generujemy z `/openapi.json` backendu (`openapi-typescript`). Zapytania idą przez `openapi-fetch` i `openapi-react-query`, więc literówka w ścieżce albo w nazwie pola wychodzi już przy kompilacji.
 
 ```bash
-pnpm install
-pnpm dev
+pnpm api:sync                                                            # z VITE_API_URL albo localhost:8000
+pnpm api:sync --url https://tuttitrip-api-develop.gburek.app/openapi.json
+API_SCHEMA_URL=./openapi.json pnpm api:sync                              # z pliku
 ```
 
-Aplikacja wystartuje pod adresem http://localhost:5173.
+Po zmianie w backendzie odpal `api:sync` i zacommituj `src/api/schema.d.ts`. CI pobiera kontrakt przy każdym buildzie, więc zmiana API, która psuje frontend, wywali `tsc`.
 
 ## Skrypty
 
-| Komenda        | Opis                                                |
-| -------------- | --------------------------------------------------- |
-| `pnpm dev`     | serwer deweloperski z HMR                           |
-| `pnpm build`   | sprawdzenie typów (`tsc -b`) i build produkcyjny    |
-| `pnpm preview` | podgląd buildu produkcyjnego                        |
-| `pnpm lint`    | linter (oxlint)                                     |
+| Komenda | Co robi |
+| --- | --- |
+| `pnpm dev` | serwer deweloperski z HMR |
+| `pnpm build` | sprawdzenie typów i build produkcyjny do `dist/` |
+| `pnpm preview` | podgląd buildu (z service workerem, czyli z PWA) |
+| `pnpm biome check --write .` | lint, formatowanie i porządkowanie importów (Biome) |
+| `pnpm tsc -b` | sprawdzenie typów |
+| `pnpm test:arch` | testy architektury (dependency-cruiser i `scripts/check-arch.mjs`) |
+| `pnpm verify` | to, co CI odpala przed buildem: `biome ci`, `tsc -b`, `test:arch` |
+| `pnpm api:sync` | regeneracja typów API |
+| `pnpm pwa:icons` | ikony PWA z `public/logo.svg` |
 
-## Struktura projektu
+Przed każdym commitem: `pnpm biome check --write . && pnpm tsc -b && pnpm test:arch`.
+
+## Stack
+
+React 19, TypeScript (strict), Vite, TanStack Router (routing z plików, parametry wyszukiwania walidowane Zodem), TanStack Query, TanStack Table, Zustand, react-hook-form z Zodem, shadcn/ui na Tailwind v4, Auth0, `vite-plugin-pwa`, Biome, hosting na Cloudflare Workers. Szczegóły i uzasadnienia są w `AGENTS.md`.
+
+## Struktura i zasady architektury
 
 ```
 src/
-├── components/
-│   └── ui/              # komponenty shadcn/ui (generowane przez CLI)
-├── lib/
-│   ├── query-client.ts  # konfiguracja TanStack Query
-│   └── utils.ts         # helper cn() do łączenia klas Tailwinda
-├── routes/              # trasy aplikacji (routing oparty na plikach)
-│   ├── __root.tsx       # layout główny, nawigacja, devtools
-│   ├── index.tsx        # strona główna (/)
-│   └── about.tsx        # /about
-├── routeTree.gen.ts     # drzewo tras GENEROWANE automatycznie – nie edytuj
-├── router.tsx           # instancja routera
-└── main.tsx             # punkt wejścia
+├── routes/            tylko definicje tras (.ts, bez JSX): component, loader, validateSearch
+├── views/             strony: składają komponenty i hooki
+├── components/ui/     komponenty shadcn (generowane)
+├── components/shared/ wspólne bloki: layout aplikacji, modal/drawer, komunikaty stanów
+├── components/trips/  komponenty jednej funkcji (tu: lista wyjazdów)
+├── hooks/             logika i hooki pomocnicze, bez JSX
+├── stores/            store'y Zustand (stan UI i sesji)
+├── loaders/           schematy parametrów URL (Zod) i loadery tras
+├── api/               klient openapi-fetch, wygenerowany schema.d.ts, query options
+├── lib/               drobne helpery: env, formatowanie dat, query client
+└── styles/            tokeny designu (jedyne miejsce z kolorami)
 ```
 
-Alias `@/` wskazuje na katalog `src/` (np. `import { Button } from '@/components/ui/button'`).
+Zasady pilnowane automatycznie (`pnpm test:arch` i Biome, CI odrzuca złamanie którejkolwiek):
 
-## Jak pracować z projektem
+1. Widok nie importuje innego widoku.
+2. Komponenty z `components/` są czysto prezentacyjne: nie sięgają do `views/`, `hooks/`, `stores/`, API ani TanStack Query. Dane i akcje dostają przez propsy.
+3. W `hooks/` nie ma JSX (tylko pliki `.ts`).
+4. Pliki tras importują wyłącznie widoki i loadery.
+5. Żadnych zahardkodowanych kolorów w klasach Tailwinda (`bg-[#...]`, `text-[rgb(...)]`, `bg-red-500` i podobne). Używamy tokenów shadcn: `bg-primary`, `text-muted-foreground`, `border` i tak dalej.
 
-### Dodawanie komponentów shadcn/ui
+Sortowanie i filtrowanie zawsze trzymamy w adresie URL, np. `/trips?q=kraków&sort=name&dir=asc`. Taki link można wysłać komuś z rodziny i zobaczy dokładnie ten sam widok.
 
-```bash
-pnpm dlx shadcn@latest add dialog input
-```
+Przykładowa funkcja, na której można się wzorować, to lista wyjazdów: `api/queries/trips.ts` → `hooks/use-trips.ts` → `components/trips/` → `views/trips-view.tsx` → `routes/trips.ts`.
 
-Komponenty trafiają do `src/components/ui/`. Można je dowolnie modyfikować, bo to nasz kod, a nie zależność.
+## Środowiska i wdrożenia
 
-### Dodawanie nowej strony
+Frontend stoi na Cloudflare Workers (statyczne pliki z fallbackiem SPA, więc działają też bezpośrednie linki do podstron).
 
-Utwórz plik w `src/routes/`, np. `src/routes/trips/$tripId.tsx`:
+| Gałąź | Adres frontendu | API |
+| --- | --- | --- |
+| `main` | https://tuttitrip.gburek.app | https://tuttitrip-api.gburek.app |
+| `develop` | https://tuttitrip-develop.gburek.app | https://tuttitrip-api-develop.gburek.app |
+| PR z innej gałęzi | `https://tuttitrip-preview-<slug>.<konto>.workers.dev` (link pojawia się w komentarzu pod PR) | patrz niżej |
 
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
+Wdraża GitHub Actions (`.github/workflows/frontend-ci.yml`) na runnerze `[self-hosted, hackathon]`: push do `main` lub `develop` wdraża dane środowisko, a każdy PR dostaje własny podgląd. Bot wrzuca link w komentarzu i przy kolejnych pushach aktualizuje ten sam komentarz, zamiast dodawać nowe.
 
-export const Route = createFileRoute('/trips/$tripId')({
-  component: TripPage,
-})
+Po usunięciu gałęzi (np. po merge'u PR) workflow `frontend-cleanup.yml` kasuje Workera `tuttitrip-preview-<slug>` i zmienia komentarz w PR na „Podgląd usunięty”. To samo sprzątanie leci przy każdym wdrożeniu, gdyby zdarzenie usunięcia gałęzi nie dotarło. Skrypt rusza wyłącznie Workery o nazwach `tuttitrip-preview-*`, więc produkcja i develop są bezpieczne.
 
-function TripPage() {
-  const { tripId } = Route.useParams()
-  return <h1>Wycieczka {tripId}</h1>
-}
-```
+## Która gałąź frontendu rozmawia z którym backendem
 
-Gdy działa `pnpm dev` (albo podczas `pnpm build`), plugin Vite sam zaktualizuje `routeTree.gen.ts`. Konwencje nazewnictwa plików opisuje [dokumentacja TanStack Router](https://tanstack.com/router/latest/docs/framework/react/routing/file-based-routing).
+Frontend z gałęzi X używa API z gałęzi backendu o tej samej nazwie. Jeśli backend takiej gałęzi nie ma, bierzemy najbliższą „wyższą”: najpierw develop, potem main.
 
-### Pobieranie danych
+- `main` zawsze używa `https://tuttitrip-api.gburek.app`.
+- `develop` używa `https://tuttitrip-api-develop.gburek.app`, a gdyby go nie było, produkcji.
+- `feature/cos-tam` najpierw próbuje `https://tuttitrip-api-feature-cos-tam.gburek.app`, potem develop, potem main.
 
-Zapytania definiujemy przez `queryOptions` i ładujemy w `loader` trasy, dzięki czemu dane zaczynają się pobierać jeszcze przed renderem (oraz przy najechaniu na link). Przykład jest w `src/routes/index.tsx`:
+Slug gałęzi to jej nazwa małymi literami, z każdym ciągiem znaków spoza `a-z0-9` zamienionym na `-` (tak samo jak w backendzie). CI sprawdza, które API odpowiada (`scripts/resolve-api.sh`), pobiera z niego kontrakt i z nim buduje aplikację.
 
-```tsx
-const tripsQueryOptions = queryOptions({
-  queryKey: ['trips'],
-  queryFn: () => fetch('/api/trips').then((res) => res.json()),
-})
+## Git flow
 
-export const Route = createFileRoute('/trips')({
-  loader: ({ context }) => context.queryClient.ensureQueryData(tripsQueryOptions),
-  component: TripsPage,
-})
+1. Zaczynasz od `develop`: `git switch -c feature/krotki-opis`.
+2. Kolejność pracy nad funkcją: zapytania i hooki → komponenty → widok → trasa.
+3. Przed commitem odpalasz weryfikację (patrz „Skrypty”).
+4. PR do `develop`, z opisem, listą zmian i zrzutami ekranu (desktop i telefon). Wydanie to PR z `develop` do `main`.
+5. Po merge'u gałąź usuwa się automatycznie, a razem z nią jej podgląd.
 
-function TripsPage() {
-  const { data } = useSuspenseQuery(tripsQueryOptions)
-  // ...
-}
-```
+`main` i `develop` mają być chronione: tylko przez PR, z zielonym CI, bez force-pusha. Aktualny stan ochrony opisuje `AGENTS.md`.
 
-`queryClient` jest dostępny w kontekście routera (`context.queryClient`).
+## Co dalej
 
-### Devtools
-
-W trybie deweloperskim w rogach ekranu są dostępne devtoolsy TanStack Router (prawy dolny) i TanStack Query (lewy dolny).
+- Opcjonalny wrapper Capacitor, jeśli będziemy chcieli wrzucić aplikację do sklepów. Na razie wystarcza PWA.
+- Sortowanie i filtrowanie po stronie serwera, kiedy API zacznie przyjmować takie parametry.

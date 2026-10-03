@@ -1,0 +1,34 @@
+// Cloudflare Workers static-assets deployment of the SPA (no Worker script).
+// One Worker per environment; see AGENTS.md "Deployment" and .github/workflows/frontend-ci.yml.
+//   main            -> worker tuttitrip-frontend          -> https://tuttitrip.gburek.app
+//   develop         -> worker tuttitrip-frontend-develop  -> https://tuttitrip-develop.gburek.app
+//   any other branch-> worker tuttitrip-preview-<slug>    -> https://tuttitrip-preview-<slug>.<account>.workers.dev
+//                      (deployed with --env preview --name ..., deleted when the branch is gone)
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "tuttitrip-frontend",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    // Deep links (/trips?sort=name) get index.html; the router takes it from there.
+    "not_found_handling": "single-page-application"
+  },
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "tuttitrip.gburek.app", "custom_domain": true }],
+  "env": {
+    "develop": {
+      "name": "tuttitrip-frontend-develop",
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [{ "pattern": "tuttitrip-develop.gburek.app", "custom_domain": true }]
+    },
+    "preview": {
+      // CI overrides the name per branch: --name tuttitrip-preview-<slug>
+      "name": "tuttitrip-preview",
+      "workers_dev": true,
+      "preview_urls": false,
+      "routes": []
+    }
+  }
+}
