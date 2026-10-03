@@ -14,7 +14,13 @@ const escapeHtml = (value: string) => value.replace(/[&<>"]/g, (char) => `&#${ch
 
 const SECTION = 'mx-auto w-full max-w-5xl px-4 md:px-6'
 
-function picture(id: PhotoId, alt: string, sizes: string, imgClass: string): string {
+function picture(
+  id: PhotoId,
+  alt: string,
+  sizes: string,
+  imgClass: string,
+  priority: boolean,
+): string {
   const photo = PHOTOS[id]
   const set = (format: 'avif' | 'webp') =>
     photo.widths.map((w) => `${photoPath(photo.file, w, format)} ${w}w`).join(', ')
@@ -23,16 +29,31 @@ function picture(id: PhotoId, alt: string, sizes: string, imgClass: string): str
     `<picture><source type="image/avif" srcset="${set('avif')}" sizes="${sizes}">` +
     `<source type="image/webp" srcset="${set('webp')}" sizes="${sizes}">` +
     `<img src="${photoPath(photo.file, middle, 'webp')}" alt="${escapeHtml(alt)}" width="${photo.width}" ` +
-    `height="${photo.height}" sizes="${sizes}" decoding="async" fetchpriority="high" ` +
+    `height="${photo.height}" sizes="${sizes}" decoding="async" ` +
+    (priority ? 'fetchpriority="high" ' : 'loading="lazy" ') +
     `class="block h-auto w-full ${imgClass}"></picture>`
   )
 }
 
+/**
+ * The shell stays hidden until the two fonts are in (or 1.5 s have passed). Shown earlier, the
+ * text would first be set in a fallback font and the app's own headline, set in the real one
+ * when it mounts, would be a larger paint: the page's LCP would move to when the scripts finish.
+ */
+const SHOW_WHEN_FONTS_READY =
+  `<script data-seo>(function(){var s=document.getElementById('seo-shell');` +
+  `function show(){s.style.visibility=''}` +
+  `try{Promise.race([Promise.all([document.fonts.load('800 1em "Funnel Display"'),` +
+  `document.fonts.load('400 1em "Atkinson Hyperlegible Next"')]),` +
+  `new Promise(function(r){setTimeout(r,1500)})]).then(show,show)}catch(e){show()}})()</script>` +
+  `<noscript><style>#seo-shell{visibility:visible!important}</style></noscript>`
+
 function frame(content: string): string {
   // The 65px stands for the sticky header the app draws above the page (h-16 and its border).
   return (
-    `<div id="seo-shell" data-seo class="flex min-h-svh flex-col bg-background text-foreground">` +
-    `<div style="height:65px"></div><main class="flex-1">${content}</main></div>`
+    `<div id="seo-shell" data-seo style="visibility:hidden" class="flex min-h-svh flex-col bg-background text-foreground">` +
+    `<div style="height:65px"></div><main class="flex-1">${content}</main></div>` +
+    SHOW_WHEN_FONTS_READY
   )
 }
 
@@ -73,13 +94,8 @@ export function shellHtml(path: SeoPath, locale: Locale): string {
         `<div class="flex flex-col gap-5">` +
         `<h1 class="text-balance font-extrabold text-4xl leading-[1.05] tracking-tight md:text-5xl">${escapeHtml(m.about_title({}, o))}</h1>` +
         `<p class="max-w-prose text-lg text-muted-foreground leading-relaxed">${escapeHtml(m.about_lede({}, o))}</p></div>` +
-        `<figure class="flex flex-col gap-2"><div class="overflow-hidden rounded-lg border">` +
-        picture(
-          'rodzina',
-          m.photo_rodzina_alt({}, o),
-          '(min-width: 768px) 38vw, 100vw',
-          'aspect-[16/10] object-cover object-[50%_60%] md:aspect-[4/5]',
-        ) +
+        `<figure class="hidden flex-col gap-2 md:flex"><div class="overflow-hidden rounded-lg border">` +
+        picture('rodzina', m.photo_rodzina_alt({}, o), '38vw', 'aspect-[4/5] object-cover', false) +
         `</div></figure></section>`,
     )
   }
@@ -90,7 +106,7 @@ export function shellHtml(path: SeoPath, locale: Locale): string {
       `<h1 class="font-extrabold text-4xl leading-[1.05] tracking-tight md:text-5xl">${escapeHtml(m.contact_title({}, o))}</h1>` +
       `<p class="max-w-prose text-lg text-muted-foreground leading-relaxed">${escapeHtml(m.contact_lede({}, o))}</p></div>` +
       `<figure class="flex flex-col gap-3"><div class="overflow-hidden rounded-lg border" style="aspect-ratio:${team.width} / ${team.height}">` +
-      picture('zespol', m.contact_photo_alt({}, o), '(min-width: 768px) 50vw, 100vw', '') +
+      picture('zespol', m.contact_photo_alt({}, o), '(min-width: 768px) 50vw, 100vw', '', true) +
       `</div></figure></section>`,
   )
 }

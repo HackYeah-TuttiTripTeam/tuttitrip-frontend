@@ -25,22 +25,42 @@ export function AboutIntro() {
         </p>
       </div>
       <figure
-        className="hero-rise flex flex-col gap-2"
+        className="hero-rise hidden flex-col gap-2 md:flex"
         style={{ '--rise-delay': '140ms' } as CSSProperties}
       >
         <div className="overflow-hidden rounded-lg border">
           <Picture
             id="rodzina"
             alt={m.photo_rodzina_alt()}
-            sizes="(min-width: 768px) 38vw, 100vw"
-            priority
-            className="aspect-[16/10] object-cover object-[50%_60%] md:aspect-[4/5]"
+            sizes="38vw"
+            className="aspect-[4/5] object-cover"
           />
         </div>
         <figcaption>
           <PhotoCredit id="rodzina" />
         </figcaption>
       </figure>
+    </Section>
+  )
+}
+
+/** The family photo on a phone: below the first screen, so the headline is what loads first. */
+export function AboutPhotoPhone() {
+  return (
+    <Section className="pb-2 md:hidden">
+      <Reveal as="figure" className="flex flex-col gap-2">
+        <div className="overflow-hidden rounded-lg border">
+          <Picture
+            id="rodzina"
+            alt={m.photo_rodzina_alt()}
+            sizes="100vw"
+            className="aspect-[16/10] object-cover object-[50%_60%]"
+          />
+        </div>
+        <figcaption>
+          <PhotoCredit id="rodzina" />
+        </figcaption>
+      </Reveal>
     </Section>
   )
 }

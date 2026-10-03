@@ -14,10 +14,21 @@ describe('shellHtml', () => {
     expect(shellHtml('/contact', 'pl')).toContain('/assets/photos/zespol-640.avif 640w')
   })
 
-  it('loads the first photo with high priority and gives it a size', () => {
+  it('loads the team photo with high priority and gives photos a size', () => {
+    expect(shellHtml('/contact', 'pl')).toContain('fetchpriority="high"')
+    expect(shellHtml('/about', 'pl')).toMatch(/width="1200" height="1500"/)
+  })
+
+  it('keeps the family photo off the phone and lazy, so the headline is what loads first', () => {
     const html = shellHtml('/about', 'pl')
-    expect(html).toContain('fetchpriority="high"')
-    expect(html).toMatch(/width="1200" height="1500"/)
+    expect(html).toContain('class="hidden flex-col gap-2 md:flex"')
+    expect(html).toContain('loading="lazy"')
+    expect(html).not.toContain('fetchpriority')
+  })
+
+  it('stays hidden until the fonts are in', () => {
+    expect(shellHtml('/', 'pl')).toContain('style="visibility:hidden"')
+    expect(shellHtml('/', 'pl')).toContain('document.fonts.load')
   })
 
   it('hides itself for a browser with a stored session, on the landing page only', () => {
