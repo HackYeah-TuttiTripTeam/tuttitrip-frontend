@@ -30,7 +30,7 @@ export function useUpdatePreferences(tripId: string, profileId: string) {
         '/api/v1/trips/{trip_id}/profiles/{profile_id}/preferences',
         path,
       )
-      if (!confirmed.data) throw new Error('No preferences')
+      if (!confirmed.data) throw confirmed.error // not reached: the client throws on every non-2xx
       const result = await fetchClient.PUT(
         '/api/v1/trips/{trip_id}/profiles/{profile_id}/preferences',
         { ...path, body: toWrite(confirmed.data, change(confirmed.data)) },
