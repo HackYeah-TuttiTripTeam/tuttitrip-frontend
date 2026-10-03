@@ -13,8 +13,8 @@ The trips feature is the reference implementation; open its files side by side w
 1. `git switch develop && git pull && git switch -c feature/<short-description>`.
 2. If the backend endpoint is new or changed, sync the contract from the backend branch
    (or local backend) and commit it:
-   `pnpm api:sync --url https://tuttitrip-api-<slug>.gburek.app/openapi.json`.
-3. Find the endpoint in `src/api/schema.d.ts` (`paths['/x']`) and its DTOs (`components['schemas']`).
+   `pnpm api:sync --url https://tuttitrip-api-<slug>.gburek.app/api/v1/openapi.json`.
+3. Find the endpoint in `src/api/schema.d.ts` (`paths['/api/v1/x']`) and its DTOs (`components['schemas']`).
 
 ## 1. API layer: `src/api/queries/<feature>.ts`
 
@@ -22,7 +22,7 @@ The trips feature is the reference implementation; open its files side by side w
 import { $api, type Schemas } from '@/api/client'
 export type Thing = Schemas['ThingRead']
 export const thingsQueryOptions = (tripId: string) =>
-  $api.queryOptions('get', '/trips/{trip_id}/things', { params: { path: { trip_id: tripId } } })
+  $api.queryOptions('get', '/api/v1/trips/{trip_id}/things', { params: { path: { trip_id: tripId } } })
 ```
 
 Never call `fetch` directly; `$api` adds the Auth0 bearer token.
@@ -31,7 +31,7 @@ Never call `fetch` directly; `$api` adds the Auth0 bearer token.
 
 - Read: `useQuery({ ...thingsQueryOptions(id), enabled })`; derive filtered/sorted data from the
   search params passed in as an argument.
-- Write: `$api.useMutation('post', '/x', { onSuccess: () => queryClient.invalidateQueries({ queryKey: thingsQueryOptions(id).queryKey }) })`.
+- Write: `$api.useMutation('post', '/api/v1/x', { onSuccess: () => queryClient.invalidateQueries({ queryKey: thingsQueryOptions(id).queryKey }) })`.
 - Map errors with `classifyApiError` from `@/api/errors`.
 
 ## 3. Components: `src/components/<feature>/*.tsx`

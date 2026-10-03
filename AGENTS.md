@@ -10,7 +10,8 @@ HackYeah 2026. One organizer runs an AI interview for the whole family; a
 fairness solver, a plan linter and an accommodation contract turn the answers
 into a plan nobody feels they lost on. This repo is the web client: a
 mobile-first PWA. The API is `tuttitrip-backend` (FastAPI), consumed through
-types generated from its `/openapi.json`.
+types generated from its `/api/v1/openapi.json`, and called same-origin
+through the Worker's `/api/*` proxy.
 
 Judging weighs Design (20%) and Usability (20%). UI quality is part of the
 product, not decoration.
@@ -49,7 +50,7 @@ product, not decoration.
 | Lint / format | Biome 2 (strict; GritQL plugin for colors) |
 | Architecture tests | dependency-cruiser + `scripts/check-arch.mjs` |
 | PWA | `vite-plugin-pwa` (generateSW), icons from `@vite-pwa/assets-generator` |
-| Hosting | Cloudflare Workers static assets (`wrangler.jsonc`) |
+| Hosting | Cloudflare Workers: static assets + `/api/*` proxy script (`wrangler.jsonc`, `worker/index.ts`) |
 
 shadcn registries configured in `components.json`: `@shadcn-space`,
 `@aceternity`, `@magicui`, `@cult-ui`
@@ -61,9 +62,9 @@ if needed.
 
 ```bash
 pnpm install
-cp .env.example .env.local      # API URL + Auth0 (all optional locally)
+cp .env.example .env.local      # backend URL for the /api dev proxy + Auth0 (all optional locally)
 pnpm api:sync                   # regenerate src/api/schema.d.ts (see below)
-pnpm dev                        # http://localhost:5173
+pnpm dev                        # http://localhost:5173, /api proxied to VITE_API_URL or :8000
 
 pnpm biome check --write .      # lint + format + organize imports
 pnpm tsc -b                     # types (the root tsconfig only has references)
@@ -126,10 +127,10 @@ one, change the rule here and in the config in the same PR, with a reason.
 ## Data flow for a feature (example: trips)
 
 ```
-api/queries/trips.ts      tripsQueryOptions() = $api.queryOptions('get', '/trips')
+api/queries/trips.ts      tripsQueryOptions() = $api.queryOptions('get', '/api/v1/trips')
 loaders/trips.ts          tripsSearchSchema (q, sort, dir) + loadTrips (prefetch)
 hooks/use-trips.ts        useQuery + filter/sort by the search params
-hooks/use-create-trip.ts  $api.useMutation('post', '/trips') + invalidate
+hooks/use-create-trip.ts  $api.useMutation('post', '/api/v1/trips') + invalidate
 components/trips/*        TripsTable (TanStack Table), TripsToolbar, CreateTripForm (RHF + Zod)
 views/trips-view.tsx      wires hooks to components, maps UI events to navigate({ search })
 routes/trips.ts           createFileRoute('/trips')({ validateSearch, search.middlewares, loader, component })
@@ -151,10 +152,10 @@ connections from this repo.
 
 ## API contract and the branch -> API mapping
 
-`pnpm api:sync` fetches `/openapi.json` and regenerates `src/api/schema.d.ts`.
+`pnpm api:sync` fetches `/api/v1/openapi.json` and regenerates `src/api/schema.d.ts`.
 Source, first match wins: `--url <url-or-file>`, `API_SCHEMA_URL`,
-`VITE_API_URL` + `/openapi.json` (env or `.env.local`), then
-`http://localhost:8000/openapi.json`. Commit the regenerated file, so a fresh
+`VITE_API_URL` + `/api/v1/openapi.json` (env or `.env.local`), then
+`http://localhost:8000/api/v1/openapi.json`. Commit the regenerated file, so a fresh
 clone builds without a backend.
 
 A frontend branch talks to the backend branch of the same name. If that
@@ -169,16 +170,43 @@ backend deployment does not exist, it falls back to the nearest higher one:
 `slug` = branch lowercased, every run of non `[a-z0-9]` turned into `-`,
 trimmed, at most 49 chars (same as the backend's `deploy/lib.sh`).
 `scripts/resolve-api.sh <branch>` implements it: a candidate counts when its
-`/openapi.json` answers (and, if `BACKEND_REPO_TOKEN` is set, when the backend
-branch exists). CI then runs `api:sync` from that URL before type-checking (an
-API change that breaks the frontend fails CI) and builds with
-`VITE_API_URL` set to it. If no deployment answers, CI keeps the committed
-schema and the expected URL and prints a warning.
+`/api/v1/openapi.json` answers (and, if `BACKEND_REPO_TOKEN` is set, when the
+backend branch exists); a deployment still on the old unversioned paths does
+not count, since it cannot serve this client. CI then runs `api:sync` from that
+URL before type-checking (an API change that breaks the frontend fails CI), and
+a preview Worker proxies to it (`--var API_ORIGIN:<api_url>`). If no deployment
+answers, CI keeps the committed schema and the expected URL and prints a warning.
 
-## Deployment (Cloudflare Workers, static assets)
+## API proxy (`/api/*`)
+
+The app never knows the backend URL: `api/client.ts` has no `baseUrl` and the
+paths in `schema.d.ts` start with `/api/v1`, so every call goes to its own
+origin. No CORS, and the same build works in every environment.
+
+- Deployed: `worker/index.ts` (typed by `tsconfig.worker.json`, plain Fetch API).
+  `assets.run_worker_first: ["/api/*"]` sends `/api/*` to it before the assets,
+  so the SPA fallback never answers an API path. It forwards method, headers
+  (incl. `Authorization`), body and query to `API_ORIGIN`, streams the response
+  back, and rewrites API redirects to the same origin. It drops hop-by-hop
+  headers, `Cookie`, `Forwarded`, `X-Real-IP` and every client `X-Forwarded-*`/`cf-*`
+  header, then sets `X-Forwarded-For` (from `CF-Connecting-IP`), `-Host`, `-Proto`.
+  Other paths reach the script only for non-navigation requests without a
+  matching asset; it hands them to `env.ASSETS` (SPA fallback).
+- `API_ORIGIN` (Worker var): main `https://tuttitrip-api.gburek.app` and develop
+  `https://tuttitrip-api-develop.gburek.app` in `wrangler.jsonc`; previews get
+  the backend picked by `resolve-api.sh` via `--var` in `frontend-ci.yml`.
+- Local: Vite's `server.proxy`/`preview.proxy` forward `/api` to `VITE_API_URL`
+  or `http://localhost:8000` (`vite.config.ts`).
+- The PWA service worker never serves the app shell for `/api/` navigations
+  (`navigateFallbackDenylist`), so `/api/v1/docs` opens Swagger.
+- The deploy smoke test also requests `/api/v1/health/live` with
+  `Sec-Fetch-Mode: navigate` and expects JSON, not `index.html`.
+
+## Deployment (Cloudflare Workers, static assets + API proxy)
 
 `wrangler.jsonc` serves `dist/` with `not_found_handling:
-"single-page-application"`, so deep links like `/trips?sort=name` work.
+"single-page-application"`, so deep links like `/trips?sort=name` work, and
+runs `worker/index.ts` first for `/api/*` (see "API proxy").
 One Worker per environment (wrangler environments):
 
 | Branch | Worker | URL |
@@ -192,7 +220,8 @@ One Worker per environment (wrangler environments):
 `test:arch`, build. `deploy` = pushes to main/develop deploy their Worker;
 pull requests deploy their preview Worker and upsert one PR comment (marker
 `<!-- tuttitrip-preview -->`, edited in place, never duplicated). Each deploy
-ends with a smoke test of `/` and a deep link.
+ends with a smoke test of `/`, a deep link and `/api/v1/health/live` through
+the proxy (skipped for a preview whose backend did not answer).
 
 **Custom domains are never taken by force.** Without a TTY, `wrangler deploy`
 silently overrides conflicting DNS records, so CI first runs
@@ -207,8 +236,8 @@ cannot be deleted, so every PR gets its own Worker. Its Custom Domain
 `tuttitrip-preview-<slug>.gburek.app` is attached by
 `scripts/attach-domain.mjs` with `override_existing_dns_record: false`
 (workers.dev is not used: on this account it sits behind Cloudflare Access).
-The backend's CORS regex `^https://tuttitrip(-[a-z0-9-]+)?\.gburek\.app$`
-already covers these hostnames.
+Previews call the API through their own `/api` proxy, so they need no CORS
+entry in the backend.
 
 **Preview cleanup.**
 `scripts/cleanup-previews.mjs` lists Workers named `tuttitrip-preview-*`,
@@ -231,7 +260,7 @@ skipped with a warning and `checks` stays green.
 ### feature
 
 1. `git switch develop && git pull && git switch -c feature/<short-description>`
-2. Backend endpoint changed? `pnpm api:sync --url https://tuttitrip-api-<slug>.gburek.app/openapi.json`
+2. Backend endpoint changed? `pnpm api:sync --url https://tuttitrip-api-<slug>.gburek.app/api/v1/openapi.json`
    (or the local backend) and commit `src/api/schema.d.ts`.
 3. Build in this order: **API hooks** (`api/queries/`, `hooks/`) -> **UI
    components** (`components/<feature>/`) -> **view** (`views/`) -> **route**
