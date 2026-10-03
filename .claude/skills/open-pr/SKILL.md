@@ -62,7 +62,10 @@ Closes #<numer>
 ```
 
 7. Wait for the CI bot's preview comment and check the preview on a phone.
-   After merge the branch is deleted, which also deletes its preview Worker.
+   After merge the `Delete merged branch` workflow deletes the branch and
+   starts `frontend-cleanup.yml`, which deletes its preview Worker. It never
+   deletes `main` or `develop`, so a release PR goes straight from `develop`;
+   do not pass `--delete-branch` to `gh pr merge` for a release PR.
 8. Merge into `develop` with "Squash and merge" (the PR title becomes the
    commit). Merge a release PR into `main` with "Create a merge commit".
    Release notes need no extra work: the `Release notes` workflow labels the PR
