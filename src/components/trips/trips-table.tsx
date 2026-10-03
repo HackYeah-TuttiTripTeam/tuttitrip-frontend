@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from '@keyline-icons/react'
+import { Link } from '@tanstack/react-router'
 import {
   createColumnHelper,
   functionalUpdate,
@@ -29,7 +30,14 @@ const columns = column.columns([
     header: () => TRIP_SORT_LABELS.name(),
     cell: ({ row }) => (
       <div className="min-w-0">
-        <p className="truncate font-medium">{row.original.name}</p>
+        <Link
+          to="/trips/$tripId"
+          params={{ tripId: row.original.id }}
+          aria-label={m.trip_open_label({ name: row.original.name })}
+          className="block truncate rounded-md font-medium outline-none after:absolute after:inset-0 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          {row.original.name}
+        </Link>
         {/* On phones the destination column is hidden, so it rides under the name. */}
         <p className="truncate text-muted-foreground md:hidden">
           {row.original.destination ?? m.trip_destination_undecided_long()}
@@ -125,7 +133,7 @@ export function TripsTable({ trips, sort, dir, onSortChange }: TripsTableProps) 
       </TableHeader>
       <TableBody>
         {table.getRowModel().rows.map((row) => (
-          <TableRow key={row.id}>
+          <TableRow key={row.id} className="relative">
             {row.getAllCells().map((cell) => (
               <TableCell
                 key={cell.id}

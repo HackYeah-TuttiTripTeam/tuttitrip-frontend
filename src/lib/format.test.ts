@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { overwriteGetLocale } from '@/paraglide/runtime'
-import { compareText, formatDate, formatMoney, formatNumber, formatTime, lowerCase } from './format'
+import {
+  compareText,
+  formatDate,
+  formatDateRange,
+  formatMoney,
+  formatNumber,
+  formatTime,
+  lowerCase,
+} from './format'
 
 const useLocale = (locale: 'pl' | 'en') => overwriteGetLocale(() => locale)
 
@@ -49,5 +57,16 @@ describe('format', () => {
     useLocale('pl')
     expect(['Zakopane', 'Łódź', 'Lublin'].sort(compareText)).toEqual(['Lublin', 'Łódź', 'Zakopane'])
     expect(lowerCase('ŁÓDŹ')).toBe('łódź')
+  })
+
+  it('writes a date range from date-only values', () => {
+    vi.useFakeTimers({ now: new Date('2026-10-01T12:00:00') })
+    useLocale('pl')
+    expect(formatDateRange('2026-10-03', '2026-10-06')).toBe('sob 3 paź – wt 6 paź')
+    expect(formatDateRange('2026-10-03', '2026-10-03')).toBe('sob 3 paź')
+    expect(formatDateRange('2026-10-03', null)).toBe('sob 3 paź')
+    expect(formatDateRange(null, null)).toBeNull()
+    useLocale('en')
+    expect(formatDateRange('2026-10-03', '2026-10-06')).toBe('Sat, Oct 3 – Tue, Oct 6')
   })
 })

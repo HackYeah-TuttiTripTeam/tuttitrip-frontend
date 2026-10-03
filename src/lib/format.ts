@@ -83,3 +83,14 @@ export function compareText(a: string, b: string): number {
 export function lowerCase(text: string): string {
   return text.toLocaleLowerCase(INTL_TAG[getLocale()])
 }
+
+/** "2026-10-04" -> local noon, so a date-only value never slips a day with the time zone. */
+const dateOnly = (value: string) => `${value}T12:00:00`
+
+/** "sob 4 paź" for one day, "sob 4 paź – wt 7 paź" for a range, null when there is no start. */
+export function formatDateRange(start: string | null, end: string | null): string | null {
+  if (!start) return null
+  const from = formatDate(dateOnly(start))
+  if (!end || end === start) return from
+  return `${from} – ${formatDate(dateOnly(end))}`
+}
