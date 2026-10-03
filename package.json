@@ -15,7 +15,7 @@
     "api:sync": "node scripts/api-sync.mjs",
     "pwa:icons": "pwa-assets-generator",
     "deploy": "wrangler deploy",
-    "i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy localStorage preferredLanguage baseLocale --emit-ts-declarations --silent",
+    "i18n": "node scripts/i18n.mjs",
     "postinstall": "pnpm i18n",
     "test": "vitest run"
   },

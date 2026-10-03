@@ -8,8 +8,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { isDev } from '@/lib/env'
 import { m } from '@/paraglide/messages'
-import { LanguageOptions, type LanguageState } from './language-menu'
 import { barItemClass, tabClass } from './nav-classes'
 
 export interface AccountState {
@@ -52,11 +52,9 @@ export function AccountAvatar({
  */
 export function AccountMenu({
   account,
-  language,
   variant,
 }: {
   account: AccountState
-  language: LanguageState
   /** "bar": desktop top bar, "tab": mobile bottom action bar. */
   variant: 'bar' | 'tab'
 }) {
@@ -91,18 +89,16 @@ export function AccountMenu({
               <Door />
               {m.account_logout()}
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <LanguageOptions language={language} />
           </>
         ) : (
           <>
             <DropdownMenuLabel className="font-normal text-muted-foreground leading-relaxed">
               {account.status === 'loading'
                 ? m.account_checking_session()
-                : m.account_auth_disabled()}
+                : isDev
+                  ? m.account_auth_disabled_dev()
+                  : m.account_auth_disabled()}
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <LanguageOptions language={language} />
           </>
         )}
       </DropdownMenuContent>

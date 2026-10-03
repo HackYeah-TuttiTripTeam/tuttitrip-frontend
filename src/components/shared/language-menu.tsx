@@ -7,63 +7,56 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { type Locale, locales } from '@/lib/i18n'
 import { m } from '@/paraglide/messages'
 import { barItemClass } from './nav-classes'
 
-export type UiLocale = 'pl' | 'en'
-
 export interface LanguageState {
-  locale: UiLocale
-  onChange: (locale: UiLocale) => void
+  locale: Locale
+  onChange: (locale: Locale) => void
 }
 
 /** Language names are written in their own language, so they stay readable after a wrong pick. */
-const NAMES: Record<UiLocale, () => string> = {
+const NAMES: Record<Locale, () => string> = {
   pl: m.language_name_pl,
   en: m.language_name_en,
 }
 
-const isUiLocale = (value: string): value is UiLocale => value in NAMES
+const isLocale = (value: string): value is Locale => locales.some((locale) => locale === value)
 
-/** Radio items for the dropdown content; shared by the language menu and the account menu. */
-export function LanguageOptions({ language }: { language: LanguageState }) {
-  return (
-    <>
-      <DropdownMenuLabel className="font-normal text-muted-foreground text-xs">
-        {m.language_label()}
-      </DropdownMenuLabel>
-      <DropdownMenuRadioGroup
-        value={language.locale}
-        onValueChange={(value) => isUiLocale(value) && language.onChange(value)}
-      >
-        {Object.entries(NAMES).map(([locale, name]) => (
-          <DropdownMenuRadioItem
-            key={locale}
-            value={locale}
-            lang={locale}
-            className="min-h-11 md:min-h-8"
-          >
-            {name()}
-          </DropdownMenuRadioItem>
-        ))}
-      </DropdownMenuRadioGroup>
-    </>
-  )
-}
-
-/** Always-visible language switch in the top bar, so guests can change it too. */
+/** Always-visible language switch in the top bar, so guests and signed-in users find it in one place. */
 export function LanguageMenu({ language }: { language: LanguageState }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className={`${barItemClass} h-11 md:h-9`}
-        aria-label={`${m.language_change()}: ${NAMES[language.locale]()}`}
+        // The visible code ("PL") leads the accessible name (WCAG 2.5.3 label in name).
+        aria-label={`${language.locale.toUpperCase()}, ${m.language_change()}: ${NAMES[language.locale]()}`}
       >
         <Globe aria-hidden="true" className="size-5" />
-        <span className="font-medium text-xs uppercase">{language.locale}</span>
+        <span aria-hidden="true" className="font-medium text-xs uppercase">
+          {language.locale}
+        </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
-        <LanguageOptions language={language} />
+        <DropdownMenuLabel className="font-normal text-muted-foreground text-xs">
+          {m.language_label()}
+        </DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={language.locale}
+          onValueChange={(value) => isLocale(value) && language.onChange(value)}
+        >
+          {locales.map((locale) => (
+            <DropdownMenuRadioItem
+              key={locale}
+              value={locale}
+              lang={locale}
+              className="min-h-11 md:min-h-8"
+            >
+              {NAMES[locale]()}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   )

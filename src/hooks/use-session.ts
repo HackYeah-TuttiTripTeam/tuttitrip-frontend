@@ -1,5 +1,5 @@
 import { useAuth0 } from '@auth0/auth0-react'
-import { authConfig } from '@/lib/env'
+import { authConfig, isDev } from '@/lib/env'
 import { m } from '@/paraglide/messages'
 
 export type SessionStatus = 'disabled' | 'loading' | 'anonymous' | 'authenticated'
@@ -19,7 +19,7 @@ const noop = () => undefined
 function describeAuthError(error: Error | undefined): string | undefined {
   if (!error) return undefined
   if (/service not found|audience/i.test(error.message)) {
-    return m.auth_error_unknown_api()
+    return isDev ? m.auth_error_unknown_api_dev() : m.auth_error_unknown_api()
   }
   if (/access_denied|denied/i.test(error.message)) return m.auth_error_cancelled()
   return m.auth_error_other({ message: error.message })

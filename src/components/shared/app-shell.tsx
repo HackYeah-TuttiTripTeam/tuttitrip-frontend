@@ -62,7 +62,7 @@ export function AppShell({ account, language, envLabel, onCreateTrip, children }
                 <Plus />
                 {m.action_new_trip()}
               </Button>
-              <AccountMenu account={account} language={language} variant="bar" />
+              <AccountMenu account={account} variant="bar" />
             </div>
           </div>
         </div>
@@ -94,7 +94,7 @@ export function AppShell({ account, language, envLabel, onCreateTrip, children }
               <Plus />
             </Button>
           </div>
-          <AccountMenu account={account} language={language} variant="tab" />
+          <AccountMenu account={account} variant="tab" />
         </div>
       </nav>
     </div>

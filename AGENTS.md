@@ -150,13 +150,43 @@ widoki ani komponenty.
 - Teksty wołamy w renderze (albo przez funkcję `() => m.klucz()`), nie w stałej modułu, której wynik
   zależałby od języka z chwili importu. Wyjątek: schematy Zod z `error: () => m.klucz()`.
 - Słownik pojęć ze skilla (`glossary_*`, `verdict_*`, `vote_*`, `reason_*`) ma wpisy w obu językach;
-  nowe pojęcia dopisz tam i do słownika w README skilla.
+  nowe pojęcia dopisz tam i do tabeli poniżej (folder skilla to kopia wzorca, nie edytujemy go).
 - Daty, godziny, kwoty i liczby tylko przez `src/lib/format.ts` (`Intl` z bieżącym językiem).
 - Język wybiera: zapamiętany wybór (localStorage), potem język przeglądarki, potem polski. Zmiana
   przez `useLocale().setLocale` przeładowuje dokument. `<html lang>` ustawia `lib/i18n.ts`.
 - Klient API wysyła `Accept-Language` z bieżącym językiem; teksty błędów z API przychodzą w tym języku.
-- `pnpm test:arch` pilnuje kompletu kluczy w pl/en i braku tekstów na sztywno w `views/` i
-  `components/` (poza `components/ui/`).
+- Teksty dla programistów (nazwy zmiennych `VITE_*`, „zgłoś zespołowi”) mają osobny klucz z
+  sufiksem `_dev` i widać je tylko przy `isDev` (`lib/env.ts`); użytkownik dostaje tekst ogólny.
+- Opcje Paraglide (strategia języka) są w jednym miejscu, `i18n.config.mjs`: czytają je
+  `scripts/i18n.mjs` (`pnpm i18n`) i `vite.config.ts`. Auth0 dostaje `ui_locales` z bieżącego języka.
+- `pnpm test:arch` pilnuje kompletu kluczy w pl/en i heurystycznie wyłapuje teksty na sztywno
+  (reguła 7, wzorce w `scripts/ui-text-rules.mjs`, testy wzorców w `ui-text-rules.test.mjs`):
+  w `views/` i `components/` (poza `components/ui/`) atrybuty `placeholder`, `aria-label`,
+  `aria-description`, `title`, `alt`, `label` oraz tekst JSX między tagami w jednej linii lub
+  zawinięty w osobną linię (min. dwa słowa); w `views/`, `components/` i `hooks/` (bez testów)
+  literały napisów, które wyglądają jak zdanie (min. dwa zwykłe słowa albo jedno słowo wielką literą
+  z min. 4 literami). Nie wykrywa: pojedynczego małego słowa w osobnej linii JSX, tekstu składanego
+  z kilku literałów, literałów w liniach z `className`/`cn`/`cva`, jednowyrazowych literałów pisanych
+  małą literą. To pomoc, nie dowód: reszta wychodzi w review.
+
+### Słownik pojęć PL / EN
+
+| PL | EN |
+| --- | --- |
+| podróż / wyjazd | trip |
+| wyjście | outing |
+| host, co-host, członek | host, co-host, member |
+| profil | profile |
+| werdykt | verdict |
+| weto | veto |
+| decyzja hosta (override) | host's decision (override) |
+| sprawdzenie planu, problemy | plan check, issues |
+| przeplanowanie | replan |
+| rozliczenie | settlement |
+| Obowiązkowo / Pasuje / Kultowe, ale nie Twoje / Pomiń | Must do / Good fit / Iconic, but not for you / Skip |
+| Chcę / Obojętnie / Nie chcę | Want / Don't mind / Don't want |
+| Za drogo / Za daleko / Nie mój klimat / Za duży tłum / Za trudne dla dziecka / Inne | Too expensive / Too far / Not my vibe / Too crowded / Too hard for a child / Other |
+
 - Poza zakresem: manifest PWA (`vite.config.ts`) i `index.html` mają opis po polsku, bo nie znają
   języka użytkownika.
 

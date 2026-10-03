@@ -17,6 +17,7 @@ import { useCreateTrip } from '@/hooks/use-create-trip'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
 import { useSession } from '@/hooks/use-session'
 import { useTrips } from '@/hooks/use-trips'
+import { isDev } from '@/lib/env'
 import type { SortDirection, TripSortKey } from '@/loaders/trips'
 import { m } from '@/paraglide/messages'
 import { useUiStore } from '@/stores/ui-store'
@@ -93,9 +94,11 @@ export function TripsView() {
             )
           }
         >
-          {session.status === 'disabled'
-            ? m.trips_login_required_auth_disabled()
-            : m.trips_login_required_body()}
+          {session.status !== 'disabled'
+            ? m.trips_login_required_body()
+            : isDev
+              ? m.trips_login_required_auth_disabled_dev()
+              : m.trips_login_required_auth_disabled()}
         </StatusMessage>
       ) : problem === 'offline' ? (
         <StatusMessage

@@ -3,6 +3,7 @@
 // Run through `pnpm test:arch`.
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { uiTextProblems } from './ui-text-rules.mjs'
 
 const SRC = 'src'
 const failures = []
@@ -70,30 +71,27 @@ for (const key of new Set([...pl.keys(), ...en.keys()])) {
     failures.push(`messages: "${key}" uses different {placeholders} in pl.json and en.json`)
 }
 
-// Rule 7: no hard-coded UI text in views and components (components/ui is vendored shadcn).
-// Flags JSX text with letters and string literals in text-bearing attributes; use m.*() instead.
-const TEXT_ATTRIBUTES =
-  /\b(?:placeholder|aria-label|aria-description|title|alt|label)="[^"{}]*\p{L}[^"{}]*"/u
-// A line of loose words: JSX text that wraps onto its own line (no tags, braces, quotes or code).
-const LOOSE_TEXT =
-  /^[^<>{}=;()'"`/\\&|?:[\]]*\p{L}{2,}\s+[^<>{}=;()'"`/\\&|?:[\]]*\p{L}{2,}[^<>{}=;()'"`]*$/u
-const JSX_TEXT = />\s*([^<>{}=;\n]*\p{L}[^<>{}=;\n]*)\s*</u
+// Rule 7: no hard-coded UI text. Heuristic, not a proof (patterns in ui-text-rules.mjs):
+// - views/ and components/ (.tsx, not components/ui/): text-bearing attributes, JSX text that sits
+//   between tags on one line or wraps onto its own line with two or more words;
+// - views/, components/ and hooks/ (.ts and .tsx, not tests): string literals that read like
+//   sentences (two or more plain words, or one capitalised word of 4+ letters).
+// A single lowercase word alone on a JSX line, text built from several literals and
+// template literals with only identifiers are not detected. Fix by using m.*().
 for (const file of handWritten) {
-  if (!/^src\/(views|components)\/.*\.tsx$/.test(file) || file.startsWith('src/components/ui/'))
-    continue
+  if (!/^src\/(views|components|hooks)\/.*\.tsx?$/.test(file)) continue
+  if (file.startsWith('src/components/ui/') || /\.test\.tsx?$/.test(file)) continue
+  const checkLiterals = true
+  const checkJsx = !file.startsWith('src/hooks/')
   readFileSync(file, 'utf8')
     .split('\n')
     .forEach((line, index) => {
-      const code = line.trim()
-      if (
-        /^(\/\/|\*|import |export |return |type |interface |const |let |function |else |case |default )/.test(
-          code,
-        )
+      const problems = uiTextProblems(line, { checkLiterals }).filter(
+        (problem) => checkJsx || problem === 'string literal',
       )
-        return
-      if (TEXT_ATTRIBUTES.test(code) || JSX_TEXT.test(code) || LOOSE_TEXT.test(code))
+      if (problems.length > 0)
         failures.push(
-          `${file}:${index + 1}: hard-coded UI text, add it to messages/*.json (rule 7)`,
+          `${file}:${index + 1}: hard-coded UI text (${problems.join(', ')}), add it to messages/*.json (rule 7)`,
         )
     })
 }

@@ -5,6 +5,7 @@ import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { paraglideOptions } from './i18n.config.mjs'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -20,13 +21,8 @@ export default defineConfig(({ mode }) => {
       // Must come before react()
       tanstackRouter({ target: 'react', autoCodeSplitting: true }),
       react(),
-      // Same options as the `i18n` script in package.json (used outside Vite, e.g. by tsc).
-      paraglideVitePlugin({
-        project: './project.inlang',
-        outdir: './src/paraglide',
-        strategy: ['localStorage', 'preferredLanguage', 'baseLocale'],
-        emitTsDeclarations: true,
-      }),
+      // Same options as `pnpm i18n` (scripts/i18n.mjs, used outside Vite, e.g. by tsc).
+      paraglideVitePlugin(paraglideOptions),
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
