@@ -104,6 +104,10 @@ with `is_me`) are served from `/trips/{id}/members` and join profiles on `profil
 | `member-readonly` | The caller is a member: reads work, writes answer 403 |
 | `server-error` | 500 for every API call |
 | `offline` | Network error for every API call |
+| `join-valid` | Opening an invitation link (`/join#t=<any token>`): preview 200, accept 200; the host's invitation list has one working invitation |
+| `join-dead` | Preview and accept answer 404 (expired, revoked or full: one answer for all) |
+| `join-already-member` | Preview says `already_member`; accept is idempotent |
+| `join-accept-dead` | Preview 200, then accept 404 (the link died in between) |
 
 - **In tests:** `src/mocks/vitest-setup.ts` starts one `setupServer` and serves
   `family-warsaw` before each test. Pick another with `useScenario('no-plan')` (from
@@ -121,7 +125,8 @@ with `is_me`) are served from `/trips/{id}/members` and join profiles on `profil
 - **New scenario:** add its name to `scenarioNames` and a `case` in `createWorld`
   (`src/mocks/scenarios.ts`; the switch fails `tsc` until you do), then a test that uses it.
 - **Smoke tests by agents:** states (empty, error, readonly, approval, offline) go through
-  `pnpm dev:mock`; the real API goes through the PR preview. Report both.
+  `pnpm dev:mock`; the real API goes through the local proxy to the develop API (`pnpm dev`),
+  or through the PR preview when the PR has the label `preview`. Report both.
 - **Build safety (rule 8):** `src/mocks/` is imported only by test files and `src/main.tsx`
   (behind `__API_MOCK__`); `msw` only inside `src/mocks/`
   (`scripts/check-arch.mjs`). `scripts/dist.test.mjs` builds and fails if MSW, the worker
@@ -330,9 +335,14 @@ One Worker per environment (wrangler environments):
 | PR from any other branch | `tuttitrip-preview-<slug>` (`--env preview --name ...`, slug max 45) | `https://tuttitrip-preview-<slug>.gburek.app` |
 
 `.github/workflows/frontend-ci.yml`, on `runs-on: [self-hosted, hackathon]`:
-`checks` = install, `biome ci`, resolve API + `api:sync`, `tsc -b`,
-`test:arch`, build. `deploy` = pushes to main/develop deploy their Worker;
-pull requests deploy their preview Worker and upsert one PR comment (marker
+One run per commit: `pull_request` for branches, `push` only for main and
+develop; a newer commit on a PR cancels its unfinished run (main/develop runs
+are never cancelled). `verify` (install, `biome ci`, resolve API + `api:sync`,
+`tsc -b`, `test:arch`, unit tests) and `build` (install, resolve API +
+`api:sync`, build) run in parallel. `deploy` (needs both) = pushes to main/develop deploy their Worker;
+pull requests deploy their preview Worker only when the org variable
+`PREVIEW_DEPLOYS` is `true` or the PR has the label `preview` (otherwise the
+`build` job summary says so), and upsert one PR comment (marker
 `<!-- tuttitrip-preview -->`, edited in place, never duplicated). Each deploy
 ends with a smoke test of `/`, a deep link and `/api/v1/health/live` through
 the proxy (skipped for a preview whose backend did not answer).
@@ -401,7 +411,7 @@ deletes the head branch and starts `frontend-cleanup.yml`, which deletes the
 preview. `main` and `develop` are never deleted, so release PRs go straight
 from `develop`.
 
-Branch protection for `main` and `develop` (PR required, `checks` must pass,
+Branch protection for `main` and `develop` (PR required, `verify` and `build` must pass,
 no force-push or deletion) is **not active**: GitHub refuses branch protection
 and rulesets on private repos of a free organization ("Upgrade to GitHub Pro or
 make this repository public"). Until the plan changes, treat these rules as a
@@ -472,9 +482,15 @@ innym w drogę i żeby każda funkcja przeszła ten sam proces. Dotyczą też lu
    - `src/api/schema.d.ts` tylko z `pnpm api:sync`, nigdy ręcznie (przy konflikcie wygeneruj od nowa),
    - `src/routeTree.gen.ts` (generowany), `src/styles/*` (tylko z skilla design systemu),
    - `components/ui/*`, `components/shared/*` i pliki z tekstami interfejsu (PL i EN).
-6. Smoke test jest obowiązkowy dla KAŻDEGO zrealizowanego feature'a. Po pushu gałęzi poczekaj na
-   wdrożenie podglądu i przejdź na żywo scenariusz z kryteriów akceptacji issue:
-   - podgląd frontendu powstaje dla PR, więc otwórz najpierw szkic PR (`gh pr create --draft`);
+6. Smoke test jest obowiązkowy dla KAŻDEGO zrealizowanego feature'a. Podglądy gałęzi są domyślnie wyłączone (zmienna organizacji `PREVIEW_DEPLOYS=false`, oszczędzamy
+   moc obliczeniową): develop i main wdrażają się zawsze, gałąź tylko z etykietą `preview` na PR (albo gdy
+   zmienna ma wartość `true`). Użyj etykiety wyłącznie, gdy żywy podgląd jest niezbędny; w pozostałych
+   przypadkach smoke test robisz lokalnie, a po merge'u sprawdzasz develop. Pominięty podgląd zostawia
+   w podsumowaniu joba jedną linię "Preview disabled (PREVIEW_DEPLOYS=false); add label `preview` to deploy".
+   Przejdź scenariusz z kryteriów akceptacji issue:
+   - lokalnie: `pnpm dev:mock` (scenariusze: puste, błąd, tylko do odczytu, zatwierdzenie, offline) i/albo
+     `pnpm dev` z lokalnym proxy `/api` do API develop (`VITE_API_URL`),
+   - tylko gdy podgląd jest niezbędny: otwórz szkic PR (`gh pr create --draft`), dodaj etykietę `preview`;
      adres `https://tuttitrip-preview-<slug>.gburek.app` jest w komentarzu bota,
    - przejdź scenariusz na telefonie (widok 390x844) i na desktopie, w motywie jasnym i ciemnym, po
      polsku i po angielsku (skill `claude-in-chrome` albo ręcznie); zrzuty dołącz do komentarza.

@@ -1,25 +1,82 @@
 name: Frontend CI
 
-# checks: install -> lint -> API contract -> types -> architecture -> build.
+# verify (lint, types, architecture, unit tests) and build run in parallel.
 # deploy: main -> tuttitrip.gburek.app, develop -> tuttitrip-develop.gburek.app,
 #         pull requests -> one preview Worker per branch + a PR comment,
 #         then delete preview Workers whose branch is gone.
+# One run per commit: pull_request for branches (the preview is deployed from
+# it), push only for main and develop. A newer commit on the same pull request
+# cancels the unfinished run; main/develop runs are never cancelled.
+# PR previews are off unless the org variable PREVIEW_DEPLOYS is 'true' or the PR
+# has the label `preview`; adding that label re-runs the workflow to deploy it.
 on:
   push:
-    branches: ["**"]
+    branches: [main, develop]
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: frontend-ci-${{ github.event_name }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  # Other labels (type:* from the autolabeler) get their own group, so they never
+  # cancel the run of a real commit.
+  group: frontend-ci-${{ github.event.pull_request.number || github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'preview' && '-label' || '' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  checks:
-    name: checks
+  verify:
+    name: verify
+    if: github.event.action != 'labeled' || github.event.label.name == 'preview'
+    runs-on: [self-hosted, hackathon]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      # The JS build of pnpm: the runner image lacks libatomic, which the
+      # standalone binary from pnpm/action-setup needs. The store stays on the
+      # self-hosted runner between runs, so no extra cache step.
+      - name: Install pnpm (version from packageManager)
+        run: npm install --global "$(node -p "require('./package.json').packageManager")"
+
+      - name: Install
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Lint and format (Biome)
+        run: pnpm biome ci --reporter=github .
+
+      - name: Pick backend API for this branch
+        id: api
+        run: scripts/resolve-api.sh "${{ github.head_ref || github.ref_name }}" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Sync API contract (/api/v1/openapi.json -> schema.d.ts)
+        if: steps.api.outputs.api_live == 'true'
+        run: |
+          pnpm api:sync --url "${{ steps.api.outputs.api_schema_url }}"
+          if ! git diff --quiet -- src/api/schema.d.ts; then
+            echo "::warning file=src/api/schema.d.ts::Backend '${{ steps.api.outputs.api_branch }}' changed the API. Run 'pnpm api:sync' locally and commit src/api/schema.d.ts."
+            git --no-pager diff --stat -- src/api/schema.d.ts
+          fi
+
+      - name: Keep committed API contract
+        if: steps.api.outputs.api_live != 'true'
+        run: echo "::warning::No backend deployment answered; using the committed src/api/schema.d.ts."
+
+      - name: Types
+        run: pnpm tsc -b
+
+      - name: Architecture tests
+        run: pnpm test:arch
+
+      - name: Unit tests
+        run: pnpm test
+
+  build:
+    name: build
+    if: github.event.action != 'labeled' || github.event.label.name == 'preview'
     runs-on: [self-hosted, hackathon]
     timeout-minutes: 15
     outputs:
@@ -40,10 +97,7 @@ jobs:
         run: npm install --global "$(node -p "require('./package.json').packageManager")"
 
       - name: Install
-        run: pnpm install --frozen-lockfile
-
-      - name: Lint and format (Biome)
-        run: pnpm biome ci --reporter=github .
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Pick backend API for this branch
         id: api
@@ -60,16 +114,7 @@ jobs:
 
       - name: Keep committed API contract
         if: steps.api.outputs.api_live != 'true'
-        run: echo "::warning::No backend deployment answered; building against the committed src/api/schema.d.ts."
-
-      - name: Types
-        run: pnpm tsc -b
-
-      - name: Architecture tests
-        run: pnpm test:arch
-
-      - name: Unit tests
-        run: pnpm test
+        run: echo "::warning::No backend deployment answered; using the committed src/api/schema.d.ts."
 
       - name: Build
         run: pnpm exec vite build
@@ -87,15 +132,22 @@ jobs:
           path: dist
           retention-days: 3
 
+      - name: Say why there is no preview
+        if: >-
+          github.event_name == 'pull_request' && vars.PREVIEW_DEPLOYS != 'true' &&
+          !contains(github.event.pull_request.labels.*.name, 'preview')
+        run: echo 'Preview disabled (PREVIEW_DEPLOYS=false); add label `preview` to deploy' >> "$GITHUB_STEP_SUMMARY"
+
   deploy:
     name: deploy
-    needs: checks
+    needs: [verify, build]
     # Pushes to main/develop deploy; pull requests from this repo get a preview,
     # except release PRs (develop -> main): develop already has its own deployment.
     if: >-
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'develop')) ||
       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository &&
-       github.head_ref != 'develop' && github.head_ref != 'main')
+       github.head_ref != 'develop' && github.head_ref != 'main' &&
+       (vars.PREVIEW_DEPLOYS == 'true' || contains(github.event.pull_request.labels.*.name, 'preview')))
     runs-on: [self-hosted, hackathon]
     timeout-minutes: 15
     permissions:
@@ -105,8 +157,8 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       GH_TOKEN: ${{ github.token }}
-      PREVIEW_WORKER: ${{ needs.checks.outputs.preview_worker }}
-      API_ORIGIN: ${{ needs.checks.outputs.api_url }}
+      PREVIEW_WORKER: ${{ needs.build.outputs.preview_worker }}
+      API_ORIGIN: ${{ needs.build.outputs.api_url }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -118,7 +170,7 @@ jobs:
       - name: Install pnpm (version from packageManager)
         run: npm install --global "$(node -p "require('./package.json').packageManager")"
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --prefer-offline
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: dist
@@ -173,13 +225,13 @@ jobs:
       - name: Deployment URL
         id: url
         if: steps.creds.outputs.ok == 'true'
-        run: echo "url=${{ steps.cmd.outputs.url || format('https://{0}.gburek.app', needs.checks.outputs.preview_worker) }}" >> "$GITHUB_OUTPUT"
+        run: echo "url=${{ steps.cmd.outputs.url || format('https://{0}.gburek.app', needs.build.outputs.preview_worker) }}" >> "$GITHUB_OUTPUT"
 
       - name: Smoke test (app shell + SPA deep link + API proxy)
         if: steps.creds.outputs.ok == 'true'
         env:
           # A preview whose backend did not answer at build time skips the proxy check.
-          CHECK_API: ${{ github.event_name == 'push' || needs.checks.outputs.api_live == 'true' }}
+          CHECK_API: ${{ github.event_name == 'push' || needs.build.outputs.api_live == 'true' }}
         run: |
           url="${{ steps.url.outputs.url }}"
           app_ok() {
@@ -208,7 +260,7 @@ jobs:
           | --- | --- |
           | Commit | \`${{ github.event.pull_request.head.sha }}\` |
           | Worker | \`$PREVIEW_WORKER\` |
-          | API | ${{ needs.checks.outputs.api_url }} (backend \`${{ needs.checks.outputs.api_branch }}\`) |
+          | API | ${{ needs.build.outputs.api_url }} (backend \`${{ needs.build.outputs.api_branch }}\`) |
 
           Podgląd zniknie automatycznie po usunięciu gałęzi.
           MD

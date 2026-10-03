@@ -1,3 +1,8 @@
+# Nothing leaves the site in a Referer header: an invitation link must stay private even if a
+# page ever links out. (Its token is in the fragment, which browsers never send anyway.)
+/*
+  Referrer-Policy: no-referrer
+
 # Workers static assets headers. The service worker and the app shell must be
 # revalidated so a new deploy reaches installed PWAs; hashed assets are immutable.
 /sw.js
