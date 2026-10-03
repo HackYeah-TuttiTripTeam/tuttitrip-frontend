@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as InterviewSpikeRouteImport } from './routes/interview-spike'
+import { Route as InterviewSpikeCopilotkitRouteImport } from './routes/interview-spike-copilotkit'
 import { Route as TripsRouteImport } from './routes/trips'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,12 @@ const InterviewSpikeRoute = InterviewSpikeRouteImport.update({
   path: '/interview-spike',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InterviewSpikeCopilotkitRoute =
+  InterviewSpikeCopilotkitRouteImport.update({
+    id: '/interview-spike-copilotkit',
+    path: '/interview-spike-copilotkit',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const TripsRoute = TripsRouteImport.update({
   id: '/trips',
   path: '/trips',
@@ -32,30 +39,39 @@ const TripsRoute = TripsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/interview-spike': typeof InterviewSpikeRoute
+  '/interview-spike-copilotkit': typeof InterviewSpikeCopilotkitRoute
   '/trips': typeof TripsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/interview-spike': typeof InterviewSpikeRoute
+  '/interview-spike-copilotkit': typeof InterviewSpikeCopilotkitRoute
   '/trips': typeof TripsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/interview-spike': typeof InterviewSpikeRoute
+  '/interview-spike-copilotkit': typeof InterviewSpikeCopilotkitRoute
   '/trips': typeof TripsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/interview-spike' | '/trips'
+  fullPaths: '/' | '/interview-spike' | '/interview-spike-copilotkit' | '/trips'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/interview-spike' | '/trips'
-  id: '__root__' | '/' | '/interview-spike' | '/trips'
+  to: '/' | '/interview-spike' | '/interview-spike-copilotkit' | '/trips'
+  id:
+    | '__root__'
+    | '/'
+    | '/interview-spike'
+    | '/interview-spike-copilotkit'
+    | '/trips'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   InterviewSpikeRoute: typeof InterviewSpikeRoute
+  InterviewSpikeCopilotkitRoute: typeof InterviewSpikeCopilotkitRoute
   TripsRoute: typeof TripsRoute
 }
 
@@ -75,6 +91,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InterviewSpikeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/interview-spike-copilotkit': {
+      id: '/interview-spike-copilotkit'
+      path: '/interview-spike-copilotkit'
+      fullPath: '/interview-spike-copilotkit'
+      preLoaderRoute: typeof InterviewSpikeCopilotkitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/trips': {
       id: '/trips'
       path: '/trips'
@@ -88,6 +111,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   InterviewSpikeRoute: InterviewSpikeRoute,
+  InterviewSpikeCopilotkitRoute: InterviewSpikeCopilotkitRoute,
   TripsRoute: TripsRoute,
 }
 export const routeTree = rootRouteImport

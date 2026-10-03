@@ -1,7 +1,6 @@
 import type { HttpAgent } from '@ag-ui/client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  applyAuthHeaders,
   type ChatLine,
   createInterviewAgent,
   EMPTY_INTERVIEW_STATE,
@@ -64,7 +63,6 @@ export function useInterview(): Interview {
     setRunning(true)
     startedAt.current = performance.now()
     try {
-      await applyAuthHeaders(agent)
       await agent.runAgent()
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Nie udało się połączyć z asystentem.')

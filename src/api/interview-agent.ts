@@ -30,17 +30,24 @@ export const EMPTY_INTERVIEW_STATE: InterviewState = { facts: [], card: null }
 // Same origin: the Worker (deployed) or the Vite dev server proxies /api to the backend.
 export const INTERVIEW_AGUI_URL = '/api/v1/interview/agui'
 
-/** One HttpAgent per interview thread; the token is set before every run. */
+/**
+ * fetch for HttpAgent: reads a fresh token for every run (Auth0 refreshes it
+ * silently), so a long interview never sends an expired Bearer. `headers` on the
+ * agent would be a snapshot, and CopilotKit rewrites them from its own provider.
+ */
+const authedFetch = async (url: string, init: RequestInit): Promise<Response> => {
+  const headers = new Headers(init.headers)
+  const token = await currentAccessToken()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+  return fetch(url, { ...init, headers })
+}
+
+/** One HttpAgent per interview thread. */
 export function createInterviewAgent(threadId?: string): HttpAgent {
   return new HttpAgent({
     url: INTERVIEW_AGUI_URL,
     threadId,
     initialState: EMPTY_INTERVIEW_STATE,
+    fetch: authedFetch,
   })
-}
-
-/** Refresh the Bearer token on the agent. Call before each `runAgent()`. */
-export async function applyAuthHeaders(agent: HttpAgent): Promise<void> {
-  const token = await currentAccessToken()
-  agent.headers = token ? { Authorization: `Bearer ${token}` } : {}
 }
