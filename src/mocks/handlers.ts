@@ -24,9 +24,22 @@ export function createHandlers(name: ScenarioName, { delayMs = 0, tweak }: Handl
     if (delayMs > 0) await delay(delayMs)
   }
   return world.behaviour === 'normal'
-    ? normalHandlers(world, latency)
+    ? [...normalHandlers(world, latency), ...noRealApi]
     : brokenHandlers(world.behaviour, latency)
 }
+
+/**
+ * Last in the list: an /api call no handler above knows is answered here, never passed on to the
+ * backend (in the browser the Vite dev server would proxy it to the real API).
+ */
+const noRealApi = [
+  http.all('*/api/*', ({ request }) =>
+    HttpResponse.json(
+      { detail: `No mock handler for ${request.method} ${new URL(request.url).pathname}` },
+      { status: 501 },
+    ),
+  ),
+]
 
 function brokenHandlers(behaviour: 'server-error' | 'offline', latency: () => Promise<void>) {
   return [
@@ -118,8 +131,10 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       const body = (await request.json()) as Schemas['ProfileUpdate']
       const changed = withoutNulls(body)
       Object.assign(current, changed)
+      // Null clears the nap start; for every other field it means "not given".
+      if (body.nap_start === null) current.nap_start = null
       for (const field of COMFORT_FIELDS)
-        if (field in changed && !current.customized_fields.includes(field))
+        if (field in body && !current.customized_fields.includes(field))
           current.customized_fields.push(field)
       return HttpResponse.json(current)
     }),
@@ -129,6 +144,10 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       if (!canWrite(params.tripId)) return forbidden()
       const index = world.profiles.findIndex((p) => p.id === params.profileId)
       if (index < 0) return notFound('Profile not found')
+      // A person with an account is removed as a member, not as a profile.
+      if (world.profiles[index]?.user_sub) {
+        return HttpResponse.json({ detail: 'Profile belongs to an account' }, { status: 409 })
+      }
       world.profiles.splice(index, 1)
       return new HttpResponse(null, { status: 204 })
     }),
@@ -197,7 +216,11 @@ const COMFORT_FIELDS = [
   'floor',
 ] as const
 
-/** Same bands as the API: toddler under 4, child under 13, teen under 18, adult under 65. */
+/**
+ * Same bands as the API's age defaults (profiles/logic/age_defaults.py). A copy, so drift shows up
+ * in scenarios.test.ts, which checks the age groups of the family.
+ * Toddler under 4, child under 13, teen under 18, adult under 65.
+ */
 function ageGroup(age: number): Profile['age_group'] {
   if (age < 4) return 'toddler'
   if (age < 13) return 'child'

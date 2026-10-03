@@ -14,10 +14,11 @@ import '@/styles/index.css'
 
 syncDocumentLanguage()
 
-// `pnpm dev:mock`: MSW answers the API and a fake user is signed in. The condition is written
-// out in the `if`, so the bundler drops the import (and MSW with it) from production builds.
+// `pnpm dev:mock`: MSW answers the API and a fake user is signed in. __API_MOCK__ is replaced by
+// a literal at build time (vite.config.ts, the only place the condition is defined), so a
+// production build drops this branch and the import with it.
 let mock: typeof MockEntry | null = null
-if (import.meta.env.DEV && import.meta.env.VITE_API_MOCK === '1') {
+if (__API_MOCK__) {
   mock = await import('@/mocks/entry')
   await mock.startMockApi()
 }

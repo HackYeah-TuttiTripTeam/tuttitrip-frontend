@@ -15,7 +15,13 @@ export default defineConfig(({ mode, command }) => {
   const apiTarget = loadEnv(mode, process.cwd(), 'VITE_').VITE_API_URL || 'http://localhost:8000'
   const apiProxy = { '/api': { target: apiTarget, changeOrigin: true } }
 
+  // Mock mode: VITE_API_MOCK=1 outside a production build. The only definition of the condition;
+  // `define` makes it a literal in every module, so production drops the mock entry completely.
+  const apiMock =
+    loadEnv(mode, process.cwd(), 'VITE_').VITE_API_MOCK === '1' && mode !== 'production'
+
   return {
+    define: { __API_MOCK__: JSON.stringify(apiMock) },
     server: { proxy: apiProxy },
     preview: { proxy: apiProxy },
     plugins: [

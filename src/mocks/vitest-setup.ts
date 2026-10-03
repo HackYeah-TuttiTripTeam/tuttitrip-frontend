@@ -33,5 +33,8 @@ server.listen({ onUnhandledFrame: 'error' })
 // Tests read Polish unless one switches the locale itself.
 beforeEach(() => overwriteGetLocale(() => 'pl'))
 beforeEach(useDefaultScenario)
-afterEach(() => server.resetHandlers())
+afterEach(() => {
+  server.resetHandlers()
+  server.events.removeAllListeners()
+})
 afterAll(() => server.close())

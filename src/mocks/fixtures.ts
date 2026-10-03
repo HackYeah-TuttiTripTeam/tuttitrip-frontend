@@ -337,6 +337,17 @@ export const needsApprovalBudget = (): PlanBudget => ({
   approval_status: 'pending',
 })
 
+/** The base for the one night of the two-day trip; hard requirements are met. */
+const lodging = (): NonNullable<Plan['lodging']> => ({
+  name: 'Apartament na Pradze',
+  lat: 52.2517,
+  lon: 21.0364,
+  nights: 1,
+  cost_total: '420.00',
+  s_h: 0.82,
+  requirements: [],
+})
+
 export const plan = (tripId: string = TRIP_ID, overrides: Partial<Plan> = {}): Plan => ({
   id: '5d1c0e77-8a2b-4c3d-9e4f-60718293a4b6',
   trip_id: tripId,
@@ -346,7 +357,7 @@ export const plan = (tripId: string = TRIP_ID, overrides: Partial<Plan> = {}): P
   created_at: '2026-10-02T12:00:00Z',
   params: { alpha: 1, weight_preset: 'default' },
   days: days(),
-  lodging: null,
+  lodging: lodging(),
   fairness: {
     group_size: 5,
     jain: 0.94,

@@ -131,6 +131,18 @@ describe('broken servers', () => {
   })
 })
 
+describe('no real API', () => {
+  it.each(['family-warsaw', 'no-plan', 'member-readonly'] as const)(
+    'answers an endpoint without a mock handler with 501 and says so (%s)',
+    async (name) => {
+      useScenario(name)
+      const response = await fetch('/api/v1/places')
+      expect(response.status).toBe(501)
+      expect(await response.json()).toEqual({ detail: 'No mock handler for GET /api/v1/places' })
+    },
+  )
+})
+
 describe('pickScenario', () => {
   const pick = (search: string, stored: string | null): ScenarioName => pickScenario(search, stored)
 

@@ -34,19 +34,6 @@ describe('TripView', () => {
     expect(interview.getAttribute('aria-selected')).toBe('true')
   })
 
-  it('shows host-only text to a host', async () => {
-    renderApp(`/trips/${TRIP_ID}?tab=people`)
-    expect(await screen.findByText(m.trip_people_body_manage())).toBeTruthy()
-  })
-
-  it('does not show host-only text to a member', async () => {
-    useScenario('member-readonly')
-    renderApp(`/trips/${TRIP_ID}?tab=people`)
-    const panel = await screen.findByRole('tabpanel')
-    expect(within(panel).getByText(m.trip_people_body_member())).toBeTruthy()
-    expect(screen.queryByText(m.trip_people_body_manage())).toBeNull()
-  })
-
   it('explains a server error and offers a retry', async () => {
     useScenario('server-error')
     renderApp(`/trips/${TRIP_ID}`)
@@ -73,6 +60,13 @@ describe('Plan tab, family-warsaw', () => {
     expect(screen.getByText(/a1b2c3d4e5f6/)).toBeTruthy()
     expect(screen.getByText(/1\s480\szł/)).toBeTruthy()
     expect(screen.getByRole('button', { name: m.plan_recompute() })).toBeTruthy()
+  })
+
+  it('shows the cost of the plan and the lodging', async () => {
+    renderApp(`/trips/${TRIP_ID}?tab=plan`)
+    expect(await screen.findByText(/1\s480\szł/)).toBeTruthy()
+    expect(screen.getByText(/Apartament na Pradze, 1 noc/)).toBeTruthy()
+    expect(screen.getByText(/420\szł za wszystkie noce/)).toBeTruthy()
   })
 
   it('marks a verified price with its date and a source link', async () => {

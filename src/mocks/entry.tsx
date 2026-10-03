@@ -1,5 +1,5 @@
 // The entry point of `pnpm dev:mock`. Imported only by src/main.tsx, behind
-// `import.meta.env.DEV && VITE_API_MOCK === '1'`, so a production build contains neither
+// `__API_MOCK__` (vite.config.ts), so a production build contains neither
 // MSW nor this fake session (scripts/check-arch.mjs and scripts/dist.test.mjs guard that).
 import {
   Auth0Context,
@@ -9,6 +9,7 @@ import {
 } from '@auth0/auth0-react'
 import { setupWorker } from 'msw/browser'
 import type { ReactNode } from 'react'
+import { setAuthConfig } from '@/lib/env'
 import { MOCK_USER_NAME, MOCK_USER_SUB } from './fixtures'
 import { createHandlers } from './handlers'
 import { pickScenario, type ScenarioName } from './scenarios'
@@ -28,6 +29,17 @@ export async function startMockApi(): Promise<ScenarioName> {
   } catch {
     // Same as above.
   }
+
+  // A service worker left by the PWA (same scope) would answer before MSW does.
+  const registrations = await navigator.serviceWorker.getRegistrations()
+  await Promise.all(
+    registrations
+      .filter((registration) => !registration.active?.scriptURL.endsWith('/mockServiceWorker.js'))
+      .map((registration) => registration.unregister()),
+  )
+
+  // The session flags: "Auth0 is configured", so the app asks the (fake) session below.
+  setAuthConfig({ domain: 'mock.invalid', clientId: 'mock', audience: undefined })
 
   const worker = setupWorker(...createHandlers(scenario, { delayMs: 250 }))
   await worker.start({ quiet: true, onUnhandledFrame: 'bypass' })

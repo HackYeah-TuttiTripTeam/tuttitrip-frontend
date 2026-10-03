@@ -112,14 +112,18 @@ with `is_me`) are served from `/trips/{id}/members` and join profiles on `profil
   tabs, "Policz plan") on scenarios. State is created per test, so tests do not leak.
 - **In the browser:** `pnpm dev:mock`, then open `http://localhost:5173/trips?scenario=<name>`.
   The choice is kept in `sessionStorage` for the tab (the router drops the query param).
-  A fake Auth0 user is signed in, no password, no network. Mock mode needs
-  `import.meta.env.DEV` and `VITE_API_MOCK=1`, and registers no PWA service worker.
+  A fake Auth0 user is signed in, no password, no network. Mock mode needs `VITE_API_MOCK=1`
+  outside a production build (`__API_MOCK__`, defined once in `vite.config.ts`), removes any
+  PWA service worker and registers none. An `/api` call without a mock handler answers 501
+  "No mock handler for ..." and never reaches the real backend.
   Keep the tab in the foreground: TanStack Query pauses retries in a hidden tab, so
   `offline` and `server-error` look like endless loading there.
+- **New scenario:** add its name to `scenarioNames` and a `case` in `createWorld`
+  (`src/mocks/scenarios.ts`; the switch fails `tsc` until you do), then a test that uses it.
 - **Smoke tests by agents:** states (empty, error, readonly, approval, offline) go through
   `pnpm dev:mock`; the real API goes through the PR preview. Report both.
 - **Build safety (rule 8):** `src/mocks/` is imported only by test files and `src/main.tsx`
-  (behind the dev-only switch); `msw` only inside `src/mocks/`
+  (behind `__API_MOCK__`); `msw` only inside `src/mocks/`
   (`scripts/check-arch.mjs`). `scripts/dist.test.mjs` builds and fails if MSW, the worker
   script or the fake session are in the bundle. A field missing in the schema lands with
   the backend, never as a hand-written fixture shape.
