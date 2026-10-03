@@ -116,7 +116,12 @@ export function TripView() {
         tab={tab}
         onTabChange={setTab}
         people={
-          <TripPeopleView key={trip.id} tripId={trip.id} canManage={trip.my_role !== 'member'} />
+          <TripPeopleView
+            key={trip.id}
+            tripId={trip.id}
+            tripName={trip.name}
+            canManage={trip.my_role !== 'member'}
+          />
         }
         plan={<TripPlanView key={trip.id} tripId={trip.id} role={trip.my_role} />}
       />
