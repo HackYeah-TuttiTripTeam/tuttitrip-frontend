@@ -326,6 +326,7 @@ No AI attribution anywhere: no `Co-Authored-By` trailers for tools, no
 - Efekty zakazane w README skilla i w `DESIGN.md` (Aurora, Beams, Sparkles, gradientowy tekst, karty 3D,
   szkło, cienie na kartkach w spoczynku, karty w kartach, emoji) są zakazane także wtedy, gdy przychodzą
   z rejestru.
+- Makiety ekranów z pitch decku są w `docs/mocks` (`pitch-deck.html`, lista w `docs/mocks/README.md`). To odniesienie wizualne, a design system i `DESIGN.md` mają pierwszeństwo.
 - Komponent z rejestru (`@react-bits`, `@aceternity`, `@shadcn-space`) przepinasz na nasze tokeny,
   kroje i ikony Keyline, zanim go zacommitujesz.
 - `PRODUCT.md` i `DESIGN.md` to kontekst impeccable. Gdy zmienia się design system, podmień
