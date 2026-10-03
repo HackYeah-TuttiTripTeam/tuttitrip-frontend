@@ -15,18 +15,14 @@ export function useJoinInvitation(token: string | null, signedIn: boolean) {
   })
   const previewProblem = preview.isError ? classifyApiError(preview.error) : null
 
-  // A dead token is useless: do not keep it around for the next visit.
+  // Signed in: the login round-trip is over, so nothing of the token stays in storage.
   useEffect(() => {
-    if (previewProblem === 'not_found') clearJoinToken()
-  }, [previewProblem])
+    if (signedIn) clearJoinToken()
+  }, [signedIn])
 
   const mutation = $api.useMutation('post', '/api/v1/invitations/accept', {
     onSuccess: () => {
-      clearJoinToken()
       return queryClient.invalidateQueries({ queryKey: tripsQueryOptions().queryKey })
-    },
-    onError: (error) => {
-      if (classifyApiError(error) === 'not_found') clearJoinToken()
     },
   })
 

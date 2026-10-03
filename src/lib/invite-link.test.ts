@@ -6,6 +6,7 @@ import {
   clearJoinToken,
   parseInviteFragment,
   peekJoinToken,
+  stashJoinToken,
 } from './invite-link'
 
 afterEach(clearJoinToken)
@@ -32,23 +33,20 @@ describe('invite link', () => {
 })
 
 describe('token kept for the login round-trip', () => {
-  it('keeps the token from the link until it is cleared', () => {
+  it('reads the link first and the stash after the redirect', () => {
     expect(captureJoinToken('#t=secret')).toBe('secret')
-    // After the redirect the fragment is gone; the stash carries the token over.
+    // Reading does not store anything: only the login button does.
+    expect(peekJoinToken()).toBeNull()
+    stashJoinToken('secret')
     expect(captureJoinToken('')).toBe('secret')
     expect(sessionStorage.getItem('tuttitrip.join-token')).toBe('secret')
     clearJoinToken()
-    expect(peekJoinToken()).toBeNull()
+    expect(captureJoinToken('')).toBeNull()
     expect(sessionStorage.getItem('tuttitrip.join-token')).toBeNull()
   })
 
-  it('survives a page reload through sessionStorage', () => {
-    sessionStorage.setItem('tuttitrip.join-token', 'from-storage')
-    expect(captureJoinToken('')).toBe('from-storage')
-  })
-
   it('prefers a new link over an old stash', () => {
-    captureJoinToken('#t=old')
+    stashJoinToken('old')
     expect(captureJoinToken('#t=new')).toBe('new')
   })
 })

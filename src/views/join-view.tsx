@@ -9,6 +9,7 @@ import { useJoinInvitation } from '@/hooks/use-join-invitation'
 import { useJoinToken } from '@/hooks/use-join-token'
 import { useSession } from '@/hooks/use-session'
 import { isDev } from '@/lib/env'
+import { stashJoinToken } from '@/lib/invite-link'
 import { m } from '@/paraglide/messages'
 
 const backToTrips = (
@@ -20,7 +21,7 @@ const backToTrips = (
 /** /join#t=<token>: sign in if needed, see the trip, confirm, land on its People tab. */
 export function JoinView() {
   const session = useSession()
-  const { token } = useJoinToken()
+  const token = useJoinToken()
   const navigate = useNavigate()
   const signedIn = session.status === 'authenticated'
   const join = useJoinInvitation(token, signedIn)
@@ -63,7 +64,17 @@ export function JoinView() {
         role={session.error ? 'alert' : 'status'}
         icon={<KeyRound />}
         title={m.join_login_title()}
-        action={<Button onClick={session.login}>{m.account_login()}</Button>}
+        action={
+          <Button
+            onClick={() => {
+              // The Auth0 redirect reloads the page; this keeps the token until we are back.
+              stashJoinToken(token)
+              session.login()
+            }}
+          >
+            {m.account_login()}
+          </Button>
+        }
       >
         {session.error ?? m.join_login_body()}
       </StatusMessage>

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createBrowserHistory, createRouter, RouterProvider } from '@tanstack/react-router'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Session } from '@/hooks/use-session'
 import { clearJoinToken, peekJoinToken } from '@/lib/invite-link'
@@ -194,6 +194,11 @@ describe('JoinView', () => {
     renderAt('/join#t=secret-token')
     expect(await screen.findByText(m.join_login_title())).toBeTruthy()
     expect(api.calls).toHaveLength(0)
+    expect(peekJoinToken()).toBeNull()
+    fireEvent.click(
+      within(screen.getByRole('status')).getByRole('button', { name: m.account_login() }),
+    )
+    expect(session.current.login).toHaveBeenCalled()
     expect(peekJoinToken()).toBe('secret-token')
     cleanup()
 

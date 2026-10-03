@@ -47,7 +47,7 @@ export function JoinForm({
 
   return (
     <form
-      onSubmit={form.handleSubmit((values) => onSubmit(values.name || null))}
+      onSubmit={form.handleSubmit((values) => onSubmit(alreadyMember ? null : values.name || null))}
       noValidate
       className="flex max-w-md flex-col gap-6"
     >
