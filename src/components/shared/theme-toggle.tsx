@@ -41,7 +41,7 @@ export function ThemeRadioGroup({ state }: { state: ThemeState }) {
       onValueChange={(value) => isTheme(value) && state.onChange(value)}
     >
       {themes.map((theme) => (
-        <DropdownMenuRadioItem key={theme} value={theme} className="min-h-11 md:min-h-8">
+        <DropdownMenuRadioItem key={theme} value={theme} className="min-h-11">
           {ICONS[theme]}
           {NAMES[theme]()}
         </DropdownMenuRadioItem>
@@ -58,7 +58,7 @@ export function ThemeToggle({ state }: { state: ThemeState }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className={cn(barItemClass, 'size-11 justify-center px-0 md:size-9 [&_svg]:size-5')}
+        className={cn(barItemClass, 'size-11 justify-center px-0 [&_svg]:size-5')}
         aria-label={`${m.theme_change()}: ${NAMES[state.theme]()}`}
       >
         {state.resolved === 'dark' ? <Moon aria-hidden="true" /> : <Sun aria-hidden="true" />}
