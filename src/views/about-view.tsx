@@ -1,14 +1,19 @@
-import { AboutInside, AboutIntro, AboutTeam } from '@/components/public/about-sections'
-import { useDocumentTitle } from '@/hooks/use-document-title'
+import {
+  AboutInside,
+  AboutIntro,
+  AboutPhotoPhone,
+  AboutSplit,
+  AboutTeam,
+} from '@/components/public/about-sections'
 import { useSession } from '@/hooks/use-session'
-import { m } from '@/paraglide/messages'
 
 export function AboutView() {
-  useDocumentTitle(m.nav_about())
   const session = useSession()
   return (
     <>
       <AboutIntro />
+      <AboutSplit />
+      <AboutPhotoPhone />
       <AboutInside />
       <AboutTeam onSignup={session.status === 'anonymous' ? session.signup : undefined} />
     </>

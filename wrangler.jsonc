@@ -21,20 +21,33 @@
     // /assets/* goes through it too: the assets layer answers a missing GET there with the
     // SPA fallback itself (200 index.html, Worker not invoked, verified on a preview), so only
     // the Worker can turn a chunk removed by a newer deploy into a 404 (worker/index.ts).
-    "run_worker_first": ["/api/*", "/assets/*"]
+    // The public pages and the crawler files go through it for their per-page metadata and
+    // first screen. Every other navigation is the assets layer's SPA fallback, no script.
+    "run_worker_first": [
+      "/api/*",
+      "/assets/*",
+      "/",
+      "/about",
+      "/about/",
+      "/contact",
+      "/contact/",
+      "/robots.txt",
+      "/sitemap.xml"
+    ]
   },
   "workers_dev": false,
   "preview_urls": false,
   "routes": [{ "pattern": "tuttitrip.gburek.app", "custom_domain": true }],
-  // Backend origin for the /api proxy (vars are not inherited by environments).
-  "vars": { "API_ORIGIN": "https://tuttitrip-api.gburek.app" },
+  // Backend origin for the /api proxy; ENVIRONMENT is "production" only here, and decides whether
+  // search engines may index the site (worker/index.ts). Vars are not inherited by environments.
+  "vars": { "API_ORIGIN": "https://tuttitrip-api.gburek.app", "ENVIRONMENT": "production" },
   "env": {
     "develop": {
       "name": "tuttitrip-frontend-develop",
       "workers_dev": false,
       "preview_urls": false,
       "routes": [{ "pattern": "tuttitrip-develop.gburek.app", "custom_domain": true }],
-      "vars": { "API_ORIGIN": "https://tuttitrip-api-develop.gburek.app" }
+      "vars": { "API_ORIGIN": "https://tuttitrip-api-develop.gburek.app", "ENVIRONMENT": "develop" }
     },
     "preview": {
       // CI overrides the name per branch: --name tuttitrip-preview-<slug>.
@@ -44,7 +57,7 @@
       "preview_urls": false,
       "routes": [],
       // CI passes the backend picked by scripts/resolve-api.sh: --var API_ORIGIN:<url>.
-      "vars": { "API_ORIGIN": "https://tuttitrip-api-develop.gburek.app" }
+      "vars": { "API_ORIGIN": "https://tuttitrip-api-develop.gburek.app", "ENVIRONMENT": "preview" }
     }
   }
 }

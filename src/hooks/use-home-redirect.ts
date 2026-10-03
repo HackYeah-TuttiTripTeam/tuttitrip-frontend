@@ -7,11 +7,11 @@ import type { SessionStatus } from './use-session'
  * `/` is the landing page for guests; a signed-in user goes straight to their trips. This
  * only navigates: what to show meanwhile is decided by shellFor (the "bare" layout).
  */
-export function useHomeRedirect(pathname: string, status: SessionStatus) {
+export function useHomeRedirect(pathname: string, status: SessionStatus, storedSession = true) {
   const navigate = useNavigate()
   useEffect(() => {
-    if (status === 'authenticated' && isHomeWaiting(pathname, status)) {
+    if (status === 'authenticated' && isHomeWaiting(pathname, status, storedSession)) {
       void navigate({ to: '/trips', replace: true })
     }
-  }, [pathname, status, navigate])
+  }, [pathname, status, storedSession, navigate])
 }

@@ -41,7 +41,7 @@ export function workboxOptions(production: boolean): Workbox {
     // index.html is never precached; hashed assets and icons are in production.
     globPatterns: production ? ['**/*.{js,css,svg,png,ico,webmanifest}'] : [],
     // Share images are for crawlers only; no need to precache them.
-    globIgnores: ['og-image-*.png'],
+    globIgnores: ['og/*.png'],
     runtimeCaching: production
       ? [
           {
@@ -78,9 +78,11 @@ export function headersFile(production: boolean): string {
 `
   if (!production) {
     return `${common}
-# Non-production build: always revalidate (ETag), so a deploy shows at once.
+# Non-production build: always revalidate (ETag), so a deploy shows at once, and keep
+# search engines out (the public pages say the same through the Worker).
 /*
   Cache-Control: no-cache
+  X-Robots-Tag: noindex
 `
   }
   return `${common}

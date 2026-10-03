@@ -1,16 +1,16 @@
-import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { Button } from '@/components/ui/button'
 import type { SessionStatus } from '@/hooks/use-session'
 import { m } from '@/paraglide/messages'
-import { BrandLogo } from './brand-mark'
-import { LanguageMenu, type LanguageState } from './language-menu'
+import type { LanguageState } from './language-menu'
+import { PublicHeader } from './public-header'
 import { SiteFooter } from './site-footer'
+import { type ThemeState, ThemeToggle } from './theme-toggle'
 
 export interface PublicShellProps {
   /** Guests get login and sign-up, signed-in users a link to their trips. */
   status: SessionStatus
   language: LanguageState
+  theme: ThemeState
   /** Deployment name; shown as a badge everywhere except production. */
   envLabel: string | null
   onLogin: () => void
@@ -18,13 +18,11 @@ export interface PublicShellProps {
   children: ReactNode
 }
 
-const navLinkClass =
-  'h-11 items-center rounded-md px-2 text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 flex [&.active]:text-foreground [&.active]:underline [&.active]:decoration-primary [&.active]:decoration-2 [&.active]:underline-offset-8'
-
-/** Layout of the pages a guest can open: a light header with the way in, content, footer. */
+/** Layout of the pages a guest can open: the header with the way in, content, the full footer. */
 export function PublicShell({
   status,
   language,
+  theme,
   envLabel,
   onLogin,
   onSignup,
@@ -39,59 +37,20 @@ export function PublicShell({
         {m.shell_skip_to_content()}
       </a>
 
-      <header className="sticky top-0 z-40 border-b bg-background pt-[env(safe-area-inset-top)]">
-        <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4 md:gap-4 md:px-6">
-          <Link
-            to={status === 'authenticated' ? '/trips' : '/'}
-            className="flex items-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-          >
-            <BrandLogo />
-          </Link>
-          {envLabel && (
-            <span className="hidden max-w-28 truncate rounded-full md:inline-block border px-2 py-0.5 font-mono text-muted-foreground text-xs">
-              {envLabel}
-            </span>
-          )}
-
-          <nav aria-label={m.shell_nav_public()} className="ml-4 hidden gap-1 md:flex">
-            <Link to="/about" className={navLinkClass}>
-              {m.nav_about()}
-            </Link>
-            <Link to="/contact" className={navLinkClass}>
-              {m.nav_contact()}
-            </Link>
-          </nav>
-
-          <div className="ml-auto flex items-center gap-1 md:gap-2">
-            <LanguageMenu language={language} />
-            {status === 'anonymous' && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={onLogin}
-                  className="h-11 rounded-full px-5 md:h-10"
-                >
-                  {m.account_login()}
-                </Button>
-                <Button onClick={onSignup} className="hidden h-10 rounded-full px-5 md:inline-flex">
-                  {m.account_signup()}
-                </Button>
-              </>
-            )}
-            {status === 'authenticated' && (
-              <Button asChild className="h-11 rounded-full px-5 md:h-10">
-                <Link to="/trips">{m.nav_trips()}</Link>
-              </Button>
-            )}
-          </div>
-        </div>
-      </header>
+      <PublicHeader
+        status={status}
+        language={language}
+        extras={<ThemeToggle state={theme} />}
+        envLabel={envLabel}
+        onLogin={onLogin}
+        onSignup={onSignup}
+      />
 
       <main id="main" className="flex-1">
         {children}
       </main>
 
-      <SiteFooter />
+      <SiteFooter language={language} extras={<ThemeToggle state={theme} />} />
     </div>
   )
 }

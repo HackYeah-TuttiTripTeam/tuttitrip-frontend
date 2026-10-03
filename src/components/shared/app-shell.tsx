@@ -88,7 +88,7 @@ export function AppShell({
       </main>
 
       {/* The bottom action bar is fixed on phones; keep the footer clear of it. */}
-      <SiteFooter className="pb-20 md:pb-0" />
+      <SiteFooter variant="compact" language={language} className="pb-20 md:pb-0" />
 
       <nav
         aria-label={m.shell_nav_actions()}

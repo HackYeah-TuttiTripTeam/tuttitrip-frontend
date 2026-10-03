@@ -28,6 +28,22 @@ export default defineConfig(({ mode, command }) => {
 
   return {
     define: { __API_MOCK__: JSON.stringify(apiMock) },
+    build: {
+      rollupOptions: {
+        output: {
+          // Photos and fonts keep their names, so the Worker can point to them from the first
+          // HTML, before any script or stylesheet has loaded (lib/photo-data.ts, lib/seo.ts).
+          // Rename a file when its content changes: /assets/* is cached as immutable.
+          // Everything else is hashed as usual.
+          assetFileNames: (asset) => {
+            const source = asset.originalFileNames.join(' ')
+            if (source.includes('src/assets/photos/')) return 'assets/photos/[name][extname]'
+            if (source.includes('src/styles/fonts/')) return 'assets/fonts/[name][extname]'
+            return 'assets/[name]-[hash][extname]'
+          },
+        },
+      },
+    },
     server: { proxy: apiProxy },
     preview: { proxy: apiProxy },
     plugins: [

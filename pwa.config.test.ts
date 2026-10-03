@@ -72,6 +72,11 @@ describe('headersFile', () => {
     expect(file).not.toContain('immutable')
   })
 
+  it('keeps search engines out of every non-production build only', () => {
+    expect(headersFile(false)).toContain('X-Robots-Tag: noindex')
+    expect(headersFile(true)).not.toContain('noindex')
+  })
+
   it('keeps hashed assets immutable in production', () => {
     expect(headersFile(true)).toContain(
       '/assets/*\n  Cache-Control: public, max-age=31536000, immutable',

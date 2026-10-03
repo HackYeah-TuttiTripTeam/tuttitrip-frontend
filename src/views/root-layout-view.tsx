@@ -1,14 +1,16 @@
-import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { lazy, Suspense } from 'react'
+import { HeadContent, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
+import { lazy, Suspense, useState } from 'react'
 import { AppShell } from '@/components/shared/app-shell'
 import { BootScreen } from '@/components/shared/boot-screen'
 import { PublicShell } from '@/components/shared/public-shell'
 import { useApiAuthBridge } from '@/hooks/use-api-auth-bridge'
+import { useCleanServerHead } from '@/hooks/use-clean-server-head'
 import { useHomeRedirect } from '@/hooks/use-home-redirect'
 import { useLocale } from '@/hooks/use-locale'
 import { useSession } from '@/hooks/use-session'
 import { useTheme } from '@/hooks/use-theme'
 import { appEnv } from '@/lib/env'
+import { hasStoredSession } from '@/lib/session-hint'
 import { shellFor } from '@/lib/shell'
 import { useUiStore } from '@/stores/ui-store'
 
@@ -32,24 +34,29 @@ const Devtools = import.meta.env.DEV
 
 export function RootLayoutView() {
   useApiAuthBridge()
+  useCleanServerHead()
   const session = useSession()
   const { locale, setLocale } = useLocale()
   const { theme, resolved, setTheme } = useTheme()
   const setCreateTripOpen = useUiStore((state) => state.setCreateTripOpen)
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
-  const shell = shellFor(pathname, session.status)
-  useHomeRedirect(pathname, session.status)
+  // Read once: a session stored while the page is open is Auth0's business, not a reason to blink.
+  const [storedSession] = useState(hasStoredSession)
+  const shell = shellFor(pathname, session.status, storedSession)
+  useHomeRedirect(pathname, session.status, storedSession)
   const language = { locale, onChange: setLocale }
   const envLabel = appEnv === 'main' ? null : appEnv
 
   return (
     <>
+      <HeadContent />
       {shell === 'bare' && <BootScreen />}
       {shell === 'public' && (
         <PublicShell
           status={session.status}
           language={language}
+          theme={{ theme, resolved, onChange: setTheme }}
           envLabel={envLabel}
           onLogin={session.login}
           onSignup={session.signup}
