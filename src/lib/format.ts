@@ -146,3 +146,27 @@ export function formatDecimal(amount: string, currency = 'PLN'): string {
     useGrouping: 'always',
   }).format(amount as `${number}`)
 }
+
+interface BudgetFields {
+  currency: string | null
+  budget_total_min: string | null
+  budget_total_max: string | null
+  budget_day_min: string | null
+  budget_day_max: string | null
+  budget_flex_pct: number
+}
+
+/** "2 000 zł do 3 000 zł, margines 10%, na całość", or null when no budget is set. */
+export function budgetSummary(trip: BudgetFields): string | null {
+  const byDay = trip.budget_total_min == null
+  const min = byDay ? trip.budget_day_min : trip.budget_total_min
+  const max = byDay ? trip.budget_day_max : trip.budget_total_max
+  if (min == null || max == null) return null
+  const currency = trip.currency ?? 'PLN'
+  return m.trip_budget_summary({
+    min: formatDecimal(min, currency),
+    max: formatDecimal(max, currency),
+    flex: trip.budget_flex_pct,
+    scope: byDay ? m.trip_budget_scope_day_short() : m.trip_budget_scope_total_short(),
+  })
+}

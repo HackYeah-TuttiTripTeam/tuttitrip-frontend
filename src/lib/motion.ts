@@ -29,23 +29,32 @@ export function scrollProgress(
   return clamp01((from - rect.top) / (from - to))
 }
 
+let revealObserver: IntersectionObserver | undefined
+
+/** One observer for every revealed element on the page. */
+function sharedRevealObserver(): IntersectionObserver {
+  revealObserver ??= new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+        ;(entry.target as HTMLElement).dataset.reveal = 'in'
+        revealObserver?.unobserve(entry.target)
+      }
+    },
+    { rootMargin: '0px 0px -8% 0px', threshold: 0.05 },
+  )
+  return revealObserver
+}
+
 /** Marks the element `data-reveal="in"` when it first comes into view (once). */
 export function observeReveal(element: HTMLElement): () => void {
   if (prefersReducedMotion() || typeof IntersectionObserver === 'undefined') {
     element.dataset.reveal = 'in'
     return () => undefined
   }
-  const observer = new IntersectionObserver(
-    (entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) {
-        element.dataset.reveal = 'in'
-        observer.disconnect()
-      }
-    },
-    { rootMargin: '0px 0px -8% 0px', threshold: 0.05 },
-  )
+  const observer = sharedRevealObserver()
   observer.observe(element)
-  return () => observer.disconnect()
+  return () => observer.unobserve(element)
 }
 
 /**

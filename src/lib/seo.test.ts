@@ -105,6 +105,13 @@ describe('crawler files', () => {
     expect(xml).toContain(`hreflang="en" href="${ORIGIN}/about?lang=en"`)
   })
 
+  it('closes every other deployment to crawlers, with no sitemap', () => {
+    const robots = robotsTxt(ORIGIN, false)
+    expect(robots).toContain('Disallow: /\n')
+    expect(robots).not.toContain('Allow')
+    expect(robots).not.toContain('Sitemap')
+  })
+
   it('keeps crawlers out of the API and the app', () => {
     const robots = robotsTxt(ORIGIN)
     expect(robots).toContain('Disallow: /api/')

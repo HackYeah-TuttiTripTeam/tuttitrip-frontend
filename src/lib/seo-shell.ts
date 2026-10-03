@@ -57,9 +57,14 @@ function frame(content: string): string {
   )
 }
 
-/** Hides the shell for a browser with a stored session: it is sent on to /trips, not to the landing page. */
+/**
+ * Hides the shell for a browser with a stored session (it is sent on to /trips, not to the
+ * landing page) and while Auth0 hands the user back (?code=&state= or ?error=&state=).
+ */
 const HIDE_FOR_SIGNED_IN =
-  `<script data-seo>try{for(var i=0;i<localStorage.length;i++)` +
+  `<script data-seo>var q=location.search;if(/[?&](code|error)=/.test(q)&&/[?&]state=/.test(q))` +
+  `document.getElementById('seo-shell').style.display='none';` +
+  `try{for(var i=0;i<localStorage.length;i++)` +
   `if((localStorage.key(i)||'').indexOf('@@auth0spajs@@')===0){` +
   `document.getElementById('seo-shell').style.display='none';break}}catch(e){}</script>`
 

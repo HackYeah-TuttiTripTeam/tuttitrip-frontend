@@ -303,23 +303,89 @@ paths in `schema.d.ts` start with `/api/v1`, so every call goes to its own
 origin. No CORS, and the same build works in every environment.
 
 - Deployed: `worker/index.ts` (typed by `tsconfig.worker.json`, plain Fetch API).
-  `assets.run_worker_first: ["/api/*"]` sends `/api/*` to it before the assets,
-  so the SPA fallback never answers an API path. It forwards method, headers
+  `assets.run_worker_first` lists `/api/*`, `/assets/*`, the public pages (`/`, `/about`, `/contact`, also with a
+  trailing slash) and `/robots.txt`, `/sitemap.xml`. It sends `/api/*` to the script before
+  the assets, so the SPA fallback never answers an API path, and `/assets/*` so a
+  missing build file is a 404 (the assets layer alone answers any missing GET with
+  `index.html`, 200, without invoking the Worker; verified on a preview). It forwards method, headers
   (incl. `Authorization`), body and query to `API_ORIGIN`, streams the response
   back, and rewrites API redirects to the same origin. It drops hop-by-hop
   headers, `Cookie`, `Forwarded`, `X-Real-IP` and every client `X-Forwarded-*`/`cf-*`
   header, then sets `X-Forwarded-For` (from `CF-Connecting-IP`), `-Host`, `-Proto`.
-  Other paths reach the script only for non-navigation requests without a
-  matching asset; it hands them to `env.ASSETS` (SPA fallback).
+  Under `/assets/*` it hands the request to `env.ASSETS` and turns an HTML answer
+  for a file-like path into a 404 (see "PWA updates and caching"); it injects nothing there,
+  and gives `/assets/photos/*` and `/assets/fonts/*` (kept unhashed so the first screen can
+  point to them) a one-day cache with stale-while-revalidate instead of `immutable`. For the
+  public pages it puts the page's metadata and first screen into `index.html` with
+  `HTMLRewriter` (`src/lib/seo.ts`, `seo-shell.ts`): no validators of the static file are
+  passed on, `Vary: Accept-Language` is set, `/about/` redirects to `/about`. `robots.txt`
+  and `sitemap.xml` come from it too. `ENVIRONMENT` (Worker var, `production` only on main)
+  decides indexing: any other value gives `Disallow: /` without a sitemap and
+  `X-Robots-Tag: noindex` on the public pages (the build adds the same header to every
+  response outside production, see `headersFile`). Every other path is served by the assets
+  layer without the script.
 - `API_ORIGIN` (Worker var): main `https://tuttitrip-api.gburek.app` and develop
   `https://tuttitrip-api-develop.gburek.app` in `wrangler.jsonc`; previews get
   the backend picked by `resolve-api.sh` via `--var` in `frontend-ci.yml`.
 - Local: Vite's `server.proxy`/`preview.proxy` forward `/api` to `VITE_API_URL`
   or `http://localhost:8000` (`vite.config.ts`).
 - The PWA service worker never serves the app shell for `/api/` navigations
-  (`navigateFallbackDenylist`), so `/api/v1/docs` opens Swagger.
+  (the navigation route in `pwa.config.ts` skips them), so `/api/v1/docs` opens Swagger.
 - The deploy smoke test also requests `/api/v1/health/live` with
   `Sec-Fetch-Mode: navigate` and expects JSON, not `index.html`.
+
+## PWA updates and caching
+
+Settings live in `pwa.config.ts` (used by `vite.config.ts`, tested in
+`pwa.config.test.ts`; `scripts/pwa-build.test.mjs` builds develop and main and
+checks the generated `sw.js` and `_headers`). Production is `VITE_APP_ENV=main`:
+`scripts/resolve-api.sh` turns the branch (`github.head_ref || github.ref_name`)
+into `app_env`, which is `main` only for the push to `main`, and the `checks`
+job passes it to `vite build`. Every other value (develop, PR previews, local)
+is not production.
+
+- **Every build:** `skipWaiting` + `clientsClaim` are set explicitly. With
+  `injectRegister: false` the plugin does not add them for `registerType:
+  autoUpdate`, so a new service worker used to sit "waiting" until every tab was
+  closed and returning browsers kept running an old build. `src/lib/pwa.ts`
+  (`reloadOnControllerUpdate`) reloads the page once when a new worker takes
+  control: it tracks the controller live, so the first install (claiming a page
+  that had none) does not reload, every later `controllerchange` does, never twice.
+  It also checks for a new version on `visibilitychange` and hourly.
+  `cleanupOutdatedCaches` stays on. `index.html` is never precached and there
+  is no `navigateFallback`.
+- **Old installs:** `public/sw-activate.js` (imported by `sw.js`) runs on
+  `activate` and navigates each open window that the previous worker controlled
+  to its own URL once, so installs older than this fix get the fresh build on
+  their first refresh instead of needing a manual Unregister. The first install
+  has no controlled windows, so nothing reloads; a worker activates once per
+  version and the reloaded page is already served by it, so there is no loop.
+  A new-style page can be reloaded by both this and `controllerchange` in the
+  same moment; the later navigation wins and it is one load. Open tabs lose
+  unsaved form input on an update, same as with the page reload.
+- **Stale chunks:** `src/lib/stale-assets.ts` reloads once (guard: 30 s in
+  `sessionStorage`, so no loop) on `vite:preloadError` and, via the router's
+  `defaultOnCatch`, on errors such as "Failed to fetch dynamically imported
+  module". A missing file-like path (`/assets/x.js`, any extension but `.html`)
+  under `/assets/*` that the SPA fallback would answer with `index.html` is a
+  real 404 from the Worker (`assetsOr404` in `worker/index.ts`).
+  The deploy smoke test checks `/assets/smoke-missing.js` -> 404.
+- **Production (`main`):** navigations are `NetworkFirst` (3 s timeout,
+  `app-shell` cache, one `/index.html` entry) so offline any deep link gets the
+  shell; JS/CSS/icons/manifest are precached; `/assets/*` and `/workbox-*` are
+  immutable for a year; `sw.js`, `sw-activate.js`, `index.html` and the manifest
+  are `no-cache`.
+- **Non-production (develop, previews):** short caching on purpose, so every
+  deploy shows on the next load. The built `sw.js` has no `precacheAndRoute`
+  (`includeAssets`, manifest icons and the manifest entry are dropped), no
+  `app-shell` cache and no navigation route (offline does not work there); its
+  only route is a `NetworkOnly` pass-through for `/api/*` (Workbox refuses a worker
+  with nothing to do). `_headers` sets `Cache-Control: no-cache` for every path.
+  `_headers` is generated at build time (`vite.config.ts`), there is no
+  `public/_headers`.
+- Recovering a browser stuck on an old build (only needed for installs older
+  than `sw-activate.js` that never got a new worker): DevTools -> Application ->
+  Service workers -> Unregister, then Storage -> Clear site data, reload.
 
 ## Deployment (Cloudflare Workers, static assets + API proxy)
 

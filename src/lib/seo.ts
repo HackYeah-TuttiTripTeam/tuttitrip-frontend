@@ -221,8 +221,12 @@ export function sitemapXml(origin: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${entries.join('\n')}\n</urlset>\n`
 }
 
-/** robots.txt: public pages are open, the API and the signed-in app are not for crawlers. */
-export function robotsTxt(origin: string): string {
+/**
+ * robots.txt. Production: public pages open, the API and the signed-in app not for crawlers, with
+ * the sitemap. Any other deployment (develop, previews) is closed to all, with no sitemap.
+ */
+export function robotsTxt(origin: string, indexable = true): string {
+  if (!indexable) return ['User-agent: *', 'Disallow: /', ''].join('\n')
   return [
     'User-agent: *',
     'Allow: /',

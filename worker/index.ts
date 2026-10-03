@@ -2,9 +2,13 @@
 // backend of this environment (API_ORIGIN), so the browser only talks to its own
 // origin (no CORS, one URL per environment). See AGENTS.md "API proxy".
 //
-// wrangler.jsonc runs this script first for /api/* (assets.run_worker_first).
-// Any other path reaches it only when no asset matched a non-navigation request
-// (curl, fetch); those go back to the assets, which apply the SPA fallback.
+// wrangler.jsonc runs this script first (assets.run_worker_first) for:
+//   /api/*        the proxy;
+//   /assets/*     handed to the assets unchanged; a missing file would get the SPA fallback
+//                 (200 index.html), so it becomes a 404 (assetsOr404). Nothing is injected here;
+//   /, /about, /contact (and the trailing-slash forms), /robots.txt, /sitemap.xml
+//                 the public pages with their own metadata and first screen (publicPage).
+// Every other path is served by the assets layer without this script.
 
 import { pageSeo, requestLocale, robotsTxt, seoHeadHtml, seoPath, sitemapXml } from '../src/lib/seo'
 import { SHELL_PRELOADS, shellHtml } from '../src/lib/seo-shell'
@@ -12,6 +16,8 @@ import { SHELL_PRELOADS, shellHtml } from '../src/lib/seo-shell'
 interface Env {
   /** Backend origin without a trailing slash, e.g. https://tuttitrip-api.gburek.app */
   API_ORIGIN: string
+  /** "production" lets search engines index the site; anything else (or nothing) keeps them out. */
+  ENVIRONMENT?: string
   ASSETS: { fetch(request: Request): Promise<Response> }
 }
 
@@ -96,6 +102,8 @@ const text = (body: string, type: string) =>
     headers: { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'public, max-age=3600' },
   })
 
+const isProduction = (env: Env) => env.ENVIRONMENT === 'production'
+
 /**
  * The app shell with the metadata of one public page. The SPA is a single index.html, so bots
  * that do not run JavaScript (link previews, crawlers) would all see the same tags; here the
@@ -103,8 +111,13 @@ const text = (body: string, type: string) =>
  * path and language are put in. The client keeps them right after navigation (loaders/seo.ts).
  */
 async function publicPage(request: Request, env: Env, url: URL): Promise<Response> {
-  const response = await env.ASSETS.fetch(request)
   const path = seoPath(url.pathname)
+  // The body depends on the language, so the validators of the static file are no use to the
+  // browser or a cache: ask the assets for the whole file and send none of theirs back.
+  const headers = new Headers(request.headers)
+  headers.delete('if-none-match')
+  headers.delete('if-modified-since')
+  const response = await env.ASSETS.fetch(new Request(request, { headers }))
   const isHtml = (response.headers.get('content-type') ?? '').includes('text/html')
   if (!path || !response.ok || !isHtml) return response
 
@@ -124,22 +137,70 @@ async function publicPage(request: Request, env: Env, url: URL): Promise<Respons
     })
     .transform(response)
 
+  const out = new Headers(page.headers)
+  out.delete('etag')
+  out.delete('last-modified')
+  out.delete('content-length')
   // The answer depends on ?lang and on Accept-Language.
-  const headers = new Headers(page.headers)
-  headers.set('vary', 'Accept-Language')
-  if (url.hostname.includes('-develop.')) headers.set('x-robots-tag', 'noindex')
-  return new Response(page.body, { status: page.status, headers })
+  out.append('vary', 'Accept-Language')
+  if (!isProduction(env)) out.set('x-robots-tag', 'noindex')
+  return new Response(page.body, { status: page.status, headers: out })
 }
 
 export default {
   fetch(request: Request, env: Env): Promise<Response> | Response {
     const url = new URL(request.url)
-    if (url.pathname.startsWith('/api/')) return proxy(request, env)
+    const { pathname } = url
+    if (pathname.startsWith('/api/')) return proxy(request, env)
+    if (pathname.startsWith('/assets/')) return assetsOr404(request, env)
     if (request.method === 'GET' || request.method === 'HEAD') {
-      if (url.pathname === '/robots.txt') return text(robotsTxt(url.origin), 'text/plain')
-      if (url.pathname === '/sitemap.xml') return text(sitemapXml(url.origin), 'application/xml')
-      if (seoPath(url.pathname)) return publicPage(request, env, url)
+      if (pathname === '/robots.txt') {
+        return text(robotsTxt(url.origin, isProduction(env)), 'text/plain')
+      }
+      if (pathname === '/sitemap.xml') return text(sitemapXml(url.origin), 'application/xml')
+      const clean = cleanPath(pathname)
+      // /about/ is /about: one URL per page, so canonical and links agree.
+      if (clean !== pathname && seoPath(clean)) {
+        return Response.redirect(`${url.origin}${clean}${url.search}`, 301)
+      }
+      if (seoPath(pathname)) return publicPage(request, env, url)
     }
-    return env.ASSETS.fetch(request)
+    return assetsOr404(request, env)
   },
+}
+
+const cleanPath = (pathname: string) =>
+  pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+
+/** Photos and fonts keep their file names (the first screen points to them), so they cannot be immutable. */
+const REVALIDATED_ASSETS = ['/assets/photos/', '/assets/fonts/']
+
+// Reached for /assets/* (run_worker_first). The assets layer answers a path without a file
+// with the SPA fallback: index.html and status 200. For a file that does not exist
+// (a chunk removed by a newer deploy, a stray .js) that means a MIME error and a blank
+// page in a returning browser, so a file-like path that comes back as HTML is a real 404
+// (the app reloads once on that error, see src/lib/stale-assets.ts). Extensionless paths
+// (/trips/abc, /join, /about) and .html stay the SPA's: deep links keep answering 200.
+async function assetsOr404(request: Request, env: Env): Promise<Response> {
+  const response = await env.ASSETS.fetch(request)
+  const { pathname } = new URL(request.url)
+  if (REVALIDATED_ASSETS.some((prefix) => pathname.startsWith(prefix)) && response.ok) {
+    // Same name, maybe new content after a deploy: a day, then a week of stale-while-revalidate.
+    const revalidated = new Response(response.body, response)
+    revalidated.headers.set('cache-control', 'public, max-age=86400, stale-while-revalidate=604800')
+    return revalidated
+  }
+  if (!isFileLike(pathname) || !response.headers.get('content-type')?.startsWith('text/html')) {
+    return response
+  }
+  return new Response('Not found', {
+    status: 404,
+    headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
+  })
+}
+
+/** The last segment has an extension other than .html: /assets/a.js, /workbox-1.js. */
+function isFileLike(pathname: string): boolean {
+  const last = pathname.split('/').pop() ?? ''
+  return /\.[A-Za-z0-9]+$/.test(last) && !last.endsWith('.html')
 }

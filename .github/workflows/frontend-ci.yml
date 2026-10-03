@@ -227,7 +227,7 @@ jobs:
         if: steps.creds.outputs.ok == 'true'
         run: echo "url=${{ steps.cmd.outputs.url || format('https://{0}.gburek.app', needs.build.outputs.preview_worker) }}" >> "$GITHUB_OUTPUT"
 
-      - name: Smoke test (app shell + SPA deep link + API proxy)
+      - name: Smoke test (app shell + SPA deep link + missing asset 404 + API proxy)
         if: steps.creds.outputs.ok == 'true'
         env:
           # A preview whose backend did not answer at build time skips the proxy check.
@@ -235,7 +235,9 @@ jobs:
         run: |
           url="${{ steps.url.outputs.url }}"
           app_ok() {
-            curl -fsS "$url/" | grep -q '<div id="root">' &&
+            # A build file that does not exist must be a real 404, never index.html.
+            [ "$(curl -s -o /dev/null -w '%{http_code}' "$url/assets/smoke-missing.js")" = 404 ] &&
+              curl -fsS "$url/" | grep -q '<div id="root">' &&
               curl -fsS -H 'Sec-Fetch-Mode: navigate' "$url/trips?sort=name" | grep -q '<div id="root">' &&
               curl -fsS "$url/trips?sort=name" | grep -q '<div id="root">'
           }

@@ -35,4 +35,8 @@ describe('shellHtml', () => {
     expect(shellHtml('/', 'pl')).toContain('@@auth0spajs@@')
     expect(shellHtml('/about', 'pl')).not.toContain('@@auth0spajs@@')
   })
+
+  it('hides itself during the Auth0 callback', () => {
+    expect(shellHtml('/', 'pl')).toContain('(code|error)=')
+  })
 })
