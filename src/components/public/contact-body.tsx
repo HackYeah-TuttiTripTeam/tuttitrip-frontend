@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { EXTERNAL_LINK, GITHUB_ORG_URL } from '@/lib/links'
 import { m } from '@/paraglide/messages'
-import { ctaClass, Section } from './landing-sections'
+import { ctaClass, Section, textLinkClass } from './section'
 
 export function ContactBody() {
   return (
@@ -22,10 +22,7 @@ export function ContactBody() {
             <span className="sr-only">({m.external_link_new_tab()})</span>
           </a>
         </Button>
-        <Link
-          to="/about"
-          className="inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        >
+        <Link to="/about" className={textLinkClass}>
           {m.contact_about()}
         </Link>
       </div>

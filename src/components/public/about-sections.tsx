@@ -2,8 +2,8 @@ import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { m } from '@/paraglide/messages'
-import { ctaClass, Section } from './landing-sections'
 import { RouteSteps } from './route-steps'
+import { ctaClass, Section, textLinkClass } from './section'
 
 export function AboutIntro() {
   return (
@@ -71,10 +71,7 @@ export function AboutTeam({ onSignup }: { onSignup?: () => void }) {
             {m.account_signup()}
           </Button>
         )}
-        <Link
-          to="/contact"
-          className="inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        >
+        <Link to="/contact" className={textLinkClass}>
           {m.nav_contact()}
         </Link>
       </div>

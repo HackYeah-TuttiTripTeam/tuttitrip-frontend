@@ -75,6 +75,14 @@ export function formatNumber(value: number, maximumFractionDigits = 2): string {
   }).format(value)
 }
 
+/** "58%" / "58%": a share between 0 and 1, whole percent. */
+export function formatPercent(share: number): string {
+  return new Intl.NumberFormat(INTL_TAG[getLocale()], {
+    style: 'percent',
+    maximumFractionDigits: 0,
+  }).format(share)
+}
+
 /** Locale-aware, accent- and case-insensitive comparison for sorting names. */
 export function compareText(a: string, b: string): number {
   return collator().compare(a, b)

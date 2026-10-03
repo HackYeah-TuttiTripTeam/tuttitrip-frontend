@@ -297,7 +297,7 @@
   "home_loading": "Checking your session…",
   "example_label": "Gdańsk, 3 days · 5 people",
   "example_badge": "Nobody below the floor",
-  "example_summary": "Least happy: {name}, {score}. The floor is {floor} points.",
+  "example_summary": "Lowest: {name}, {share}. The floor is {floor}.",
   "example_note": "Sample data",
   "example_person_1": "Zosia",
   "example_person_2": "Ania",
@@ -342,5 +342,7 @@
   "contact_title": "Contact",
   "contact_lede": "The HackYeah-TuttiTripTeam is on GitHub. That is where you find the project and us.",
   "contact_github": "The team on GitHub",
-  "contact_about": "Read who we are"
+  "contact_about": "Read who we are",
+  "example_metric": "lowest in the group, as a part of what the person could get alone",
+  "example_explainer": "Each value is the part of what that person would get planning the trip alone."
 }

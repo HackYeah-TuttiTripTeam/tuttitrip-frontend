@@ -35,7 +35,7 @@ export function AppShell({ account, language, envLabel, onCreateTrip, children }
       <header className="sticky top-0 z-40 border-b bg-background pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-6 px-4 md:px-6">
           <Link
-            to="/"
+            to={account.status === 'authenticated' ? '/trips' : '/'}
             className="flex items-center gap-2 rounded-md font-semibold tracking-tight outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
             <BrandMark />

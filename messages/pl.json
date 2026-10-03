@@ -307,7 +307,7 @@
   "home_loading": "Sprawdzam sesję…",
   "example_label": "Gdańsk, 3 dni · 5 osób",
   "example_badge": "Nikt poniżej podłogi",
-  "example_summary": "Najmniej zadowolony: {name}, {score}. Podłoga to {floor} punktów.",
+  "example_summary": "Najmniej: {name}, {share}. Podłoga to {floor}.",
   "example_note": "Dane przykładowe",
   "example_person_1": "Zosia",
   "example_person_2": "Ania",
@@ -352,5 +352,7 @@
   "contact_title": "Kontakt",
   "contact_lede": "Zespół HackYeah-TuttiTripTeam jest na GitHubie. Tam znajdziesz projekt i nas.",
   "contact_github": "Zespół na GitHubie",
-  "contact_about": "Przeczytaj, kim jesteśmy"
+  "contact_about": "Przeczytaj, kim jesteśmy",
+  "example_metric": "najmniej w grupie, jako część tego, co osoba dostałaby sama",
+  "example_explainer": "Każda wartość to część tego, co dana osoba dostałaby, planując wyjazd sama."
 }

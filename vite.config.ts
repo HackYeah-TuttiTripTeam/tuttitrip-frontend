@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => {
           short_name: 'TuttiTrip',
           description: 'Planowanie wyjazdów w grupie: plan, po którym nikt nie czuje, że przegrał.',
           lang: 'pl',
-          start_url: '/trips',
+          start_url: '/',
           scope: '/',
           display: 'standalone',
           orientation: 'portrait',

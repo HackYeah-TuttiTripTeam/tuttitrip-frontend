@@ -1,39 +1,20 @@
 import { ArrowRight } from '@keyline-icons/react'
-import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { m } from '@/paraglide/messages'
 import { type ExamplePerson, FairnessExample } from './fairness-example'
 import { RouteSteps } from './route-steps'
-
-export const ctaClass = 'h-11 rounded-full px-6 text-base'
+import { ctaClass, Section, textLinkClass } from './section'
 
 interface Cta {
   onSignup: () => void
 }
 
-/** Section width shared by every public page. */
-export function Section({
-  children,
-  id,
-  className = '',
-}: {
-  children: ReactNode
-  id?: string
-  className?: string
-}) {
-  return (
-    <section id={id} className={`mx-auto w-full max-w-5xl px-4 md:px-6 ${className}`}>
-      {children}
-    </section>
-  )
-}
-
 interface HeroProps extends Partial<Cta> {
-  example: { people: ExamplePerson[]; floor: number; metric: string }
-  formatScore: (score: number) => string
+  example: { people: ExamplePerson[]; floor: number }
+  formatShare: (share: number) => string
 }
 
-export function LandingHero({ onSignup, example, formatScore }: HeroProps) {
+export function LandingHero({ onSignup, example, formatShare }: HeroProps) {
   return (
     <Section className="grid items-center gap-10 py-10 md:grid-cols-[1.1fr_0.9fr] md:gap-14 md:py-20">
       <div className="flex flex-col gap-5 md:gap-6">
@@ -47,22 +28,14 @@ export function LandingHero({ onSignup, example, formatScore }: HeroProps) {
               {m.account_signup()}
             </Button>
           )}
-          <a
-            href="#how"
-            className="inline-flex min-h-11 items-center gap-1 rounded-md font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
-          >
+          <a href="#how" className={textLinkClass}>
             {m.home_see_how()}
             <ArrowRight aria-hidden="true" className="size-4" />
           </a>
         </div>
         <p className="max-w-prose text-muted-foreground text-sm">{m.home_accounts_note()}</p>
       </div>
-      <FairnessExample
-        people={example.people}
-        floor={example.floor}
-        metric={example.metric}
-        formatScore={formatScore}
-      />
+      <FairnessExample people={example.people} floor={example.floor} formatShare={formatShare} />
     </Section>
   )
 }

@@ -1,14 +1,15 @@
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
+import type { SessionStatus } from '@/hooks/use-session'
 import { m } from '@/paraglide/messages'
 import { BrandMark } from './brand-mark'
 import { LanguageMenu, type LanguageState } from './language-menu'
 import { SiteFooter } from './site-footer'
 
 export interface PublicShellProps {
-  /** "guest": offer login and sign-up; "member": link to the trips; "none": nothing to offer yet. */
-  visitor: 'guest' | 'member' | 'none'
+  /** Guests get login and sign-up, signed-in users a link to their trips. */
+  status: SessionStatus
   language: LanguageState
   /** Deployment name; shown as a badge everywhere except production. */
   envLabel: string | null
@@ -22,7 +23,7 @@ const navLinkClass =
 
 /** Layout of the pages a guest can open: a light header with the way in, content, footer. */
 export function PublicShell({
-  visitor,
+  status,
   language,
   envLabel,
   onLogin,
@@ -41,7 +42,7 @@ export function PublicShell({
       <header className="sticky top-0 z-40 border-b bg-background pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4 md:gap-4 md:px-6">
           <Link
-            to="/"
+            to={status === 'authenticated' ? '/trips' : '/'}
             className="flex items-center gap-2 rounded-md font-heading font-extrabold tracking-tight outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
             <BrandMark />
@@ -64,7 +65,7 @@ export function PublicShell({
 
           <div className="ml-auto flex items-center gap-1 md:gap-2">
             <LanguageMenu language={language} />
-            {visitor === 'guest' && (
+            {status === 'anonymous' && (
               <>
                 <Button
                   variant="outline"
@@ -78,7 +79,7 @@ export function PublicShell({
                 </Button>
               </>
             )}
-            {visitor === 'member' && (
+            {status === 'authenticated' && (
               <Button asChild className="h-11 rounded-full px-5 md:h-10">
                 <Link to="/trips">{m.nav_trips()}</Link>
               </Button>

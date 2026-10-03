@@ -1,8 +1,10 @@
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { lazy, Suspense } from 'react'
 import { AppShell } from '@/components/shared/app-shell'
+import { BootScreen } from '@/components/shared/boot-screen'
 import { PublicShell } from '@/components/shared/public-shell'
 import { useApiAuthBridge } from '@/hooks/use-api-auth-bridge'
+import { useHomeRedirect } from '@/hooks/use-home-redirect'
 import { useLocale } from '@/hooks/use-locale'
 import { useSession } from '@/hooks/use-session'
 import { appEnv } from '@/lib/env'
@@ -35,21 +37,16 @@ export function RootLayoutView() {
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const shell = shellFor(pathname, session.status)
+  useHomeRedirect(pathname, session.status)
   const language = { locale, onChange: setLocale }
   const envLabel = appEnv === 'main' ? null : appEnv
 
   return (
     <>
-      {shell === 'bare' && <Outlet />}
+      {shell === 'bare' && <BootScreen />}
       {shell === 'public' && (
         <PublicShell
-          visitor={
-            session.status === 'anonymous'
-              ? 'guest'
-              : session.status === 'authenticated'
-                ? 'member'
-                : 'none'
-          }
+          status={session.status}
           language={language}
           envLabel={envLabel}
           onLogin={session.login}
