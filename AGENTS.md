@@ -18,12 +18,17 @@ product, not decoration.
 
 ## Philosophy
 
-- **Run the impeccable audit after generating new UI.** Use the
-  `impeccable-review` skill (it delegates to `impeccable`). Product context
-  lives in `PRODUCT.md`, visual decisions in `DESIGN.md`.
-- **Only shadcn design-system tokens.** Colors come from `src/styles/index.css`
-  as semantic utilities (`bg-primary`, `text-muted-foreground`, `border`,
-  `bg-destructive`...). Never `bg-[#...]`, `text-[rgb(...)]`, `hsl(...)` or raw
+- **The TuttiTrip design system is binding for every UI change.** Skill
+  `tuttitrip-design-system` (`.claude/skills/tuttitrip-design-system`); see
+  "UI: design system i impeccable" below. Product context lives in
+  `PRODUCT.md`, the recorded visual system in `DESIGN.md`.
+- **Run impeccable on every new or changed screen** (critique, audit, the
+  de-slop passes, polish) through the `impeccable-review` skill before the
+  subagent review.
+- **Only design-system tokens.** Colors, fonts, radii and spacing come from
+  `src/styles/theme.css` (a verbatim copy of the skill's `theme.css`) as
+  semantic utilities (`bg-primary`, `text-muted-foreground`, `bg-want-soft`,
+  `font-heading`...). Never `bg-[#...]`, `text-[rgb(...)]`, `hsl(...)` or raw
   palette colors like `bg-red-500`: Biome fails the build on them.
 - No AI slop: no cards inside cards, no generic gradients, no filler sections,
   no eyebrow labels above headings. Every screen has loading, empty, error and
@@ -31,7 +36,9 @@ product, not decoration.
 - Mobile first. Primary actions sit in the bottom action bar on phones, forms
   open in a `vaul` drawer on phones and a dialog on desktop
   (`components/shared/responsive-modal.tsx`). Touch targets are at least 44px.
-- UI copy is Polish. Code, comments and commit messages are English.
+- UI copy is Polish and English (Polish is the default); words come from the
+  UI glossary in the design-system README. Code, comments and commit messages
+  are English.
 
 ## Stack
 
@@ -45,18 +52,19 @@ product, not decoration.
 | UI / session state | Zustand (`src/stores/`) |
 | Forms | `react-hook-form` + Zod (`@hookform/resolvers`) |
 | Tables | TanStack Table v9 (`useTable` + `tableFeatures`) |
-| UI kit | shadcn/ui (new-york, zinc + one green accent), Tailwind v4, lucide icons |
+| UI kit | shadcn/ui (new-york) restyled by the TuttiTrip design system (tokens and fonts in `src/styles/`), Tailwind v4 |
+| Icons | Keyline Icons (`@keyline-icons/react`); lucide is not used |
 | Auth | Auth0 (`@auth0/auth0-react`), Google and Discord connections |
 | Lint / format | Biome 2 (strict; GritQL plugin for colors) |
 | Architecture tests | dependency-cruiser + `scripts/check-arch.mjs` |
 | PWA | `vite-plugin-pwa` (generateSW), icons from `@vite-pwa/assets-generator` |
 | Hosting | Cloudflare Workers: static assets + `/api/*` proxy script (`wrangler.jsonc`, `worker/index.ts`) |
 
-shadcn registries configured in `components.json`: `@shadcn-space`,
-`@aceternity`, `@magicui`, `@cult-ui`
-(`pnpm dlx shadcn@latest add @magicui/<name>`). Install only components you
-use. Tremor has no shadcn registry; copy its components from tremor.so by hand
-if needed.
+shadcn registries allowed by the design system: `@react-bits`, `@aceternity`,
+`@shadcn-space` and `@keyline` (`pnpm dlx shadcn@latest add @react-bits/<name>`;
+the list of components to use is in the skill README). Install only components
+you use, restyle them onto our tokens and swap their lucide imports for
+`@keyline-icons/react` before committing.
 
 ## Commands
 
@@ -259,14 +267,17 @@ skipped with a warning and `checks` stays green.
 
 ### feature
 
-1. `git switch develop && git pull && git switch -c feature/<short-description>`
+1. Claim the issue and create a worktree as described in "Praca agentów nad issues"
+   (`feature/<issue>-<short-description>` from `origin/develop`, in `~/Documents/GitHub/worktrees/tuttitrip/`).
 2. Backend endpoint changed? `pnpm api:sync --url https://tuttitrip-api-<slug>.gburek.app/api/v1/openapi.json`
    (or the local backend) and commit `src/api/schema.d.ts`.
 3. Build in this order: **API hooks** (`api/queries/`, `hooks/`) -> **UI
    components** (`components/<feature>/`) -> **view** (`views/`) -> **route**
    (`loaders/<feature>.ts` + `routes/<feature>.ts`). The `new-feature` skill
    scaffolds this.
-4. New UI? Run the `impeccable-review` skill and fix what it finds.
+4. New UI? Follow "UI: design system i impeccable", run the `impeccable-review` skill and fix
+   what it finds.
+5. Smoke test on the preview, subagent review, smoke test again, then the PR (see "Praca agentów nad issues").
 
 ### verify (before every commit)
 
@@ -299,6 +310,79 @@ base of another open PR. If `develop` disappears anyway (deleted by hand),
 
 No AI attribution anywhere: no `Co-Authored-By` trailers for tools, no
 "generated with" lines in commits, PRs or comments.
+
+## UI: design system i impeccable
+
+- Każda zmiana interfejsu bezwzględnie stosuje skill `tuttitrip-design-system`
+  (`.claude/skills/tuttitrip-design-system`). Przed pracą przeczytaj jego `README.md`, README użytych
+  komponentów (`components/<Nazwa>/README.md`, podgląd `preview.html`) i wzorcowy ekran
+  (`components/Screen*`). Tokeny tylko z `src/styles/theme.css` (wierna kopia `theme.css` ze skilla,
+  nie edytuj jej ręcznie, tylko podmieniaj przy zmianie skilla), kroje z `src/styles/fonts`, ikony z
+  `@keyline-icons/react`, teksty ze słownika UI w README skilla, w obu językach.
+- Każdy nowy albo zmieniony ekran przechodzi przez impeccable (skill `impeccable-review`): critique i
+  audit, a przed PR polish. Szczególnie używaj zdolności do usuwania AI slopu: detektora wzorców
+  (`/impeccable hooks on` uruchamia go po każdej edycji UI), `distill` i `quieter` dla przeładowanych
+  ekranów, `clarify` dla tekstów. Znalezione problemy poprawiasz przed review subagenta.
+- Efekty zakazane w README skilla i w `DESIGN.md` (Aurora, Beams, Sparkles, gradientowy tekst, karty 3D,
+  szkło, cienie na kartkach w spoczynku, karty w kartach, emoji) są zakazane także wtedy, gdy przychodzą
+  z rejestru.
+- Komponent z rejestru (`@react-bits`, `@aceternity`, `@shadcn-space`) przepinasz na nasze tokeny,
+  kroje i ikony Keyline, zanim go zacommitujesz.
+- `PRODUCT.md` i `DESIGN.md` to kontekst impeccable. Gdy zmienia się design system, podmień
+  `src/styles/theme.css` i fonty ze skilla i odśwież `DESIGN.md` przez `/impeccable document`.
+
+## Praca agentów nad issues
+
+Nad backlogiem pracuje równolegle kilku agentów AI i ludzi. Te zasady pilnują, żeby nikt nie wchodził
+innym w drogę i żeby każda funkcja przeszła ten sam proces. Dotyczą też ludzi.
+
+1. Wybór issue. Bierzesz tylko issue z tablicy
+   [TuttiTrip](https://github.com/orgs/HackYeah-TuttiTripTeam/projects/1) ze statusem Todo, bez etykiety
+   `in-progress` i bez przypisanej osoby. Linia „Zależy od:” w opisie wymienia issues, które muszą być
+   zmergowane do `develop`. Jeśli któreś nie jest, pracuj tylko na jego kontrakcie (np. stała odpowiedź z
+   OpenAPI) i napisz to w komentarzu. Kolejność: najpierw P0, potem P1, w obrębie milestone'u.
+2. Zajęcie issue, zanim napiszesz kod:
+   - `gh issue edit <nr> --add-label in-progress`,
+   - Status na tablicy: In Progress,
+   - komentarz „Start” z nazwą gałęzi, ścieżką worktree i krótkim planem (pliki, które zmienisz).
+   Etykieta `in-progress` znaczy „zajęte”. Nie bierz takiego issue i nie zmieniaj go bez zgody zespołu.
+3. Worktree i gałąź. Nigdy nie pracuj w głównym klonie repozytorium. Jedno issue to jeden worktree, jedna
+   gałąź i jeden PR do `develop`:
+
+   ```bash
+   git -C ~/Documents/GitHub/<repo> fetch origin
+   git -C ~/Documents/GitHub/<repo> worktree add -b feature/<nr>-<krotka-nazwa> \
+     ~/Documents/GitHub/worktrees/tuttitrip/<repo>-<nr>-<krotka-nazwa> origin/develop
+   ```
+
+   (`<repo>` to `tuttitrip-backend`, `tuttitrip-worker` albo `tuttitrip-frontend`; w repo zbiorczym
+   `tuttitrip` gałąź bierzesz z `origin/main`.)
+4. Komentarze ze statusem w issue po każdym etapie: plan, implementacja z testami, wynik smoke testu,
+   wynik review subagenta, link do PR. Krótko: co zrobione, co dalej, co blokuje. Gdy utkniesz: etykieta
+   `blocked` i komentarz z powodem i tym, czego potrzebujesz.
+5. Pliki wspólne, w których łatwo o konflikt, zmieniaj małymi krokami i przed PR rób
+   `git fetch origin && git rebase origin/develop`:
+   - `src/api/schema.d.ts` tylko z `pnpm api:sync`, nigdy ręcznie (przy konflikcie wygeneruj od nowa),
+   - `src/routeTree.gen.ts` (generowany), `src/styles/*` (tylko z skilla design systemu),
+   - `components/ui/*`, `components/shared/*` i pliki z tekstami interfejsu (PL i EN).
+6. Smoke test jest obowiązkowy dla KAŻDEGO zrealizowanego feature'a. Po pushu gałęzi poczekaj na
+   wdrożenie podglądu i przejdź na żywo scenariusz z kryteriów akceptacji issue:
+   - podgląd frontendu powstaje dla PR, więc otwórz najpierw szkic PR (`gh pr create --draft`);
+     adres `https://tuttitrip-preview-<slug>.gburek.app` jest w komentarzu bota,
+   - przejdź scenariusz na telefonie (widok 390x844) i na desktopie, w motywie jasnym i ciemnym, po
+     polsku i po angielsku (skill `claude-in-chrome` albo ręcznie); zrzuty dołącz do komentarza.
+   Wynik (kroki, odpowiedzi albo zrzuty ekranu) wpisz w komentarzu w issue. Bez zielonego smoke testu
+   nie ma PR.
+7. Review subagenta. Po zielonym smoke teście uruchom subagenta-recenzenta z diffem gałęzi, treścią
+   issue i story źródłową. Sprawdza:
+   - uproszczenie kodu i zbędną złożoność (skille `simplify` i `ponytail-review`),
+   - złożoność logiki,
+   - poprawność biznesową względem story, słownika z dokumentu architektonicznego i, przy logice
+     planowania, specyfikacji algorytmu (`docs/algorytm.md` w tuttitrip-backend).
+   Popraw to, co znalazł, i **powtórz smoke test**. Wynik review i drugiego smoke testu wpisz w komentarzu.
+8. PR. Dopiero po tym oznacz szkic PR jako gotowy (`gh pr ready`), opis według skilla `open-pr` (`Closes #<nr>`) i ustaw Status: In
+   Review. Po merge'u zdejmij `in-progress`, usuń worktree
+   (`git -C ~/Documents/GitHub/<repo> worktree remove <ścieżka>`); issue zamyka `Closes`, Status: Done.
 
 ## Zgłoszenia, PR i wydania
 
@@ -400,6 +484,8 @@ Wydania:
 - `impeccable-review`: AI-slop, contrast and hierarchy audit via `impeccable`.
 - `open-pr`: branch checks, verify, structured PR description.
 - `new-issue`: drafts an issue in the required format and creates it with `gh`.
+- `tuttitrip-design-system`: the TuttiTrip design system (tokens, fonts, Keyline
+  icons, `tt-*` components, screens, UI glossary). Read it before any UI work.
 - `humanizer`: vendored from github.com/blader/humanizer (MIT, Siqi Chen);
   run it over README and other prose for people.
 

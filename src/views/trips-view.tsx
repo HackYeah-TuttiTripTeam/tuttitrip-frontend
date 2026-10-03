@@ -1,5 +1,12 @@
+import {
+  CloudOff,
+  KeyRound,
+  PlaneTakeoff,
+  Plus,
+  SearchX,
+  TriangleAlert,
+} from '@keyline-icons/react'
 import { getRouteApi } from '@tanstack/react-router'
-import { CloudOff, KeyRound, Luggage, Plus, SearchX, TriangleAlert } from 'lucide-react'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
 import { StatusMessage } from '@/components/shared/status-message'
 import { CreateTripForm } from '@/components/trips/create-trip-form'
@@ -119,7 +126,7 @@ export function TripsView() {
         </StatusMessage>
       ) : total === 0 ? (
         <StatusMessage
-          icon={<Luggage />}
+          icon={<PlaneTakeoff />}
           title="Pierwszy wyjazd zaczyna się od nazwy"
           action={
             <Button onClick={openCreate}>

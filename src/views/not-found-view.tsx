@@ -1,5 +1,5 @@
+import { Compass } from '@keyline-icons/react'
 import { Link } from '@tanstack/react-router'
-import { Compass } from 'lucide-react'
 import { StatusMessage } from '@/components/shared/status-message'
 import { Button } from '@/components/ui/button'
 

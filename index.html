@@ -10,9 +10,20 @@
     <link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
 
-    <!-- Browser chrome follows the light/dark surface of the app. -->
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+    <!-- Browser chrome follows the light/dark surface of the app (design system background token). -->
+    <meta name="theme-color" content="#f7fcf9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#080f0c" media="(prefers-color-scheme: dark)" />
+
+    <!-- Dark theme: the design system switches on the `.dark` class. Set it from the
+         system setting before first paint and keep it in sync (no toggle yet). -->
+    <script>
+      ;(() => {
+        const media = window.matchMedia('(prefers-color-scheme: dark)')
+        const apply = () => document.documentElement.classList.toggle('dark', media.matches)
+        apply()
+        media.addEventListener('change', apply)
+      })()
+    </script>
 
     <!-- "Add to Home Screen": full-screen app on iOS and Android. -->
     <meta name="mobile-web-app-capable" content="yes" />
