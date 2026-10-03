@@ -407,5 +407,10 @@
   "invite_revoke_confirm_title": "Odwołać to zaproszenie?",
   "invite_revoke_confirm_body": "Zaproszenie ważne do {date}, dołączyło {uses} z {max}. Link przestanie działać. Osoby, które już dołączyły, zostają na wyjeździe.",
   "invite_revoke_keep": "Zostaw zaproszenie",
-  "invite_revoke_confirm": "Odwołaj zaproszenie"
+  "invite_revoke_confirm": "Odwołaj zaproszenie",
+  "theme_label": "Motyw",
+  "theme_change": "Zmień motyw",
+  "theme_light": "Jasny",
+  "theme_dark": "Ciemny",
+  "theme_system": "Systemowy"
 }

@@ -11,18 +11,24 @@
     <link rel="icon" href="/icon-32.png" sizes="32x32" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
 
-    <!-- Browser chrome follows the light/dark surface of the app (design system background token). -->
-    <meta name="theme-color" content="#f7fcf9" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#080f0c" media="(prefers-color-scheme: dark)" />
+    <!-- Browser chrome follows the theme in use; the script below picks data-light or data-dark. -->
+    <meta name="theme-color" content="#f7fcf9" data-light="#f7fcf9" data-dark="#080f0c" />
 
-    <!-- Dark theme: the design system switches on the `.dark` class. Set it from the
-         system setting before first paint and keep it in sync (no toggle yet). -->
+    <!-- Theme (#97): before first paint, set `.dark`, color-scheme and theme-color from the
+         saved choice (`tuttitrip-theme`: light | dark | system), else the system setting.
+         Keep in sync with src/lib/theme.ts, which takes over once the app is running. -->
     <script>
       ;(() => {
-        const media = window.matchMedia('(prefers-color-scheme: dark)')
-        const apply = () => document.documentElement.classList.toggle('dark', media.matches)
-        apply()
-        media.addEventListener('change', apply)
+        let dark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        try {
+          const saved = localStorage.getItem('tuttitrip-theme')
+          if (saved === 'light' || saved === 'dark') dark = saved === 'dark'
+        } catch {}
+        const root = document.documentElement
+        root.classList.toggle('dark', dark)
+        root.style.colorScheme = dark ? 'dark' : 'light'
+        const meta = document.querySelector('meta[name="theme-color"]')
+        if (meta) meta.content = meta.dataset[dark ? 'dark' : 'light']
       })()
     </script>
 

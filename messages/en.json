@@ -397,5 +397,10 @@
   "invite_revoke_confirm_title": "Revoke this invitation?",
   "invite_revoke_confirm_body": "The invitation valid until {date}, {uses} of {max} joined. The link will stop working. People who already joined stay on the trip.",
   "invite_revoke_keep": "Keep the invitation",
-  "invite_revoke_confirm": "Revoke invitation"
+  "invite_revoke_confirm": "Revoke invitation",
+  "theme_label": "Theme",
+  "theme_change": "Change theme",
+  "theme_light": "Light",
+  "theme_dark": "Dark",
+  "theme_system": "System"
 }
