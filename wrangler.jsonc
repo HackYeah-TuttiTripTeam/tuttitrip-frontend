@@ -1,28 +1,37 @@
-// Cloudflare Workers static-assets deployment of the SPA (no Worker script).
+// Cloudflare Workers deployment: the SPA as static assets plus a small Worker
+// script (worker/index.ts) that proxies /api/* to the backend of the environment.
 // One Worker per environment; see AGENTS.md "Deployment" and .github/workflows/frontend-ci.yml.
 //   main            -> worker tuttitrip-frontend          -> https://tuttitrip.gburek.app
 //   develop         -> worker tuttitrip-frontend-develop  -> https://tuttitrip-develop.gburek.app
 //   pull request    -> worker tuttitrip-preview-<slug>    -> https://tuttitrip-preview-<slug>.gburek.app
-//                      (deployed with --env preview --name ..., domain attached by
-//                      scripts/attach-domain.mjs, both deleted when the branch is gone)
+//                      (deployed with --env preview --name ... --var API_ORIGIN:<backend>,
+//                      domain attached by scripts/attach-domain.mjs, both deleted when
+//                      the branch is gone)
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "tuttitrip-frontend",
+  "main": "./worker/index.ts",
   "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     // Deep links (/trips?sort=name) get index.html; the router takes it from there.
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    // /api/* never hits the assets or the SPA fallback: the Worker proxies it.
+    "run_worker_first": ["/api/*"]
   },
   "workers_dev": false,
   "preview_urls": false,
   "routes": [{ "pattern": "tuttitrip.gburek.app", "custom_domain": true }],
+  // Backend origin for the /api proxy (vars are not inherited by environments).
+  "vars": { "API_ORIGIN": "https://tuttitrip-api.gburek.app" },
   "env": {
     "develop": {
       "name": "tuttitrip-frontend-develop",
       "workers_dev": false,
       "preview_urls": false,
-      "routes": [{ "pattern": "tuttitrip-develop.gburek.app", "custom_domain": true }]
+      "routes": [{ "pattern": "tuttitrip-develop.gburek.app", "custom_domain": true }],
+      "vars": { "API_ORIGIN": "https://tuttitrip-api-develop.gburek.app" }
     },
     "preview": {
       // CI overrides the name per branch: --name tuttitrip-preview-<slug>.
@@ -30,7 +39,9 @@
       "name": "tuttitrip-preview",
       "workers_dev": false,
       "preview_urls": false,
-      "routes": []
+      "routes": [],
+      // CI passes the backend picked by scripts/resolve-api.sh: --var API_ORIGIN:<url>.
+      "vars": { "API_ORIGIN": "https://tuttitrip-api-develop.gburek.app" }
     }
   }
 }

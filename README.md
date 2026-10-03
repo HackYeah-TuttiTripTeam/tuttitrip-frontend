@@ -35,7 +35,7 @@ Skopiuj `.env.example` do `.env.local` (ten plik nie trafia do gita) i uzupełni
 
 | Zmienna | Co to jest | Domyślnie |
 | --- | --- | --- |
-| `VITE_API_URL` | adres backendu, bez `/` na końcu | `http://localhost:8000` |
+| `VITE_API_URL` | adres backendu dla proxy `/api` w `pnpm dev` i źródło `api:sync`, bez `/` i bez `/api/v1` na końcu | `http://localhost:8000` |
 | `VITE_AUTH0_DOMAIN` | domena tenanta Auth0 | puste, logowanie wyłączone |
 | `VITE_AUTH0_CLIENT_ID` | client id aplikacji SPA w Auth0 | puste, logowanie wyłączone |
 | `VITE_AUTH0_AUDIENCE` | identyfikator API w Auth0 (np. `https://tuttitrip-api.gburek.app`) | puste |
@@ -44,13 +44,22 @@ Wszystkie te wartości lądują w kodzie przeglądarki, więc nie wpisuj tu sekr
 
 Do pracy na wdrożonym API zamiast lokalnego ustaw `VITE_API_URL=https://tuttitrip-api-develop.gburek.app`.
 
+## Proxy `/api`
+
+Aplikacja woła API zawsze pod własnym adresem, ścieżkami `/api/v1/...`, więc przeglądarka nie potrzebuje CORS, a w kodzie nie ma adresu backendu.
+
+- Lokalnie `pnpm dev` (i `pnpm preview`) przekazuje `/api` do `VITE_API_URL` albo `http://localhost:8000`.
+- Na Cloudflare robi to Worker `worker/index.ts`: `wrangler.jsonc` puszcza `/api/*` najpierw do niego (`assets.run_worker_first`), więc te ścieżki nigdy nie trafiają do fallbacku SPA. Worker przekazuje metodę, nagłówki (z `Authorization`), body i query do backendu swojego środowiska i strumieniuje odpowiedź. Nie przekazuje ciasteczek, nagłówków hop-by-hop ani `X-Forwarded-*` od klienta.
+- Backend środowiska to zmienna Workera `API_ORIGIN`: main `https://tuttitrip-api.gburek.app`, develop `https://tuttitrip-api-develop.gburek.app`, podgląd PR backend wybrany przez `scripts/resolve-api.sh` (ta sama gałąź, potem develop, potem main), przekazany przy deployu przez `--var`.
+- Dokumentacja API jest też pod adresem frontendu, np. https://tuttitrip-develop.gburek.app/api/v1/docs.
+
 ## Kontrakt API (`api:sync`)
 
-Typy endpointów generujemy z `/openapi.json` backendu (`openapi-typescript`). Zapytania idą przez `openapi-fetch` i `openapi-react-query`, więc literówka w ścieżce albo w nazwie pola wychodzi już przy kompilacji.
+Typy endpointów generujemy z `/api/v1/openapi.json` backendu (`openapi-typescript`). Zapytania idą przez `openapi-fetch` i `openapi-react-query`, więc literówka w ścieżce albo w nazwie pola wychodzi już przy kompilacji.
 
 ```bash
 pnpm api:sync                                                            # z VITE_API_URL albo localhost:8000
-pnpm api:sync --url https://tuttitrip-api-develop.gburek.app/openapi.json
+pnpm api:sync --url https://tuttitrip-api-develop.gburek.app/api/v1/openapi.json
 API_SCHEMA_URL=./openapi.json pnpm api:sync                              # z pliku
 ```
 

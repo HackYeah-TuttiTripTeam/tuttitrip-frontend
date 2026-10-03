@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/health": {
+    "/api/v1/health": {
         parameters: {
             query?: never;
             header?: never;
@@ -21,7 +21,7 @@ export interface paths {
          *     Returns:
          *         The health report.
          */
-        get: operations["health_health_get"];
+        get: operations["health_api_v1_health_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -30,7 +30,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/health/live": {
+    "/api/v1/health/live": {
         parameters: {
             query?: never;
             header?: never;
@@ -44,7 +44,7 @@ export interface paths {
          *     Returns:
          *         A constant ``ok``.
          */
-        get: operations["live_health_live_get"];
+        get: operations["live_api_v1_health_live_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -53,7 +53,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/me": {
+    "/api/v1/me": {
         parameters: {
             query?: never;
             header?: never;
@@ -68,9 +68,9 @@ export interface paths {
          *         user: The authenticated caller.
          *
          *     Returns:
-         *         The caller's subject, scopes and permissions.
+         *         The caller's subject, scopes, permissions and roles.
          */
-        get: operations["read_me_me_get"];
+        get: operations["read_me_api_v1_me_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -79,7 +79,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/jobs/ping": {
+    "/api/v1/jobs/ping": {
         parameters: {
             query?: never;
             header?: never;
@@ -98,14 +98,14 @@ export interface paths {
          *     Returns:
          *         The workflow id to poll at ``GET /jobs/ping/{id}``.
          */
-        post: operations["ping_jobs_ping_post"];
+        post: operations["ping_api_v1_jobs_ping_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/jobs/ping/{workflow_id}": {
+    "/api/v1/jobs/ping/{workflow_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -123,7 +123,7 @@ export interface paths {
          *     Returns:
          *         The job state.
          */
-        get: operations["ping_status_jobs_ping__workflow_id__get"];
+        get: operations["ping_status_api_v1_jobs_ping__workflow_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -132,7 +132,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/jobs/{workflow_id}": {
+    "/api/v1/jobs/{workflow_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -151,7 +151,7 @@ export interface paths {
          *     Returns:
          *         The job state.
          */
-        get: operations["get_job_jobs__workflow_id__get"];
+        get: operations["get_job_api_v1_jobs__workflow_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -160,7 +160,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/jobs/{workflow_id}/cancel": {
+    "/api/v1/jobs/{workflow_id}/cancel": {
         parameters: {
             query?: never;
             header?: never;
@@ -181,14 +181,14 @@ export interface paths {
          *     Returns:
          *         The job state after cancelling.
          */
-        post: operations["cancel_job_jobs__workflow_id__cancel_post"];
+        post: operations["cancel_job_api_v1_jobs__workflow_id__cancel_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/trips": {
+    "/api/v1/trips": {
         parameters: {
             query?: never;
             header?: never;
@@ -206,7 +206,7 @@ export interface paths {
          *     Returns:
          *         Trips, newest first.
          */
-        get: operations["list_trips_trips_get"];
+        get: operations["list_trips_api_v1_trips_get"];
         put?: never;
         /**
          * Create Trip
@@ -220,14 +220,14 @@ export interface paths {
          *     Returns:
          *         The created trip.
          */
-        post: operations["create_trip_trips_post"];
+        post: operations["create_trip_api_v1_trips_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/trips/{trip_id}/profiles": {
+    "/api/v1/trips/{trip_id}/profiles": {
         parameters: {
             query?: never;
             header?: never;
@@ -246,7 +246,7 @@ export interface paths {
          *     Returns:
          *         The trip's profiles.
          */
-        get: operations["list_profiles_trips__trip_id__profiles_get"];
+        get: operations["list_profiles_api_v1_trips__trip_id__profiles_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -255,7 +255,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/planning/jobs": {
+    "/api/v1/planning/jobs": {
         parameters: {
             query?: never;
             header?: never;
@@ -277,14 +277,14 @@ export interface paths {
          *     Returns:
          *         The workflow id.
          */
-        post: operations["start_plan_job_planning_jobs_post"];
+        post: operations["start_plan_job_api_v1_planning_jobs_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/planning/fairness/score": {
+    "/api/v1/planning/fairness/score": {
         parameters: {
             query?: never;
             header?: never;
@@ -303,14 +303,14 @@ export interface paths {
          *     Returns:
          *         The weighted log welfare.
          */
-        post: operations["score_planning_fairness_score_post"];
+        post: operations["score_api_v1_planning_fairness_score_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/planning/linter/check": {
+    "/api/v1/planning/linter/check": {
         parameters: {
             query?: never;
             header?: never;
@@ -329,14 +329,14 @@ export interface paths {
          *     Returns:
          *         All violations.
          */
-        post: operations["check_planning_linter_check_post"];
+        post: operations["check_api_v1_planning_linter_check_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/trips/{trip_id}/expenses": {
+    "/api/v1/trips/{trip_id}/expenses": {
         parameters: {
             query?: never;
             header?: never;
@@ -355,7 +355,7 @@ export interface paths {
          *     Returns:
          *         The trip's expenses.
          */
-        get: operations["list_expenses_trips__trip_id__expenses_get"];
+        get: operations["list_expenses_api_v1_trips__trip_id__expenses_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -364,7 +364,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/expenses/settlement/balances": {
+    "/api/v1/expenses/settlement/balances": {
         parameters: {
             query?: never;
             header?: never;
@@ -383,7 +383,7 @@ export interface paths {
          *     Returns:
          *         Balance per person.
          */
-        post: operations["balances_expenses_settlement_balances_post"];
+        post: operations["balances_api_v1_expenses_settlement_balances_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -576,6 +576,16 @@ export interface components {
             scopes: string[];
             /** Permissions */
             permissions: string[];
+            /**
+             * Roles
+             * @description Roles from the Auth0 roles claim.
+             */
+            roles: string[];
+            /**
+             * Is Admin
+             * @description True for TuttiTrip administrators.
+             */
+            is_admin: boolean;
         };
         /**
          * Payment
@@ -631,6 +641,13 @@ export interface components {
             trip_id: string;
             /** Request */
             request: string;
+            /**
+             * Provider
+             * @description LLM backend: OpenRouter or the local model.
+             * @default openrouter
+             * @enum {string}
+             */
+            provider: "openrouter" | "local";
         };
         /**
          * ProfileRead
@@ -728,7 +745,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    health_health_get: {
+    health_api_v1_health_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -748,7 +765,7 @@ export interface operations {
             };
         };
     };
-    live_health_live_get: {
+    live_api_v1_health_live_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -768,7 +785,7 @@ export interface operations {
             };
         };
     };
-    read_me_me_get: {
+    read_me_api_v1_me_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -788,7 +805,7 @@ export interface operations {
             };
         };
     };
-    ping_jobs_ping_post: {
+    ping_api_v1_jobs_ping_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -808,7 +825,7 @@ export interface operations {
             };
         };
     };
-    ping_status_jobs_ping__workflow_id__get: {
+    ping_status_api_v1_jobs_ping__workflow_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -839,7 +856,7 @@ export interface operations {
             };
         };
     };
-    get_job_jobs__workflow_id__get: {
+    get_job_api_v1_jobs__workflow_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -870,7 +887,7 @@ export interface operations {
             };
         };
     };
-    cancel_job_jobs__workflow_id__cancel_post: {
+    cancel_job_api_v1_jobs__workflow_id__cancel_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -901,7 +918,7 @@ export interface operations {
             };
         };
     };
-    list_trips_trips_get: {
+    list_trips_api_v1_trips_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -921,7 +938,7 @@ export interface operations {
             };
         };
     };
-    create_trip_trips_post: {
+    create_trip_api_v1_trips_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -954,7 +971,7 @@ export interface operations {
             };
         };
     };
-    list_profiles_trips__trip_id__profiles_get: {
+    list_profiles_api_v1_trips__trip_id__profiles_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -985,7 +1002,7 @@ export interface operations {
             };
         };
     };
-    start_plan_job_planning_jobs_post: {
+    start_plan_job_api_v1_planning_jobs_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1018,7 +1035,7 @@ export interface operations {
             };
         };
     };
-    score_planning_fairness_score_post: {
+    score_api_v1_planning_fairness_score_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1051,7 +1068,7 @@ export interface operations {
             };
         };
     };
-    check_planning_linter_check_post: {
+    check_api_v1_planning_linter_check_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1084,7 +1101,7 @@ export interface operations {
             };
         };
     };
-    list_expenses_trips__trip_id__expenses_get: {
+    list_expenses_api_v1_trips__trip_id__expenses_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1115,7 +1132,7 @@ export interface operations {
             };
         };
     };
-    balances_expenses_settlement_balances_post: {
+    balances_api_v1_expenses_settlement_balances_post: {
         parameters: {
             query?: never;
             header?: never;
