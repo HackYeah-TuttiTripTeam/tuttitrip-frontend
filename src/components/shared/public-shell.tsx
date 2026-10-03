@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import type { SessionStatus } from '@/hooks/use-session'
 import { m } from '@/paraglide/messages'
-import { BrandMark } from './brand-mark'
+import { BrandLogo } from './brand-mark'
 import { LanguageMenu, type LanguageState } from './language-menu'
 import { SiteFooter } from './site-footer'
 
@@ -43,10 +43,9 @@ export function PublicShell({
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4 md:gap-4 md:px-6">
           <Link
             to={status === 'authenticated' ? '/trips' : '/'}
-            className="flex items-center gap-2 rounded-md font-heading font-extrabold tracking-tight outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="flex items-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
-            <BrandMark />
-            TuttiTrip
+            <BrandLogo />
           </Link>
           {envLabel && (
             <span className="hidden max-w-28 truncate rounded-full md:inline-block border px-2 py-0.5 font-mono text-muted-foreground text-xs">

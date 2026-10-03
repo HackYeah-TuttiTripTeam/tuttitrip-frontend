@@ -20,6 +20,11 @@ colors:
   danger-soft: "#fdecec"
   route-dot: "oklch(78% 0.015 168)"
   brand: "#00774d"
+  brand-ink: "#f4fbf8"
+  brand-sky: "#0a2f23"
+  brand-gold: "#f2b53a"
+  brand-ivory: "#f5efe6"
+  brand-night: "#0f1b17"
   member-1: "oklch(50% 0.11 250)"
   member-2: "oklch(50% 0.12 295)"
   member-3: "oklch(52% 0.09 210)"
@@ -129,7 +134,8 @@ The interface shows that a plan was counted: numbers, hours, prices and verdicts
 the plan check, and the language model only writes questions and justifications. It sits on shadcn/ui and
 Tailwind v4 but deliberately does not look like default shadcn: paper background with a green note
 instead of zinc, Funnel Display and Atkinson Hyperlegible, 44px pill buttons, flat sheets without
-shadows, and the route motif from the logo mark (dots, stops and the destination ring).
+shadows, and the route motif (dots, stops and the destination ring) that the "Horyzont" logo shares: a round
+badge with a road running to the horizon under a gold goal ring.
 
 Operate surface first: phone portrait 360 to 430px, a floating dock, short sessions. Public pages
 (landing, about) are a desktop 1200px layout.
@@ -163,6 +169,12 @@ exactly one meaning each.
 - **Destructive** (`destructive`, `danger-soft`, `danger-ink`): not met, error, deletion.
 Each `*-ink` on its `*-soft` keeps at least 4.5:1 in both themes.
 
+### Brand (logo and app icons only)
+- **Sky** (`brand-sky`, `#0a2f23`, lighter `#0f4434` in dark so the badge keeps an edge on `background`),
+  **Ground** (`brand` `#00774d`, also the PWA `theme_color`), **Road** (`brand-ivory` `#f5efe6`),
+  **Goal ring** (`brand-gold` `#f2b53a`), and for the wordmark `brand-night` on light surfaces and
+  `brand-ink` on dark ones.
+
 ### People
 - **member-1 to member-6** (blue, violet, teal, raspberry, olive, graphite): only avatars, a dot on an
   axis or a 3px bar. Never a state background.
@@ -171,6 +183,9 @@ Each `*-ink` on its `*-soft` keeps at least 4.5:1 in both themes.
 **The One Meaning Rule.** A state color means one thing everywhere; never borrow `decline` for emphasis
 or `want` for decoration.
 **The No Glow Rule.** No gradients, glows, glass or gradient text.
+**The Gold Is Brand Rule.** `brand-gold` and the other `brand-*` colors exist for the logo and app icons.
+Gold never means warning or a waiting decision (that is `warning`); in the interface the goal ring is
+`primary`.
 
 ## Typography
 
@@ -229,6 +244,12 @@ component to start from.
 - During the trip: `ReplanBar`. Expenses: `Settlement`. Navigation: `BottomNav`.
 - Screens to copy layouts from: `ScreenLanding`, `ScreenAbout`, `ScreenDashboard`, `ScreenSettings`,
   `ScreenPlanBuilder`, `ScreenInterviewVoice`, `ScreenInterviewChat`, `ScreenDecisions`.
+
+Logo: the "Horyzont" mark and wordmark ship as outlined SVG in `public/brand/` (`BrandLogo` in the app
+header, `BrandMark` on the boot screen) in a `-light` and a `-dark` file, swapped by the `.dark` class; the
+`-light` file never sits on a dark surface. Used unaltered, at least 24px, always with its own badge; the
+tagline version stays out of the interface. App icons (favicon, 16 to 1024px tile, maskable, apple-touch)
+and the 1200x630 share images come from `assets/AppIcons` and are copied to `public/`.
 
 Icons: Keyline Icons (`@keyline-icons/react`, MIT), stroke, rounded, 24 grid, 2px line; 20px in controls,
 16px in chips and rows, always `currentColor`; two-tone only for the "kultowe" star, the "zweryfikowana"
