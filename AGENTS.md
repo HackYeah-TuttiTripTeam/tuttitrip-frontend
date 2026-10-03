@@ -131,7 +131,7 @@ with `is_me`) are served from `/trips/{id}/members` and join profiles on `profil
   or through the PR preview when the PR has the label `preview`. Report both.
 - **Build safety (rule 8):** `src/mocks/` is imported only by test files and `src/main.tsx`
   (behind `__API_MOCK__`); `msw` only inside `src/mocks/`
-  (`scripts/check-arch.mjs`). `scripts/dist.int.test.mjs` (integration, `pnpm test:integration`) builds and fails if MSW, the worker
+  (`scripts/check-arch.mjs`). `scripts/dist.int.test.mjs` and `scripts/pwa-build.int.test.mjs` (integration, `pnpm test:integration`, local pre-PR checks) build and fail if MSW, the worker
   script or the fake session are in the bundle. A field missing in the schema lands with
   the backend, never as a hand-written fixture shape.
 
@@ -557,9 +557,9 @@ innym w drogę i żeby każda funkcja przeszła ten sam proces. Dotyczą też lu
    w podsumowaniu joba jedną linię "Preview disabled (PREVIEW_DEPLOYS=false); add label `preview` to deploy".
    CI sprawdza tylko lint, typy, testy jednostkowe i testy architektury (job `verify`), a `vite build`
    robi tylko wtedy, gdy będzie wdrożenie (develop, main, etykieta `preview`). Testy integracyjne
-   (`*.int.test.*`, dziś `scripts/dist.int.test.mjs`, czyli dwa pełne buildy produkcyjne) nie
+   (`*.int.test.*`, dziś `scripts/dist.int.test.mjs` i `scripts/pwa-build.int.test.mjs`, czyli pełne buildy produkcyjne) nie
    chodzą na CI, więc przed oznaczeniem PR jako gotowego uruchom lokalnie `pnpm verify`,
-   `pnpm test:integration` i `pnpm build`; wynik wpisz w komentarzu ze smoke testem.
+   `pnpm test:integration` i `pnpm build` (to one łapią błędy pluginów, Rollupa i PWA, bo zwykły `vite build` na PR bez etykiety `preview` nie chodzi na CI); wynik wpisz w komentarzu ze smoke testem.
    Nowy wolny test (pełny build, wiele sekund) nazwij `*.int.test.*`; szybkie testy
    przepływów w jsdom z MSW zostają jednostkowe. Przejdź scenariusz z kryteriów akceptacji issue:
    - lokalnie: `pnpm dev:mock` (scenariusze: puste, błąd, tylko do odczytu, zatwierdzenie, offline) i/albo

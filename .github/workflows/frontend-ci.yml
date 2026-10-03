@@ -5,6 +5,8 @@ name: Frontend CI
 # `pnpm test:integration`, see AGENTS.md.
 # build (vite build + dist artifact) feeds a deploy, so it runs only when a deploy
 # will happen (develop/main, or a PR with the `preview` label), in parallel with verify.
+# Consequence: a plain PR has no `vite build` on CI (plugin, Rollup and PWA errors are not
+# caught there), so `pnpm build` and `pnpm test:integration` are part of the local pre-PR checks.
 # deploy: main -> tuttitrip.gburek.app, develop -> tuttitrip-develop.gburek.app,
 #         pull requests -> one preview Worker per branch + a PR comment,
 #         then delete preview Workers whose branch is gone.
