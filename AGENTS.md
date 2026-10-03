@@ -257,6 +257,9 @@ no force-push or deletion) is **not active**: GitHub refuses branch protection
 and rulesets on private repos of a free organization ("Upgrade to GitHub Pro or
 make this repository public"). Until the plan changes, treat these rules as a
 team convention: never push to `main`/`develop` directly, never force-push.
+Because nothing protects `develop`, "Automatically delete head branches"
+deletes it after every release PR (`develop` -> `main`, merge commit);
+`frontend-cleanup.yml` then recreates `develop` at `main` within seconds.
 
 No AI attribution anywhere: no `Co-Authored-By` trailers for tools, no
 "generated with" lines in commits, PRs or comments.
