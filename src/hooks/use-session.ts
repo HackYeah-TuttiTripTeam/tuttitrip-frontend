@@ -18,8 +18,11 @@ export interface Session {
 
 const noop = () => undefined
 
-/** Auth0 brings the user back to the page the login started from (see onRedirectCallback). */
-const returnToHere = () => ({
+/**
+ * Auth0 brings the user back to the page the login started from (see onRedirectCallback).
+ * Path and query only: a fragment (an invitation token) must never ride along in the state.
+ */
+export const returnToHere = () => ({
   returnTo: `${window.location.pathname}${window.location.search}`,
 })
 

@@ -1,7 +1,8 @@
 import { QRCodeSVG } from 'qrcode.react'
 
-// Scanners need dark modules on a light ground and a quiet zone of 4 modules, in dark mode too.
-// So the code keeps its own fixed colors instead of following the theme tokens.
+// A deliberate exception to "only theme tokens" (AGENTS.md rule 5): scanners need dark modules on
+// a light ground and a quiet zone of 4 modules, in dark mode too, so a QR code never follows
+// the theme. These are plain constants, not Tailwind classes, so the Biome color rules do not apply.
 const QR_DARK = '#000000'
 const QR_LIGHT = '#ffffff'
 

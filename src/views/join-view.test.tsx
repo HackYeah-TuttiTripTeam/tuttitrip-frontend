@@ -1,229 +1,235 @@
 // @vitest-environment jsdom
-import { QueryClientProvider } from '@tanstack/react-query'
-import { createBrowserHistory, createRouter, RouterProvider } from '@tanstack/react-router'
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { HttpResponse, http } from 'msw'
+import { describe, expect, it, vi } from 'vitest'
 import type { Session } from '@/hooks/use-session'
-import { clearJoinToken, peekJoinToken } from '@/lib/invite-link'
-import { queryClient } from '@/lib/query-client'
+import { clearJoinToken, peekJoinToken, stashJoinToken } from '@/lib/invite-link'
+import { MOCK_USER_NAME, TRIP_ID } from '@/mocks/fixtures'
+import { server, useScenario } from '@/mocks/node'
+import { renderApp } from '@/mocks/render-app'
 import { m } from '@/paraglide/messages'
-import { overwriteGetLocale } from '@/paraglide/runtime'
-import { routeTree } from '@/routeTree.gen'
 
-const TRIP_ID = '3f0c2a52-6d0b-4a39-8f0e-7a7c9a1c0b11'
-// jsdom has no matchMedia; the phone layout (drawer) is what these tests see.
-window.matchMedia = (query: string) =>
-  ({
-    matches: false,
-    media: query,
-    addEventListener: () => undefined,
-    removeEventListener: () => undefined,
-  }) as unknown as MediaQueryList
-
-const api = vi.hoisted(() => {
-  const state: {
-    calls: { method: string; path: string; body: unknown }[]
-    /** Status of POST /invitations/preview and /accept. */
-    previewStatus: number
-    acceptStatus: number
-    alreadyMember: boolean
-  } = { calls: [], previewStatus: 200, acceptStatus: 200, alreadyMember: false }
-  const BaseRequest = globalThis.Request
-  globalThis.Request = class extends BaseRequest {
-    constructor(input: RequestInfo | URL, init?: RequestInit) {
-      super(
-        typeof input === 'string' && input.startsWith('/') ? `http://localhost${input}` : input,
-        init,
-      )
-    }
-  }
-  const reply = (status: number, body: unknown) =>
-    new Response(JSON.stringify(body), {
-      status,
-      headers: { 'content-type': 'application/json' },
-    })
-  globalThis.fetch = async (input) => {
-    const request = input instanceof Request ? input : new Request(String(input))
-    const { pathname, search } = new URL(request.url)
-    const text = await request.clone().text()
-    state.calls.push({
-      method: request.method,
-      path: pathname + search,
-      body: text ? JSON.parse(text) : null,
-    })
-    if (pathname.endsWith('/trips/3f0c2a52-6d0b-4a39-8f0e-7a7c9a1c0b11')) {
-      return reply(200, {
-        id: '3f0c2a52-6d0b-4a39-8f0e-7a7c9a1c0b11',
-        name: 'Majówka w Krakowie',
-        destination: 'Kraków',
-        created_at: '2026-10-01T10:00:00Z',
-        start_date: null,
-        end_date: null,
-        my_role: 'host',
-        kind: 'trip',
-      })
-    }
-    if (pathname.endsWith('/profiles') || pathname.endsWith('/members')) return reply(200, [])
-    if (pathname.endsWith('/invitations/preview')) {
-      return state.previewStatus === 200
-        ? reply(200, {
-            trip_name: 'Majówka w Krakowie',
-            destination: 'Kraków',
-            already_member: state.alreadyMember,
-          })
-        : reply(state.previewStatus, { detail: 'Invitation not found' })
-    }
-    if (pathname.endsWith('/invitations/accept')) {
-      return state.acceptStatus === 200
-        ? reply(200, {
-            trip_id: '3f0c2a52-6d0b-4a39-8f0e-7a7c9a1c0b11',
-            profile_id: 'p',
-            role: 'member',
-            already_member: state.alreadyMember,
-          })
-        : reply(state.acceptStatus, { detail: 'Invitation not found' })
-    }
-    if (pathname.endsWith('/invitations')) {
-      return request.method === 'POST'
-        ? reply(201, {
-            id: 'i1',
-            trip_id: '3f0c2a52-6d0b-4a39-8f0e-7a7c9a1c0b11',
-            created_by_sub: 'auth0|1',
-            created_at: '2026-10-03T12:00:00Z',
-            expires_at: '2026-10-10T12:00:00Z',
-            max_uses: 10,
-            uses: 0,
-            revoked_at: null,
-            token: 'TOKEN-from-API_1',
-          })
-        : reply(200, [])
-    }
-    return reply(404, { detail: 'Not found' })
-  }
-  return state
-})
+const TOKEN = 'secret-invitation-token'
 
 const session = vi.hoisted(() => ({ current: null as unknown as Session }))
-vi.mock('@/hooks/use-session', () => ({ useSession: () => session.current }))
+vi.mock('@/hooks/use-session', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/hooks/use-session')>()),
+  useSession: () => session.current,
+}))
 
-const signedIn = (): Session => ({
+const sessionOf = (over: Partial<Session> = {}): Session => ({
   status: 'authenticated',
   error: undefined,
-  userName: 'Anna Nowak',
+  userName: MOCK_USER_NAME,
   userPicture: undefined,
   login: vi.fn(),
   signup: vi.fn(),
   logout: vi.fn(),
+  ...over,
 })
 
-function renderAt(url: string) {
-  // The view reads and rewrites the real address bar, so the router uses the browser history.
-  window.history.replaceState(null, '', url)
-  const router = createRouter({
-    routeTree,
-    history: createBrowserHistory(),
-    context: { queryClient },
-  })
-  render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-  )
-  return router
+/** The browser opens a link: the address bar holds the fragment, the router starts at /join. */
+function openInvite(hash = `#t=${TOKEN}`) {
+  clearJoinToken()
+  window.history.replaceState(null, '', `/join${hash}`)
+  return renderApp('/join')
 }
 
-beforeEach(() => {
-  overwriteGetLocale(() => 'pl')
-  session.current = signedIn()
-  clearJoinToken()
-  Object.assign(api, { calls: [], previewStatus: 200, acceptStatus: 200, alreadyMember: false })
-})
+/** What the API saw: method, path, the location at that moment, and the JSON body. */
+function recordRequests() {
+  const seen: { method: string; path: string; href: string; body: unknown }[] = []
+  server.events.on('request:start', async ({ request }) => {
+    const { pathname } = new URL(request.url)
+    if (!pathname.startsWith('/api/v1/')) return
+    seen.push({
+      method: request.method,
+      path: pathname,
+      href: window.location.href,
+      body: await request
+        .clone()
+        .json()
+        .catch(() => null),
+    })
+  })
+  return seen
+}
 
-afterEach(() => {
-  cleanup()
-  queryClient.clear()
-  clearJoinToken()
-  window.history.replaceState(null, '', '/')
-})
+const bodyOf = (seen: ReturnType<typeof recordRequests>, path: string) =>
+  seen.find((call) => call.method === 'POST' && call.path.endsWith(path))?.body
 
-describe('JoinView', () => {
-  it('previews with the token in the body, joins and opens the People tab', async () => {
-    const router = renderAt('/join#t=secret-token')
-    expect(await screen.findByRole('heading', { name: 'Majówka w Krakowie' })).toBeTruthy()
+/** Everything a page can keep a token in, as one string. */
+function everywhere(): string {
+  const dump = (store: Storage) => Object.keys(store).map((key) => `${key}=${store.getItem(key)}`)
+  return [
+    window.location.href,
+    JSON.stringify(window.history.state),
+    ...dump(localStorage),
+    ...dump(sessionStorage),
+  ].join('\n')
+}
 
-    fireEvent.change(screen.getByLabelText(m.join_name_label()), { target: { value: ' Ania ' } })
-    fireEvent.click(screen.getByRole('button', { name: m.join_submit() }))
+describe('JoinView, signed in', () => {
+  it('strips the fragment before any request, then previews and joins with the token in bodies', async () => {
+    session.current = sessionOf()
+    const seen = recordRequests()
+    const { router } = openInvite()
+    const user = userEvent.setup()
+
+    expect(await screen.findByRole('heading', { name: 'Warszawa z rodziną' })).toBeTruthy()
+    // The very first request already ran with a clean address bar.
+    expect(seen.length).toBeGreaterThan(0)
+    for (const call of seen) {
+      expect(call.href).not.toContain(TOKEN)
+      expect(call.href).not.toContain('#')
+      expect(call.path).not.toContain(TOKEN)
+    }
+    expect(bodyOf(seen, '/invitations/preview')).toEqual({ token: TOKEN })
+
+    const name = screen.getByLabelText(m.join_name_label())
+    await user.clear(name)
+    await user.type(name, ' Ola ')
+    await user.click(screen.getByRole('button', { name: m.join_submit() }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe(`/trips/${TRIP_ID}`))
     expect(router.state.location.search).toEqual({ tab: 'people' })
-    expect(router.state.location.hash).toBe('')
-
-    const [preview, accept] = api.calls.filter((call) => call.method === 'POST')
-    expect(preview?.body).toEqual({ token: 'secret-token' })
-    expect(accept?.body).toEqual({ token: 'secret-token', display_name: 'Ania' })
-    // The token is never in a path or query string.
-    expect(api.calls.every((call) => !call.path.includes('secret-token'))).toBe(true)
+    expect(bodyOf(seen, '/invitations/accept')).toEqual({ token: TOKEN, display_name: 'Ola' })
+    // After the join the token is nowhere: not in the URL, history state, or either storage.
+    expect(everywhere()).not.toContain(TOKEN)
     expect(peekJoinToken()).toBeNull()
   })
 
-  it('removes the fragment from the address bar after reading it', async () => {
-    const router = renderAt('/join#t=secret-token')
-    await screen.findByRole('heading', { name: 'Majówka w Krakowie' })
-    expect(router.state.location.hash).toBe('')
-    expect(window.location.hash).toBe('')
-    expect(router.history.location.href).toBe('/join')
+  it('sends no query string with the token on any request', async () => {
+    session.current = sessionOf()
+    const seen = recordRequests()
+    openInvite()
+    await screen.findByRole('heading', { name: 'Warszawa z rodziną' })
+    expect(seen.every((call) => !call.path.includes('?') && !call.href.includes(TOKEN))).toBe(true)
   })
 
-  it('opens an already joined trip without asking for a name', async () => {
-    api.alreadyMember = true
-    renderAt('/join#t=secret-token')
+  it('re-accepting as an existing member sends no name and lands on the trip', async () => {
+    useScenario('join-already-member')
+    session.current = sessionOf()
+    const seen = recordRequests()
+    const { router } = openInvite()
+    const user = userEvent.setup()
+
     expect(await screen.findByText(m.join_already_member())).toBeTruthy()
     expect(screen.queryByLabelText(m.join_name_label())).toBeNull()
-    expect(screen.getByRole('button', { name: m.join_open() })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: m.join_open() }))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/trips/${TRIP_ID}`))
+    expect(bodyOf(seen, '/invitations/accept')).toEqual({ token: TOKEN, display_name: null })
+    expect(everywhere()).not.toContain(TOKEN)
   })
 
-  it('explains a dead token and forgets it', async () => {
-    api.previewStatus = 404
-    renderAt('/join#t=dead')
+  it('shows one message for a dead token and forgets it', async () => {
+    useScenario('join-dead')
+    session.current = sessionOf()
+    stashJoinToken(TOKEN)
+    openInvite()
+    expect(await screen.findByText(m.join_dead_title())).toBeTruthy()
+    expect(screen.getByText(m.join_dead_body())).toBeTruthy()
+    expect(peekJoinToken()).toBeNull()
+  })
+
+  it('shows the same message when accepting fails with 404 after a good preview', async () => {
+    useScenario('join-accept-dead')
+    session.current = sessionOf()
+    const user = userEvent.setup()
+    openInvite()
+
+    await user.click(await screen.findByRole('button', { name: m.join_submit() }))
     expect(await screen.findByText(m.join_dead_title())).toBeTruthy()
     expect(peekJoinToken()).toBeNull()
+    expect(everywhere()).not.toContain(TOKEN)
   })
 
-  it('keeps the token for the login round-trip while signed out, then finishes', async () => {
-    session.current = { ...signedIn(), status: 'anonymous' }
-    renderAt('/join#t=secret-token')
-    expect(await screen.findByText(m.join_login_title())).toBeTruthy()
-    expect(api.calls).toHaveLength(0)
-    expect(peekJoinToken()).toBeNull()
-    fireEvent.click(
-      within(screen.getByRole('status')).getByRole('button', { name: m.account_login() }),
+  it('explains a failed check with a retry and keeps nothing in storage', async () => {
+    session.current = sessionOf()
+    stashJoinToken(TOKEN)
+    server.use(
+      http.post('*/api/v1/invitations/preview', () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
     )
-    expect(session.current.login).toHaveBeenCalled()
-    expect(peekJoinToken()).toBe('secret-token')
-    cleanup()
-
-    // Back from Auth0: /join without a fragment, signed in.
-    session.current = signedIn()
-    renderAt('/join')
-    expect(await screen.findByRole('heading', { name: 'Majówka w Krakowie' })).toBeTruthy()
-    expect(api.calls[0]?.body).toEqual({ token: 'secret-token' })
+    openInvite()
+    expect(await screen.findByText(m.join_load_failed_title())).toBeTruthy()
+    expect(screen.getByRole('button', { name: m.action_retry() })).toBeTruthy()
+    expect(peekJoinToken()).toBeNull()
   })
 
   it('asks for a link when there is no token', async () => {
-    renderAt('/join')
+    session.current = sessionOf()
+    const seen = recordRequests()
+    openInvite('')
     expect(await screen.findByText(m.join_missing_title())).toBeTruthy()
-    expect(api.calls).toHaveLength(0)
+    expect(seen).toHaveLength(0)
   })
 })
 
-describe('invitations of a host', () => {
-  it('creates a link and shows it as a /join#t= link with a QR code', async () => {
-    renderAt(`/trips/${TRIP_ID}?tab=people`)
-    fireEvent.click(await screen.findByRole('button', { name: m.invite_action() }))
-    const field = await screen.findByLabelText<HTMLInputElement>(m.invite_link_label())
-    expect(field.value).toBe(`${window.location.origin}/join#t=TOKEN-from-API_1`)
-    expect(screen.getByRole('img', { name: m.invite_qr_label() })).toBeTruthy()
-    const post = api.calls.find((call) => call.method === 'POST')
-    expect(post?.body).toEqual({ expires_in_days: 7, max_uses: 10 })
+describe('JoinView, signed out', () => {
+  it('waits for the login without any request and stashes the token only on the button', async () => {
+    const login = vi.fn()
+    session.current = sessionOf({ status: 'anonymous', login })
+    const seen = recordRequests()
+    const user = userEvent.setup()
+    openInvite()
+
+    expect(await screen.findByText(m.join_login_body())).toBeTruthy()
+    expect(seen).toHaveLength(0)
+    expect(peekJoinToken()).toBeNull()
+
+    await user.click(
+      within(screen.getByRole('status')).getByRole('button', { name: m.account_login() }),
+    )
+    // Stashed before login() left the page.
+    expect(login).toHaveBeenCalledOnce()
+    expect(peekJoinToken()).toBe(TOKEN)
+    expect(JSON.parse(sessionStorage.getItem('tuttitrip.join-token') ?? '{}')).toMatchObject({
+      token: TOKEN,
+    })
+  })
+
+  it('finishes the join after the login round-trip from the stash', async () => {
+    // Back from Auth0: /join without a fragment, now signed in.
+    session.current = sessionOf()
+    clearJoinToken()
+    stashJoinToken(TOKEN)
+    window.history.replaceState(null, '', '/join')
+    const seen = recordRequests()
+    renderApp('/join')
+
+    expect(await screen.findByRole('heading', { name: 'Warszawa z rodziną' })).toBeTruthy()
+    expect(bodyOf(seen, '/invitations/preview')).toEqual({ token: TOKEN })
+    // The login round-trip is over: nothing stays in storage.
+    expect(peekJoinToken()).toBeNull()
+  })
+
+  it('forgets the token when the login is cancelled', async () => {
+    session.current = sessionOf({ status: 'anonymous', error: m.auth_error_cancelled() })
+    stashJoinToken(TOKEN)
+    openInvite()
+    expect(await screen.findByText(m.auth_error_cancelled())).toBeTruthy()
+    expect(peekJoinToken()).toBeNull()
+  })
+
+  it('forgets the token when login is not available', async () => {
+    session.current = sessionOf({ status: 'disabled' })
+    stashJoinToken(TOKEN)
+    openInvite()
+    expect(await screen.findByRole('alert')).toBeTruthy()
+    expect(peekJoinToken()).toBeNull()
+  })
+
+  it('does not use an expired stash', async () => {
+    session.current = sessionOf()
+    clearJoinToken()
+    stashJoinToken(TOKEN, Date.now() - 11 * 60 * 1000)
+    window.history.replaceState(null, '', '/join')
+    const seen = recordRequests()
+    renderApp('/join')
+    expect(await screen.findByText(m.join_missing_title())).toBeTruthy()
+    expect(seen).toHaveLength(0)
   })
 })

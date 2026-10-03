@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { ApiError } from '@/api/errors'
+import type { Invitation } from '@/api/queries/invitations'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
 import { InvitationList, InvitationListSkeleton } from '@/components/trips/invitation-list'
 import { InvitationShare } from '@/components/trips/invitation-share'
 import { InvitePanel } from '@/components/trips/invite-panel'
+import { RevokeInvitationDialog } from '@/components/trips/revoke-invitation-dialog'
 import { Button } from '@/components/ui/button'
 import { useCreateInvitation, useInvitations, useRevokeInvitation } from '@/hooks/use-invitations'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
@@ -20,6 +23,7 @@ export function TripInvitationsView({ tripId, tripName }: TripInvitationsViewPro
   const list = useInvitations(tripId)
   const creation = useCreateInvitation(tripId)
   const revocation = useRevokeInvitation(tripId)
+  const [revoking, setRevoking] = useState<Invitation | null>(null)
 
   const createError = creation.error
     ? creation.error instanceof ApiError && creation.error.status === 409
@@ -47,11 +51,7 @@ export function TripInvitationsView({ tripId, tripName }: TripInvitationsViewPro
           <p className="py-3 text-muted-foreground text-sm">{m.invite_list_empty()}</p>
         ) : (
           <>
-            <InvitationList
-              invitations={list.invitations}
-              onRevoke={revocation.revoke}
-              revokingId={revocation.pendingId}
-            />
+            <InvitationList invitations={list.invitations} onRevoke={setRevoking} />
             <p className="text-muted-foreground text-sm">{m.invite_list_hint()}</p>
           </>
         )}
@@ -61,6 +61,17 @@ export function TripInvitationsView({ tripId, tripName }: TripInvitationsViewPro
           </p>
         )}
       </InvitePanel>
+
+      <RevokeInvitationDialog
+        invitation={revoking}
+        isDesktop={isDesktop}
+        isRevoking={revocation.isPending}
+        onCancel={() => setRevoking(null)}
+        onConfirm={(invitation) => {
+          revocation.revoke(invitation.id)
+          setRevoking(null)
+        }}
+      />
 
       <ResponsiveModal
         open={creation.created !== undefined}

@@ -1,6 +1,8 @@
 import {
   familyMembers,
   familyProfiles,
+  type Invitation,
+  invitation,
   type Member,
   needsApprovalBudget,
   outing,
@@ -18,6 +20,10 @@ export const scenarioNames = [
   'member-readonly',
   'server-error',
   'offline',
+  'join-valid',
+  'join-dead',
+  'join-already-member',
+  'join-accept-dead',
 ] as const
 
 export type ScenarioName = (typeof scenarioNames)[number]
@@ -45,6 +51,16 @@ export interface World {
   members: Member[]
   /** The latest plan of the main trip; null until "Policz plan" creates one. */
   plan: Plan | null
+  /** Invitations of the main trip, newest first (the host's list). */
+  invitations: Invitation[]
+  /** What a person opening an invitation link meets (/invitations/preview and /accept). */
+  join: {
+    /** "ok": a working token. "dead": expired, revoked or full, which the API answers with 404. */
+    preview: 'ok' | 'dead'
+    /** The caller is on the trip already, so accepting is idempotent. */
+    alreadyMember: boolean
+    accept: 'ok' | 'dead'
+  }
 }
 
 export function createWorld(name: ScenarioName): World {
@@ -55,6 +71,8 @@ export function createWorld(name: ScenarioName): World {
     profiles: familyProfiles(),
     members: familyMembers(),
     plan: plan(main.id),
+    invitations: [invitation()],
+    join: { preview: 'ok', alreadyMember: false, accept: 'ok' },
   }
   switch (name) {
     case 'family-warsaw':
@@ -73,5 +91,13 @@ export function createWorld(name: ScenarioName): World {
       return { ...base, behaviour: 'server-error' }
     case 'offline':
       return { ...base, behaviour: 'offline' }
+    case 'join-valid':
+      return base
+    case 'join-dead':
+      return { ...base, join: { ...base.join, preview: 'dead' } }
+    case 'join-already-member':
+      return { ...base, join: { ...base.join, alreadyMember: true } }
+    case 'join-accept-dead':
+      return { ...base, join: { ...base.join, accept: 'dead' } }
   }
 }

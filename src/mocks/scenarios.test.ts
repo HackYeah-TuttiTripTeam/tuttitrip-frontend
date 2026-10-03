@@ -156,3 +156,52 @@ describe('pickScenario', () => {
     expect(pick('?scenario=nope', 'nope')).toBe('family-warsaw')
   })
 })
+
+describe('join scenarios', () => {
+  const preview = () => fetchClient.POST('/api/v1/invitations/preview', { body: { token: 't' } })
+  const accept = () => fetchClient.POST('/api/v1/invitations/accept', { body: { token: 't' } })
+
+  it('join-valid previews and accepts', async () => {
+    useScenario('join-valid')
+    expect((await preview()).data).toMatchObject({ already_member: false })
+    expect((await accept()).data).toMatchObject({ trip_id: TRIP_ID, already_member: false })
+  })
+
+  it('join-dead answers 404 to both', async () => {
+    useScenario('join-dead')
+    expect(await statusOf(preview)).toBe(404)
+    expect(await statusOf(accept)).toBe(404)
+  })
+
+  it('join-already-member says so in both answers', async () => {
+    useScenario('join-already-member')
+    expect((await preview()).data?.already_member).toBe(true)
+    expect((await accept()).data?.already_member).toBe(true)
+  })
+
+  it('join-accept-dead previews fine and then answers 404', async () => {
+    useScenario('join-accept-dead')
+    expect(await statusOf(preview)).toBe(200)
+    expect(await statusOf(accept)).toBe(404)
+  })
+
+  it('serves the invitation list, a token only on creation, and a revoke', async () => {
+    const path = { params: { path: { trip_id: TRIP_ID } } }
+    const list = await fetchClient.GET('/api/v1/trips/{trip_id}/invitations', path)
+    expect(list.data).toHaveLength(1)
+    expect(JSON.stringify(list.data)).not.toContain('token')
+    const created = await fetchClient.POST('/api/v1/trips/{trip_id}/invitations', {
+      ...path,
+      body: { expires_in_days: 7, max_uses: 10 },
+    })
+    expect(created.data?.token).toBeTruthy()
+    expect(created.response.headers.get('cache-control')).toBe('no-store')
+    const revoked = await fetchClient.DELETE(
+      '/api/v1/trips/{trip_id}/invitations/{invitation_id}',
+      {
+        params: { path: { trip_id: TRIP_ID, invitation_id: created.data?.id ?? '' } },
+      },
+    )
+    expect(revoked.data?.revoked_at).toBeTruthy()
+  })
+})

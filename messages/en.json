@@ -347,7 +347,7 @@
   "example_explainer": "Each value is the part of what that person would get planning the trip alone.",
   "invite_title": "Invite by link",
   "invite_description": "Send the link or show the QR code. Anyone who opens it and signs in joins the trip as a member.",
-  "invite_accounts_only": "An invitation is for people with an account. Add people without one separately.",
+  "invite_accounts_only": "An invitation is for people with an account: they join with a new profile. Add people without one separately.",
   "invite_action": "Invite",
   "invite_creating": "Creating invitation…",
   "invite_create_failed": "Could not create the invitation. Try again.",
@@ -393,5 +393,9 @@
   "join_submitting": "Joining…",
   "join_open": "Open the trip",
   "join_already_member": "You are already on this trip.",
-  "join_failed": "Could not join. Try again."
+  "join_failed": "Could not join. Try again.",
+  "invite_revoke_confirm_title": "Revoke this invitation?",
+  "invite_revoke_confirm_body": "The invitation valid until {date}, {uses} of {max} joined. The link will stop working. People who already joined stay on the trip.",
+  "invite_revoke_keep": "Keep the invitation",
+  "invite_revoke_confirm": "Revoke invitation"
 }

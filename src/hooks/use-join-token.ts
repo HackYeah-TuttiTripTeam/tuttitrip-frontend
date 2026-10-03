@@ -1,20 +1,11 @@
-import { useNavigate } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
-import { captureJoinToken, parseInviteFragment } from '@/lib/invite-link'
+import { useState } from 'react'
+import { currentJoinToken } from '@/lib/invite-link'
 
 /**
- * Reads the invitation token from the `#t=` fragment of /join (or from the login round-trip) and
- * takes it off the address bar, so it stays out of the history and out of screenshots.
+ * The invitation token of this visit. The route already read it from the fragment and took the
+ * fragment off the address bar (loaders/join.ts); after a login redirect it comes from the stash.
  */
 export function useJoinToken(): string | null {
-  const navigate = useNavigate()
-  const [token] = useState(() => captureJoinToken(window.location.hash))
-
-  useEffect(() => {
-    if (parseInviteFragment(window.location.hash)) {
-      void navigate({ to: '/join', hash: '', replace: true })
-    }
-  }, [navigate])
-
+  const [token] = useState(() => currentJoinToken())
   return token
 }

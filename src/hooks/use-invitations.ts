@@ -21,6 +21,8 @@ export function useInvitations(tripId: string) {
 export function useCreateInvitation(tripId: string) {
   const queryClient = useQueryClient()
   const mutation = $api.useMutation('post', '/api/v1/trips/{trip_id}/invitations', {
+    // The answer holds the token: drop it from the cache as soon as nothing shows it.
+    gcTime: 0,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: invitationsQueryOptions(tripId).queryKey }),
   })
@@ -48,7 +50,7 @@ export function useRevokeInvitation(tripId: string) {
   return {
     revoke: (invitationId: string) =>
       mutation.mutate({ params: { path: { trip_id: tripId, invitation_id: invitationId } } }),
-    pendingId: mutation.isPending ? mutation.variables?.params.path.invitation_id : undefined,
+    isPending: mutation.isPending,
     isError: mutation.isError,
   }
 }

@@ -9,7 +9,7 @@ import { useJoinInvitation } from '@/hooks/use-join-invitation'
 import { useJoinToken } from '@/hooks/use-join-token'
 import { useSession } from '@/hooks/use-session'
 import { isDev } from '@/lib/env'
-import { stashJoinToken } from '@/lib/invite-link'
+import { clearJoinToken, stashJoinToken } from '@/lib/invite-link'
 import { m } from '@/paraglide/messages'
 
 const backToTrips = (
@@ -25,6 +25,13 @@ export function JoinView() {
   const navigate = useNavigate()
   const signedIn = session.status === 'authenticated'
   const join = useJoinInvitation(token, signedIn)
+
+  // The stash only exists for the login round-trip. Any other state ends it: signed in, login
+  // cancelled or failed, Auth0 not configured. (The token itself stays in this component.)
+  const waitingForLogin = session.status === 'anonymous' && !session.error
+  useEffect(() => {
+    if (!waitingForLogin) clearJoinToken()
+  }, [waitingForLogin])
 
   const joinedTripId = join.joined?.trip_id
   useEffect(() => {
@@ -67,7 +74,8 @@ export function JoinView() {
         action={
           <Button
             onClick={() => {
-              // The Auth0 redirect reloads the page; this keeps the token until we are back.
+              // Order matters: the stash first, because login() leaves the page. Auth0 returns
+              // to returnTo (/join, never a fragment), where useJoinToken reads the stash.
               stashJoinToken(token)
               session.login()
             }}

@@ -1,5 +1,5 @@
 import { Copy, Share } from '@keyline-icons/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { QrCode } from '@/components/shared/qr-code'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label'
 import { formatDate } from '@/lib/format'
 import { copyText, shareOrCopy } from '@/lib/share'
 import { m } from '@/paraglide/messages'
+
+const FEEDBACK_MS = 4000
 
 interface InvitationShareProps {
   link: string
@@ -20,6 +22,13 @@ export function InvitationShare({ link, tripName, expiresAt, maxUses }: Invitati
   const [feedback, setFeedback] = useState<'copied' | 'failed' | null>(null)
 
   const report = (copied: boolean) => setFeedback(copied ? 'copied' : 'failed')
+
+  // The confirmation is a moment, not a state: it fades out after a few seconds.
+  useEffect(() => {
+    if (!feedback) return
+    const timer = setTimeout(() => setFeedback(null), FEEDBACK_MS)
+    return () => clearTimeout(timer)
+  }, [feedback])
 
   return (
     <div className="flex flex-col items-center gap-4">

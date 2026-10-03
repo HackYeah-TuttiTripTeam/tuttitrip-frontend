@@ -52,8 +52,8 @@ export function JoinForm({
       className="flex max-w-md flex-col gap-6"
     >
       <header className="flex flex-col gap-2">
-        <p className="text-muted-foreground text-sm">{m.join_lead()}</p>
         <h1 className="text-balance font-semibold text-3xl tracking-tight">{tripName}</h1>
+        <p className="text-muted-foreground text-sm">{m.join_lead()}</p>
         {destination && (
           <p className="flex items-center gap-1.5 text-muted-foreground text-sm">
             <MapPin aria-hidden="true" className="size-4" />

@@ -14,19 +14,13 @@ const STATUS_LABELS: Record<InvitationStatus, () => string> = {
 
 interface InvitationListProps {
   invitations: Invitation[]
-  onRevoke: (invitationId: string) => void
-  /** The invitation being revoked right now. */
-  revokingId: string | undefined
+  /** Asks to revoke; the caller confirms before anything is sent. */
+  onRevoke: (invitation: Invitation) => void
   now?: Date
 }
 
 /** Working invitations first, each with its expiry, uses and Revoke; older ones fold away. */
-export function InvitationList({
-  invitations,
-  onRevoke,
-  revokingId,
-  now = new Date(),
-}: InvitationListProps) {
+export function InvitationList({ invitations, onRevoke, now = new Date() }: InvitationListProps) {
   const rows = invitations.map((invitation) => ({
     invitation,
     status: invitationStatus(invitation, now),
@@ -53,9 +47,8 @@ export function InvitationList({
         <Button
           variant="outline"
           className="h-11 shrink-0 md:h-9"
-          disabled={revokingId === invitation.id}
           aria-label={m.invite_revoke_label({ date: formatDate(invitation.expires_at) })}
-          onClick={() => onRevoke(invitation.id)}
+          onClick={() => onRevoke(invitation)}
         >
           {m.invite_revoke()}
         </Button>

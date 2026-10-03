@@ -357,7 +357,7 @@
   "example_explainer": "Każda wartość to część tego, co dana osoba dostałaby, planując wyjazd sama.",
   "invite_title": "Zaproszenie linkiem",
   "invite_description": "Wyślij link albo pokaż kod QR. Kto go otworzy i zaloguje się, dołączy do wyjazdu jako członek.",
-  "invite_accounts_only": "Zaproszenie jest dla osób z kontem. Osoby bez konta dodasz osobno.",
+  "invite_accounts_only": "Zaproszenie jest dla osób z kontem: dołączą z nowym profilem. Osoby bez konta dodasz osobno.",
   "invite_action": "Zaproś",
   "invite_creating": "Tworzę zaproszenie…",
   "invite_create_failed": "Nie udało się utworzyć zaproszenia. Spróbuj ponownie.",
@@ -403,5 +403,9 @@
   "join_submitting": "Dołączam…",
   "join_open": "Otwórz wyjazd",
   "join_already_member": "Jesteś już na tym wyjeździe.",
-  "join_failed": "Nie udało się dołączyć. Spróbuj ponownie."
+  "join_failed": "Nie udało się dołączyć. Spróbuj ponownie.",
+  "invite_revoke_confirm_title": "Odwołać to zaproszenie?",
+  "invite_revoke_confirm_body": "Zaproszenie ważne do {date}, dołączyło {uses} z {max}. Link przestanie działać. Osoby, które już dołączyły, zostają na wyjeździe.",
+  "invite_revoke_keep": "Zostaw zaproszenie",
+  "invite_revoke_confirm": "Odwołaj zaproszenie"
 }

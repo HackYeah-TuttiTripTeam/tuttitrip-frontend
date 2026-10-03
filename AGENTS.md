@@ -104,6 +104,10 @@ with `is_me`) are served from `/trips/{id}/members` and join profiles on `profil
 | `member-readonly` | The caller is a member: reads work, writes answer 403 |
 | `server-error` | 500 for every API call |
 | `offline` | Network error for every API call |
+| `join-valid` | Opening an invitation link (`/join#t=<any token>`): preview 200, accept 200; the host's invitation list has one working invitation |
+| `join-dead` | Preview and accept answer 404 (expired, revoked or full: one answer for all) |
+| `join-already-member` | Preview says `already_member`; accept is idempotent |
+| `join-accept-dead` | Preview 200, then accept 404 (the link died in between) |
 
 - **In tests:** `src/mocks/vitest-setup.ts` starts one `setupServer` and serves
   `family-warsaw` before each test. Pick another with `useScenario('no-plan')` (from
