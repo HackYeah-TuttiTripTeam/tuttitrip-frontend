@@ -12,8 +12,8 @@ export function AboutView() {
   return (
     <>
       <AboutIntro />
-      <AboutPhotoPhone />
       <AboutSplit />
+      <AboutPhotoPhone />
       <AboutInside />
       <AboutTeam onSignup={session.status === 'anonymous' ? session.signup : undefined} />
     </>
