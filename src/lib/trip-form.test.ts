@@ -154,22 +154,54 @@ describe('tripToFormValues', () => {
 })
 
 describe('mapValidationErrors', () => {
-  const item = (field: string, msg: string) => ({ loc: ['body', field], msg, type: 'value_error' })
+  const item = (type: string, field: string, msg = 'English text, never read') => ({
+    type,
+    loc: ['body', field],
+    msg,
+  })
 
-  it('puts each body error on its form field, in the UI language', () => {
+  it('reads the code in `type` and the field in `loc`, in the UI language', () => {
     const errors = mapValidationErrors([
-      item('end_date', 'end_date must not be before start_date'),
-      item('budget_total_max', 'budget_total_max must not be before budget_total_min'),
-      item('day_end', 'day_end must be after day_start'),
-      item('budget_day_min', 'budget_day_min is required with its pair'),
+      item('trip.dates_order', 'end_date'),
+      item('trip.budget_order', 'budget_total_max'),
+      item('trip.day_window_order', 'day_end'),
+      item('trip.pair_required', 'budget_day_max'),
     ])
-    expect(Object.keys(errors).sort()).toEqual(['budgetMax', 'budgetMin', 'dayEnd', 'endDate'])
+    expect(Object.keys(errors).sort()).toEqual(['budgetMax', 'dayEnd', 'endDate'])
     expect(errors.endDate).toBe('Koniec nie może być przed początkiem.')
-    expect(errors.budgetMax).toContain('„do”')
+    expect(errors.dayEnd).toBe('Koniec dnia musi być po jego początku.')
+    expect(errors.budgetMax).toBe('Kwota „do” nie może być mniejsza niż „od”.')
+  })
+
+  it('maps a pair error to the missing end of the pair', () => {
+    expect(mapValidationErrors([item('trip.pair_required', 'budget_total_min')]).budgetMin).toBe(
+      'Podaj też kwotę „od”.',
+    )
+    expect(mapValidationErrors([item('trip.pair_required', 'start_date')]).startDate).toBe(
+      'Podaj też początek. Jeden dzień to wyjście.',
+    )
+  })
+
+  it('does not look at the message text', () => {
+    const errors = mapValidationErrors([item('trip.dates_order', 'end_date', 'something else')])
+    expect(errors.endDate).toBe('Koniec nie może być przed początkiem.')
+    const other = mapValidationErrors([
+      item('trip.unknown', 'end_date', 'end_date must not be before'),
+    ])
+    expect(other.endDate).toBe('Ta wartość nie została przyjęta.')
+  })
+
+  it('falls back by field for a framework error without a trip code', () => {
+    const errors = mapValidationErrors([
+      item('less_than_equal', 'budget_flex_pct'),
+      item('decimal_max_digits', 'budget_total_min'),
+    ])
+    expect(errors.flexPct).toBe('Ta wartość nie została przyjęta.')
+    expect(errors.budgetMin).toBe('Wpisz kwotę, np. 2000 albo 2000,50.')
   })
 
   it('ignores path errors and non-array details', () => {
-    expect(mapValidationErrors([{ loc: ['path', 'trip_id'], msg: 'x' }])).toEqual({})
+    expect(mapValidationErrors([{ type: 'x', loc: ['path', 'trip_id'], msg: 'x' }])).toEqual({})
     expect(mapValidationErrors('nope')).toEqual({})
   })
 })

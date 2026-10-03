@@ -207,8 +207,9 @@ const FIELD_OF_API: Record<string, TripFormField> = {
 }
 
 /**
- * Maps the backend's 422 body (`loc: ["body", field]`) onto form fields with Polish/English copy.
- * The backend's own messages are English, so only the rule behind them is read.
+ * Maps the backend's 422 body onto form fields with Polish/English copy. An item is read by its
+ * `type` (a stable `trip.<code>`, see TripErrorCode) and `loc[1]` (the field); `msg` is English
+ * and never shown or parsed.
  */
 export function mapValidationErrors(detail: unknown): Partial<Record<TripFormField, string>> {
   const out: Partial<Record<TripFormField, string>> = {}
@@ -220,30 +221,35 @@ export function mapValidationErrors(detail: unknown): Partial<Record<TripFormFie
     if (where !== 'body' || typeof apiField !== 'string') continue
     const field = FIELD_OF_API[apiField]
     if (!field || out[field]) continue
-    const msg = 'msg' in item && typeof item.msg === 'string' ? item.msg : ''
-    out[field] = serverMessage(apiField, msg)
+    const type = 'type' in item && typeof item.type === 'string' ? item.type : ''
+    out[field] = serverMessage(type, apiField)
   }
   return out
 }
 
-function serverMessage(apiField: string, msg: string): string {
-  if (/must not be before/.test(msg)) {
-    return apiField === 'end_date'
-      ? m.trip_form_end_before_start()
-      : m.trip_form_budget_max_below_min()
+function serverMessage(type: string, apiField: string): string {
+  switch (type) {
+    case 'trip.dates_order':
+      return m.trip_form_end_before_start()
+    case 'trip.budget_order':
+      return m.trip_form_budget_max_below_min()
+    case 'trip.day_window_order':
+      return m.trip_form_day_end_before_start()
+    case 'trip.pair_required':
+      if (MONEY_API_FIELDS.has(apiField)) {
+        return apiField.endsWith('max')
+          ? m.trip_form_budget_max_required()
+          : m.trip_form_budget_min_required()
+      }
+      return apiField === 'end_date' ? m.trip_form_end_required() : m.trip_form_start_required()
+    case 'trip.null_not_allowed':
+      return m.trip_form_required()
+    default:
+      // A framework error (type, range, pattern) with no trip code.
+      return MONEY_API_FIELDS.has(apiField)
+        ? m.trip_form_money_invalid()
+        : m.trip_form_field_invalid()
   }
-  if (/day_end must be after/.test(msg)) return m.trip_form_day_end_before_start()
-  if (/required with its pair/.test(msg)) {
-    if (apiField.startsWith('budget')) {
-      return apiField.endsWith('max')
-        ? m.trip_form_budget_max_required()
-        : m.trip_form_budget_min_required()
-    }
-    return apiField === 'end_date' ? m.trip_form_end_required() : m.trip_form_start_required()
-  }
-  if (/cannot be null/.test(msg)) return m.trip_form_required()
-  if (MONEY_API_FIELDS.has(apiField)) return m.trip_form_money_invalid()
-  return m.trip_form_field_invalid()
 }
 
 const BUDGET_KEYS = [

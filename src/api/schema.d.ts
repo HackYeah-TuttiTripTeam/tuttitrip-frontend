@@ -550,7 +550,13 @@ export interface paths {
         put?: never;
         /**
          * Create Trip
-         * @description Create a trip; the caller becomes its host.
+         * @description Create a trip in one request; the caller becomes its host.
+         *
+         *     Takes the same fields as the PATCH body (`name` is required); dates and
+         *     each budget range must come in pairs. The trip, its host and the host's
+         *     profile are created in one transaction.
+         *
+         *     A broken rule answers 422 with a `TripErrorCode` in `type`.
          *
          *     Args:
          *         data: Trip payload.
@@ -608,6 +614,8 @@ export interface paths {
         /**
          * Update Trip
          * @description Change trip details (co-host or host); only sent fields change.
+         *
+         *     A broken rule answers 422 with a `TripErrorCode` in `type`.
          *
          *     Args:
          *         data: Fields to change.
@@ -3552,14 +3560,57 @@ export interface components {
         TransferMode: "walk" | "transit" | "car" | "bike";
         /**
          * TripCreate
-         * @description Payload for creating a trip.
+         * @description POST payload: a whole trip in one request.
+         *
+         *     Same fields as ``TripUpdate`` but ``name`` is required and the result must
+         *     pass ``check_trip(complete=True)``, so dates and budget ranges come in
+         *     pairs. Only ``name`` and ``destination`` are enough.
          */
         TripCreate: {
             /** Name */
             name: string;
             /** Destination */
             destination?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Day Start */
+            day_start?: string | null;
+            /** Day End */
+            day_end?: string | null;
+            /** City Slug */
+            city_slug?: string | null;
+            /** Currency */
+            currency?: string | null;
+            /** Budget Total Min */
+            budget_total_min?: number | string | null;
+            /** Budget Total Max */
+            budget_total_max?: number | string | null;
+            /** Budget Day Min */
+            budget_day_min?: number | string | null;
+            /** Budget Day Max */
+            budget_day_max?: number | string | null;
+            /**
+             * Budget Flex Pct
+             * @description Flex of E6 in percent (0-50), the solver divides it by 100: B_max = B_do * (1 + flex_pct / 100).
+             */
+            budget_flex_pct?: number | null;
+            /**
+             * Fairness Alpha
+             * @description Group goal alpha of E5 (0-3); 1 balances fairness and total utility.
+             */
+            fairness_alpha?: number | null;
         };
+        /**
+         * TripErrorCode
+         * @description Stable code of a trip rule violation, sent as the 422 item's ``type``.
+         *
+         *     The global 422 handler strips ``ctx``, so clients read the code from
+         *     ``type``. Map errors by this code and ``loc``, never by ``msg``.
+         * @enum {string}
+         */
+        TripErrorCode: "trip.null_not_allowed" | "trip.pair_required" | "trip.dates_order" | "trip.budget_order" | "trip.day_window_order";
         /**
          * TripRead
          * @description A trip as returned by the API.
@@ -3678,6 +3729,31 @@ export interface components {
              * @description Group goal alpha of E5 (0-3); 1 balances fairness and total utility.
              */
             fairness_alpha?: number | null;
+        };
+        /**
+         * TripValidationError
+         * @description One 422 item of a trip rule violation.
+         */
+        TripValidationError: {
+            type: components["schemas"]["TripErrorCode"];
+            /**
+             * Loc
+             * @description `["body", field]`
+             */
+            loc: string[];
+            /**
+             * Msg
+             * @description For people; may change, do not parse it.
+             */
+            msg: string;
+        };
+        /**
+         * TripValidationErrors
+         * @description The 422 body of ``POST`` and ``PATCH`` ``/trips``.
+         */
+        TripValidationErrors: {
+            /** Detail */
+            detail: components["schemas"]["TripValidationError"][];
         };
         /**
          * UserPermissionsRead
@@ -4708,13 +4784,13 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Validation Error */
+            /** @description A trip rule is broken. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["TripValidationErrors"];
                 };
             };
         };
@@ -4845,13 +4921,13 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Validation Error */
+            /** @description A trip rule is broken. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["TripValidationErrors"];
                 };
             };
         };

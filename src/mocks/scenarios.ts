@@ -1,4 +1,7 @@
+import type { Schemas } from '@/api/client'
 import {
+  type City,
+  cities,
   familyMembers,
   familyProfiles,
   type Invitation,
@@ -46,6 +49,12 @@ export interface World {
   /** How the API behaves: normally, with 500 for everything, or unreachable. */
   behaviour: 'normal' | 'server-error' | 'offline'
   trips: Trip[]
+  /** The city catalogue (`GET /places/cities`). */
+  cities: City[]
+  /** Status the API answers with for one kind of trip write, for a failure no scenario has. */
+  failures: { post?: number; patch?: number; delete?: number }
+  /** When set, create and PATCH answer 422 with these items (a rule the client cannot see). */
+  validationErrors?: Schemas['TripValidationError'][]
   profiles: Profile[]
   /** People with an account and their trip role (the Osoby view joins them with profiles on profile_id). */
   members: Member[]
@@ -68,6 +77,8 @@ export function createWorld(name: ScenarioName): World {
   const base: World = {
     behaviour: 'normal',
     trips: [main, outing()],
+    cities: cities(),
+    failures: {},
     profiles: familyProfiles(),
     members: familyMembers(),
     plan: plan(main.id),
