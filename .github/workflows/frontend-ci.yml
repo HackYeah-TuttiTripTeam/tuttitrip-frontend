@@ -1,6 +1,12 @@
 name: Frontend CI
 
-# verify (lint, types, architecture, unit tests) and build run in parallel.
+# CI gates lint, types, architecture and unit tests only (verify). Integration tests
+# (`*.int.test.*`, e.g. the production-build leak check) run locally before the PR:
+# `pnpm test:integration`, see AGENTS.md.
+# build (vite build + dist artifact) feeds a deploy, so it runs only when a deploy
+# will happen (develop/main, or a PR with the `preview` label), in parallel with verify.
+# Consequence: a plain PR has no `vite build` on CI (plugin, Rollup and PWA errors are not
+# caught there), so `pnpm build` and `pnpm test:integration` are part of the local pre-PR checks.
 # deploy: main -> tuttitrip.gburek.app, develop -> tuttitrip-develop.gburek.app,
 #         pull requests -> one preview Worker per branch + a PR comment,
 #         then delete preview Workers whose branch is gone.
@@ -74,9 +80,21 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      - name: Say why there is no preview
+        if: >-
+          github.event_name == 'pull_request' && vars.PREVIEW_DEPLOYS != 'true' &&
+          !contains(github.event.pull_request.labels.*.name, 'preview')
+        run: echo 'Preview disabled (PREVIEW_DEPLOYS=false); add label `preview` to deploy' >> "$GITHUB_STEP_SUMMARY"
+
   build:
     name: build
-    if: github.event.action != 'labeled' || github.event.label.name == 'preview'
+    # Same condition as the deploy job, so a build never runs without a deploy to feed.
+    if: >-
+      (github.event.action != 'labeled' || github.event.label.name == 'preview') &&
+      ((github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'develop')) ||
+       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository &&
+        github.head_ref != 'develop' && github.head_ref != 'main' &&
+        (vars.PREVIEW_DEPLOYS == 'true' || contains(github.event.pull_request.labels.*.name, 'preview'))))
     runs-on: [self-hosted, hackathon]
     timeout-minutes: 15
     outputs:
@@ -131,12 +149,6 @@ jobs:
           name: dist
           path: dist
           retention-days: 3
-
-      - name: Say why there is no preview
-        if: >-
-          github.event_name == 'pull_request' && vars.PREVIEW_DEPLOYS != 'true' &&
-          !contains(github.event.pull_request.labels.*.name, 'preview')
-        run: echo 'Preview disabled (PREVIEW_DEPLOYS=false); add label `preview` to deploy' >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
     name: deploy
