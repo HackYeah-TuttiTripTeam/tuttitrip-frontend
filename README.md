@@ -143,3 +143,5 @@ Do `main` i `develop` wchodzimy tylko przez PR z zielonym CI i nigdy nie robimy 
 
 - Opcjonalny wrapper Capacitor, jeśli będziemy chcieli wrzucić aplikację do sklepów. Na razie wystarcza PWA.
 - Sortowanie i filtrowanie po stronie serwera, kiedy API zacznie przyjmować takie parametry.
+
+<!-- Sprawdzenie cyklu życia podglądu, PR do zamknięcia bez merge. -->
