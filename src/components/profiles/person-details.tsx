@@ -17,8 +17,10 @@ interface PersonDetailsProps {
   canEdit: boolean
   onBack: () => void
   onSaveConstraints: (values: ConstraintsValues) => Promise<SaveResult>
-  onSetDiet: (diet: Diet) => Promise<SaveResult>
-  onSetInterests: (interests: Preferences['interests']) => Promise<SaveResult>
+  onSetDiet: (change: (diet: Diet) => Diet) => Promise<SaveResult>
+  onSetInterests: (
+    change: (interests: Preferences['interests']) => Preferences['interests'],
+  ) => Promise<SaveResult>
 }
 
 function Section({

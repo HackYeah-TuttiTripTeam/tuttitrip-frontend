@@ -1,6 +1,7 @@
 import type {
   Constraints,
   Diet,
+  DietTag,
   InterestTag,
   Preferences,
   PreferencesWrite,
@@ -31,7 +32,9 @@ export function toWrite(current: Preferences, patch: PreferencesWrite = {}): Pre
   return {
     interests: current.interests,
     diet: current.diet,
-    example_places: current.example_places,
+    // Entries with a place_id are thumb ratings the API merged in; a PUT would save them again
+    // (as likes, or as dislikes with reason OTHER). Ratings are sent on their own (see #30).
+    example_places: current.example_places.filter((place) => !place.place_id),
     min_tags: current.min_tags,
     ...(current.constraints ? { constraints: current.constraints } : {}),
     ...(current.filled ? { importance_pool: current.importance_pool } : {}),
@@ -45,29 +48,32 @@ export function applyWrite(current: Preferences, body: PreferencesWrite): Prefer
     ...current,
     interests: body.interests ?? current.interests,
     diet: body.diet ?? current.diet,
-    example_places: body.example_places ?? current.example_places,
     min_tags: body.min_tags ?? current.min_tags,
     constraints: body.constraints ?? current.constraints,
     importance_pool: body.importance_pool ?? current.importance_pool,
-    effective_stairs_sensitivity:
-      body.constraints && (body.constraints.stairs || body.constraints.wheelchair)
-        ? 1
-        : current.effective_stairs_sensitivity,
   }
 }
 
 /**
- * The interests after the person ticked exactly `picked` among `known`. A tag that stays keeps
- * its strength; tags outside `known` (a newer API) are left alone.
+ * Ticks or unticks one interest. A tag that stays keeps the strength it has, so strengths set
+ * elsewhere (the interview) survive; tags this screen does not know are left alone.
  */
-export function withPickedInterests(
+export function setInterest(
   interests: Preferences['interests'],
-  known: readonly InterestTag[],
-  picked: readonly InterestTag[],
+  tag: InterestTag,
+  on: boolean,
 ): Preferences['interests'] {
-  const others = Object.entries(interests).filter(([tag]) => !known.some((k) => k === tag))
-  const kept = picked.map((tag) => [tag, interests[tag] ?? INTEREST_ON] as const)
-  return Object.fromEntries([...others, ...kept])
+  if (!on) return Object.fromEntries(Object.entries(interests).filter(([key]) => key !== tag))
+  return { ...interests, [tag]: interests[tag] ?? INTEREST_ON }
+}
+
+export function setDietTag(diet: Diet, tag: DietTag, on: boolean): Diet {
+  const tags = (diet.tags ?? []).filter((item) => item !== tag)
+  return { ...diet, tags: on ? [...tags, tag] : tags }
+}
+
+export function removeAllergy(diet: Diet, allergy: string): Diet {
+  return { ...diet, allergies: (diet.allergies ?? []).filter((item) => item !== allergy) }
 }
 
 /** Interest tags the person has ticked (strength above zero), in the order of `order`. */

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { InterestTag, Preferences } from '@/api/queries/preferences'
 import type { SaveResult } from '@/lib/people'
-import { pickedInterests, withPickedInterests } from '@/lib/preferences'
+import { pickedInterests, setInterest } from '@/lib/preferences'
 import { m } from '@/paraglide/messages'
 import { ChipGroup, type ChipOption } from './chip-group'
 
@@ -45,8 +45,10 @@ const interestOptions = (): ChipOption<InterestTag>[] =>
 
 interface InterestsPickerProps {
   interests: Preferences['interests']
-  /** Saves at once; the parent shows `interests` again, the old ones when the save failed. */
-  onChange: (interests: Preferences['interests']) => Promise<SaveResult>
+  /** Saves one change at once; the parent shows `interests` again, the old ones when it failed. */
+  onChange: (
+    change: (interests: Preferences['interests']) => Preferences['interests'],
+  ) => Promise<SaveResult>
   readOnly?: boolean
 }
 
@@ -54,9 +56,11 @@ interface InterestsPickerProps {
 export function InterestsPicker({ interests, onChange, readOnly = false }: InterestsPickerProps) {
   const [error, setError] = useState<string | null>(null)
 
-  const change = async (picked: InterestTag[]) => {
-    const result = await onChange(withPickedInterests(interests, ORDER, picked))
-    setError(result.ok ? null : result.message)
+  // A tap clears the old message; only a failure sets one, so a later success never hides it.
+  const toggle = async (tag: InterestTag, on: boolean) => {
+    setError(null)
+    const result = await onChange((current) => setInterest(current, tag, on))
+    if (!result.ok) setError(result.message)
   }
 
   return (
@@ -65,7 +69,7 @@ export function InterestsPicker({ interests, onChange, readOnly = false }: Inter
         label={m.prefs_interests_title()}
         options={interestOptions()}
         value={pickedInterests(interests, ORDER)}
-        onChange={(next) => void change(next)}
+        onToggle={(tag, on) => void toggle(tag, on)}
         emptyText={m.prefs_interests_empty()}
         readOnly={readOnly}
       />

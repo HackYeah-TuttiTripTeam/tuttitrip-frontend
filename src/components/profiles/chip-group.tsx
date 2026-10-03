@@ -12,7 +12,8 @@ interface ChipGroupProps<T extends string> {
   label: string
   options: ChipOption<T>[]
   value: T[]
-  onChange: (next: T[]) => void
+  /** One tap changes one chip. */
+  onToggle: (value: T, on: boolean) => void
   /** Shown when `readOnly` and nothing is ticked. */
   emptyText: string
   readOnly?: boolean
@@ -32,7 +33,7 @@ export function ChipGroup<T extends string>({
   label,
   options,
   value,
-  onChange,
+  onToggle,
   emptyText,
   readOnly = false,
 }: ChipGroupProps<T>) {
@@ -60,9 +61,10 @@ export function ChipGroup<T extends string>({
       type="multiple"
       aria-label={label}
       value={value}
-      onValueChange={(next) =>
-        onChange(options.filter((o) => next.includes(o.value)).map((o) => o.value))
-      }
+      onValueChange={(next) => {
+        const changed = options.find((o) => next.includes(o.value) !== value.includes(o.value))
+        if (changed) onToggle(changed.value, next.includes(changed.value))
+      }}
       className="flex flex-wrap gap-2"
     >
       {options.map((option) => (

@@ -1,17 +1,11 @@
-import { useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@/api/errors'
-import {
-  type Diet,
-  type Preferences,
-  type PreferencesWrite,
-  preferencesQueryOptions,
-} from '@/api/queries/preferences'
+import type { Diet, Preferences } from '@/api/queries/preferences'
 import type { Profile } from '@/api/queries/profiles'
 import { editDefaults, type SaveResult } from '@/lib/people'
-import { type ConstraintsValues, toConstraints, toWrite } from '@/lib/preferences'
+import { type ConstraintsValues, toConstraints } from '@/lib/preferences'
 import { m } from '@/paraglide/messages'
 import { useProfileActions } from './use-profile-actions'
-import { useUpdatePreferences } from './use-update-preferences'
+import { type PreferencesChange, useUpdatePreferences } from './use-update-preferences'
 
 const OK: SaveResult = { ok: true }
 
@@ -30,20 +24,12 @@ function failure(error: unknown): SaveResult {
 
 /** Saves for the details of one person: constraints, diet and interests. */
 export function usePersonActions(tripId: string, profile: Profile) {
-  const queryClient = useQueryClient()
   const update = useUpdatePreferences(tripId, profile.id)
   const profileActions = useProfileActions(tripId)
-  const queryKey = preferencesQueryOptions(tripId, profile.id).queryKey
 
-  /** Puts `patch` on top of the freshest preferences, which include the saves still on their way. */
-  async function save(patch: PreferencesWrite): Promise<SaveResult> {
-    const current = queryClient.getQueryData<Preferences>(queryKey)
-    if (!current) return failure(null)
+  async function save(change: PreferencesChange): Promise<SaveResult> {
     try {
-      await update.mutateAsync({
-        params: { path: { trip_id: tripId, profile_id: profile.id } },
-        body: toWrite(current, patch),
-      })
+      await update.mutateAsync(change)
       return OK
     } catch (error) {
       return failure(error)
@@ -51,9 +37,16 @@ export function usePersonActions(tripId: string, profile: Profile) {
   }
 
   return {
-    setDiet: (diet: Diet) => save({ diet }),
-    setInterests: (interests: Preferences['interests']) => save({ interests }),
+    setDiet: (change: (diet: Diet) => Diet) => save((current) => ({ diet: change(current.diet) })),
+    setInterests: (change: (interests: Preferences['interests']) => Preferences['interests']) =>
+      save((current) => ({ interests: change(current.interests) })),
+    /**
+     * The constraints go first: they are the safety-critical part. When the walking and nap values
+     * fail after that, the message says the constraints were saved.
+     */
     async saveConstraints(values: ConstraintsValues): Promise<SaveResult> {
+      const constraints = await save(() => ({ constraints: toConstraints(values) }))
+      if (!constraints.ok) return constraints
       const { segment_km, daily_km, nap_minutes, nap_start } = values
       const comfort = await profileActions.edit(profile, {
         ...editDefaults(profile),
@@ -62,8 +55,9 @@ export function usePersonActions(tripId: string, profile: Profile) {
         nap_minutes,
         nap_start,
       })
-      if (!comfort.ok) return comfort
-      return save({ constraints: toConstraints(values) })
+      return comfort.ok
+        ? OK
+        : { ok: false, message: `${m.prefs_error_partial()} ${comfort.message}` }
     },
   }
 }

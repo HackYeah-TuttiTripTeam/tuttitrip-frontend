@@ -597,5 +597,7 @@
   "prefs_interest_playground": "Place zabaw",
   "prefs_interest_water": "Woda",
   "prefs_interest_cycling": "Rower",
-  "prefs_interest_wellness": "Spa i wellness"
+  "prefs_interest_wellness": "Spa i wellness",
+  "prefs_interests_hint_autosave": "Co ta osoba lubi zwiedzać i robić. Zmiany w tej sekcji zapisują się od razu.",
+  "prefs_error_partial": "Ograniczenia zapisane, dystans i drzemka jeszcze nie."
 }

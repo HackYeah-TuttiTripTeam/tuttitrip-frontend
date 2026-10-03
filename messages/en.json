@@ -587,5 +587,7 @@
   "prefs_interest_playground": "Playgrounds",
   "prefs_interest_water": "Water",
   "prefs_interest_cycling": "Cycling",
-  "prefs_interest_wellness": "Spa and wellness"
+  "prefs_interest_wellness": "Spa and wellness",
+  "prefs_interests_hint_autosave": "What this person likes to see and do. Changes in this section are saved at once.",
+  "prefs_error_partial": "The constraints are saved, the walking distance and nap are not yet."
 }

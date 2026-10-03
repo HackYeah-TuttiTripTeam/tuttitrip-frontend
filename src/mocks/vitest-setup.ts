@@ -47,12 +47,3 @@ afterEach(() => {
   server.events.removeAllListeners()
 })
 afterAll(() => server.close())
-
-// jsdom has no ResizeObserver; Radix (Switch) measures with it.
-if (typeof window !== 'undefined' && !window.ResizeObserver) {
-  window.ResizeObserver = class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  }
-}

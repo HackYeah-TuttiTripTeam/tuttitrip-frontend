@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { HttpResponse, http } from 'msw'
+import { delay, HttpResponse, http } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { PROFILE_IDS, TRIP_ID } from '@/mocks/fixtures'
 import { server, useScenario } from '@/mocks/node'
@@ -114,6 +114,59 @@ describe('Preferencje osoby, host', () => {
     await waitFor(() => expect(bodies).toHaveLength(2))
     expect(bodies[0]?.interests).toEqual({ history: 1, museums: 1, local_food: 1, art: 1 })
     expect(bodies[1]?.interests).toEqual({ museums: 1, local_food: 1, art: 1 })
+  })
+
+  it('does not save a failed tap together with the next one', async () => {
+    openPerson(PROFILE_IDS.tata)
+    let puts = 0
+    const bodies = recordBodies('put', '/preferences')
+    server.use(
+      http.put(PREFERENCES, async () => {
+        puts += 1
+        if (puts > 1) return undefined // the scenario's own handler saves it
+        // Slow enough that the second tap happens before this one fails.
+        await delay(150)
+        return HttpResponse.json({ detail: 'boom' }, { status: 500 })
+      }),
+    )
+    await heading('Marek')
+    // Two taps before the first save has answered.
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_diet_vegan() }))
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_diet_halal() }))
+
+    expect(await screen.findByText(m.people_error_generic())).toBeTruthy()
+    await waitFor(() => expect(puts).toBe(2))
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: m.prefs_diet_vegan() }).getAttribute('aria-pressed'),
+      ).toBe('false')
+      expect(
+        screen.getByRole('button', { name: m.prefs_diet_halal() }).getAttribute('aria-pressed'),
+      ).toBe('true')
+    })
+    // What reached the server: the second tap alone, without the failed first one.
+    expect(bodies[1]?.diet).toEqual({ tags: ['vegetarian', 'halal'], allergies: [] })
+    // The message of the first tap is still there after the second one succeeded.
+    expect(screen.getByText(m.people_error_generic())).toBeTruthy()
+  })
+
+  it('saves the constraints first, and says so when the walking values then fail', async () => {
+    openPerson(PROFILE_IDS.zosia)
+    const puts = recordBodies('put', '/preferences')
+    server.use(
+      http.patch(`*/api/v1/trips/:tripId/profiles/:profileId`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 }),
+      ),
+    )
+    await heading('Zosia')
+    await userEvent.click(screen.getByRole('switch', { name: new RegExp(m.prefs_stairs()) }))
+    const daily = screen.getByLabelText(m.people_form_daily_label())
+    await userEvent.clear(daily)
+    await userEvent.type(daily, '6')
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_save() }))
+
+    expect(await screen.findByText(new RegExp(m.prefs_error_partial()))).toBeTruthy()
+    expect(puts[0]?.constraints).toMatchObject({ stairs: true })
   })
 
   it('puts the old diet back and says so in Polish when the save fails', async () => {
