@@ -156,10 +156,14 @@ jobs:
           packageManager: pnpm
           command: ${{ steps.cmd.outputs.command }} --message "${{ github.sha }}"
 
+      - name: Attach the preview domain
+        if: steps.creds.outputs.ok == 'true' && github.event_name == 'pull_request'
+        run: node scripts/attach-domain.mjs "$PREVIEW_WORKER" "$PREVIEW_WORKER.gburek.app"
+
       - name: Deployment URL
         id: url
         if: steps.creds.outputs.ok == 'true'
-        run: echo "url=${{ steps.cmd.outputs.url || steps.wrangler.outputs.deployment-url }}" >> "$GITHUB_OUTPUT"
+        run: echo "url=${{ steps.cmd.outputs.url || format('https://{0}.gburek.app', needs.checks.outputs.preview_worker) }}" >> "$GITHUB_OUTPUT"
 
       - name: Smoke test (app shell + SPA deep link)
         if: steps.creds.outputs.ok == 'true'

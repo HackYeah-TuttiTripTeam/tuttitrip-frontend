@@ -73,5 +73,5 @@ echo "api_url=https://$(api_host "$picked")"
 echo "api_branch=$picked"
 echo "api_live=$live"
 echo "app_env=$env_label"
-# Worker names are DNS labels on workers.dev: "tuttitrip-preview-" + 45 = 63.
+# Worker name = preview hostname label: "tuttitrip-preview-" + 45 = 63 chars.
 echo "preview_worker=tuttitrip-preview-$(slugify "$branch" 45)"
