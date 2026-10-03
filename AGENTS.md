@@ -194,6 +194,14 @@ pull requests deploy their preview Worker and upsert one PR comment (marker
 `<!-- tuttitrip-preview -->`, edited in place, never duplicated). Each deploy
 ends with a smoke test of `/` and a deep link.
 
+**Custom domains are never taken by force.** Without a TTY, `wrangler deploy`
+silently overrides conflicting DNS records, so CI first runs
+`scripts/check-custom-domain.mjs <worker> <hostname>` (the same changeset
+wrangler uses) and stops if the hostname has a DNS record or Custom Domain
+that belongs to something else. The two Workers were bootstrapped without
+routes and their domains attached with `override_existing_dns_record: false`;
+a new environment needs the same treatment before its first CI deploy.
+
 **Preview cleanup.** Cloudflare preview aliases (`versions upload
 --preview-alias`) cannot be deleted, so previews are separate Workers instead.
 `scripts/cleanup-previews.mjs` lists Workers named `tuttitrip-preview-*`,

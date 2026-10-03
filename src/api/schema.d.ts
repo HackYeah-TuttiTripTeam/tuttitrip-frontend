@@ -79,6 +79,115 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/jobs/ping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ping
+         * @description Enqueue an echo workflow (no auth, no LLM) for smoke tests.
+         *
+         *     Args:
+         *         queue: Job queue.
+         *
+         *     Returns:
+         *         The workflow id to poll at ``GET /jobs/ping/{id}``.
+         */
+        post: operations["ping_jobs_ping_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/jobs/ping/{workflow_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ping Status
+         * @description State of a ping job (only ping jobs are visible here).
+         *
+         *     Args:
+         *         workflow_id: Id returned by ``POST /jobs/ping``.
+         *         queue: Job queue.
+         *
+         *     Returns:
+         *         The job state.
+         */
+        get: operations["ping_status_jobs_ping__workflow_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/jobs/{workflow_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Job
+         * @description Status, result, error and progress of one of the caller's jobs.
+         *
+         *     Args:
+         *         workflow_id: Id returned when the job was enqueued.
+         *         user: The authenticated caller.
+         *         queue: Job queue.
+         *
+         *     Returns:
+         *         The job state.
+         */
+        get: operations["get_job_jobs__workflow_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/jobs/{workflow_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Job
+         * @description Cancel one of the caller's jobs.
+         *
+         *     Args:
+         *         workflow_id: Job id.
+         *         user: The authenticated caller.
+         *         queue: Job queue.
+         *
+         *     Returns:
+         *         The job state after cancelling.
+         */
+        post: operations["cancel_job_jobs__workflow_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips": {
         parameters: {
             query?: never;
@@ -140,6 +249,35 @@ export interface paths {
         get: operations["list_profiles_trips__trip_id__profiles_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/planning/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Plan Job
+         * @description Enqueue plan generation; poll ``GET /jobs/{workflow_id}`` for the result.
+         *
+         *     Args:
+         *         data: Trip and free-text request.
+         *         user: The authenticated organizer.
+         *         session: Database session.
+         *         queue: Job queue.
+         *
+         *     Returns:
+         *         The workflow id.
+         */
+        post: operations["start_plan_job_planning_jobs_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -335,7 +473,11 @@ export interface components {
         };
         /**
          * HealthResponse
-         * @description Overall status plus the database check.
+         * @description Overall status, the database check and the worker heartbeat.
+         *
+         *     ``status`` is ``degraded`` when the database is down or the worker speaks
+         *     an incompatible contract version. A stale or missing worker alone keeps
+         *     ``ok`` (the API itself works), but enqueue endpoints refuse while missing.
          */
         HealthResponse: {
             /**
@@ -350,6 +492,48 @@ export interface components {
             database: "ok" | "unavailable";
             /** Environment */
             environment: string;
+            /**
+             * Worker
+             * @enum {string}
+             */
+            worker: "ok" | "stale" | "missing";
+            /** Contract Version */
+            contract_version: number;
+            /** Worker Contract Version */
+            worker_contract_version?: number | null;
+        };
+        /**
+         * JobAccepted
+         * @description Returned when a job is enqueued.
+         */
+        JobAccepted: {
+            /** Workflow Id */
+            workflow_id: string;
+        };
+        /**
+         * JobState
+         * @description Status of a workflow as seen by the API.
+         *
+         *     ``status`` is DBOS's: ENQUEUED, DELAYED, PENDING, SUCCESS, ERROR,
+         *     CANCELLED or MAX_RECOVERY_ATTEMPTS_EXCEEDED. Contract-version rejections
+         *     by the worker show up as ERROR with the worker's message in ``error``.
+         */
+        JobState: {
+            /** Workflow Id */
+            workflow_id: string;
+            /** Workflow Name */
+            workflow_name: string;
+            /** Status */
+            status: string;
+            /** Owner */
+            owner?: string | null;
+            /** Output */
+            output?: {
+                [key: string]: unknown;
+            } | null;
+            /** Error */
+            error?: string | null;
+            progress?: components["schemas"]["Progress"] | null;
         };
         /**
          * LintReport
@@ -436,6 +620,19 @@ export interface components {
             cost: number | string;
         };
         /**
+         * PlanJobRequest
+         * @description Ask the worker to draft a plan for one of the caller's trips.
+         */
+        PlanJobRequest: {
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /** Request */
+            request: string;
+        };
+        /**
          * ProfileRead
          * @description A person on a trip.
          */
@@ -458,6 +655,16 @@ export interface components {
              * @description Vote multiplier in the fairness solver.
              */
             weight: number;
+        };
+        /**
+         * Progress
+         * @description Value of the ``progress`` event.
+         */
+        Progress: {
+            /** Stage */
+            stage: string;
+            /** Percent */
+            percent: number;
         };
         /**
          * TripCreate
@@ -581,6 +788,119 @@ export interface operations {
             };
         };
     };
+    ping_jobs_ping_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
+                };
+            };
+        };
+    };
+    ping_status_jobs_ping__workflow_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_jobs__workflow_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_job_jobs__workflow_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_trips_trips_get: {
         parameters: {
             query?: never;
@@ -652,6 +972,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProfileRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_plan_job_planning_jobs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanJobRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
                 };
             };
             /** @description Validation Error */
