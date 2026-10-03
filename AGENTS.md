@@ -302,8 +302,9 @@ paths in `schema.d.ts` start with `/api/v1`, so every call goes to its own
 origin. No CORS, and the same build works in every environment.
 
 - Deployed: `worker/index.ts` (typed by `tsconfig.worker.json`, plain Fetch API).
-  `assets.run_worker_first: ["/api/*"]` sends `/api/*` to it before the assets,
-  so the SPA fallback never answers an API path. It forwards method, headers
+  `assets.run_worker_first: ["/api/*", "/assets/*", "/workbox-*"]` sends `/api/*`
+  to it before the assets, so the SPA fallback never answers an API path (and a
+  missing build file is a 404, see "PWA updates and caching"). It forwards method, headers
   (incl. `Authorization`), body and query to `API_ORIGIN`, streams the response
   back, and rewrites API redirects to the same origin. It drops hop-by-hop
   headers, `Cookie`, `Forwarded`, `X-Real-IP` and every client `X-Forwarded-*`/`cf-*`
@@ -316,9 +317,39 @@ origin. No CORS, and the same build works in every environment.
 - Local: Vite's `server.proxy`/`preview.proxy` forward `/api` to `VITE_API_URL`
   or `http://localhost:8000` (`vite.config.ts`).
 - The PWA service worker never serves the app shell for `/api/` navigations
-  (`navigateFallbackDenylist`), so `/api/v1/docs` opens Swagger.
+  (the navigation route in `pwa.config.ts` skips them), so `/api/v1/docs` opens Swagger.
 - The deploy smoke test also requests `/api/v1/health/live` with
   `Sec-Fetch-Mode: navigate` and expects JSON, not `index.html`.
+
+## PWA updates and caching
+
+Settings live in `pwa.config.ts` (used by `vite.config.ts`, tested in
+`pwa.config.test.ts`). `VITE_APP_ENV=main` is the production build, every other
+value (develop, PR previews, local) is not.
+
+- **Every build:** `skipWaiting` + `clientsClaim` are set explicitly. With
+  `injectRegister: false` the plugin does not add them for `registerType:
+  autoUpdate`, so a new service worker used to sit "waiting" until every tab was
+  closed and returning browsers kept running an old build. `src/lib/pwa.ts`
+  reloads the page once on `controllerchange` (not on the first install), checks
+  for a new version on `visibilitychange` and hourly. `cleanupOutdatedCaches`
+  stays on. `index.html` is never precached and there is no `navigateFallback`:
+  navigations (except `/api/*`) go through a runtime route.
+- **Stale chunks:** `src/lib/stale-assets.ts` reloads once (guard: 30 s in
+  `sessionStorage`, so no loop) on `vite:preloadError` and on router errors
+  such as "Failed to fetch dynamically imported module". The Worker returns a
+  real 404 for a missing `/assets/*` or `/workbox-*.js` (`run_worker_first`
+  covers them); the SPA fallback would answer 200 `index.html` and a MIME error.
+- **Production (`main`):** navigations are `NetworkFirst` (3 s timeout) with a
+  single cached shell for offline, JS/CSS/icons are precached, `/assets/*` is
+  immutable for a year, `sw.js`, `index.html` and the manifest are `no-cache`.
+- **Non-production (develop, previews):** short caching on purpose, so every
+  deploy shows on the next load: no precache (icons only), navigations
+  `NetworkOnly` (no offline there), and `_headers` sets `Cache-Control:
+  no-cache` for every path. `_headers` is generated at build time (`vite.config.ts`),
+  there is no `public/_headers`.
+- Recovering a browser stuck on an old build: DevTools -> Application ->
+  Service workers -> Unregister, then Storage -> Clear site data, reload.
 
 ## Deployment (Cloudflare Workers, static assets + API proxy)
 
