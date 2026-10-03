@@ -17,7 +17,9 @@
     "deploy": "wrangler deploy",
     "i18n": "node scripts/i18n.mjs",
     "postinstall": "pnpm i18n",
-    "test": "vitest run"
+    "test": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:local": "pnpm test && pnpm test:integration"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.28.1",

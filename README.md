@@ -75,12 +75,14 @@ Po zmianie w backendzie odpal `api:sync` i zacommituj `src/api/schema.d.ts`. CI 
 | `pnpm biome check --write .` | lint, formatowanie i porządkowanie importów (Biome) |
 | `pnpm tsc -b` | sprawdzenie typów |
 | `pnpm test:arch` | testy architektury (dependency-cruiser i `scripts/check-arch.mjs`) |
-| `pnpm test` | testy jednostkowe (Vitest) |
+| `pnpm test` | testy jednostkowe (Vitest, projekt `unit`), to samo robi CI |
+| `pnpm test:integration` | wolne testy `*.int.test.*` (pełne buildy produkcyjne), tylko lokalnie, przed PR |
+| `pnpm test:local` | `pnpm test` i `pnpm test:integration` |
 | `pnpm i18n` | kompilacja `messages/*.json` do `src/paraglide` (uruchamia się sama przy instalacji, `verify` i `build`) |
-| `pnpm verify` | to, co CI odpala przed buildem: `i18n`, `biome ci`, `tsc -b`, `test:arch`, `test` |
+| `pnpm verify` | to, co CI sprawdza: `i18n`, `biome ci`, `tsc -b`, `test:arch`, `test` (bez testów integracyjnych) |
 | `pnpm api:sync` | regeneracja typów API |
 
-Przed każdym commitem: `pnpm biome check --write . && pnpm tsc -b && pnpm test:arch`.
+Przed każdym commitem: `pnpm biome check --write . && pnpm tsc -b && pnpm test:arch`. Przed oznaczeniem PR jako gotowego: `pnpm verify && pnpm test:integration && pnpm build`.
 
 ## Stack
 
