@@ -33,7 +33,9 @@ export function createHandlers(name: ScenarioName, { delayMs = 0, tweak }: Handl
  * backend (in the browser the Vite dev server would proxy it to the real API).
  */
 const noRealApi = [
-  http.all('*/api/*', ({ request }) =>
+  // A regular expression on the whole URL: the glob */api/* would also catch Vite's source
+  // modules under /src/api/ in the browser.
+  http.all(/^https?:\/\/[^/]+\/api\//, ({ request }) =>
     HttpResponse.json(
       { detail: `No mock handler for ${request.method} ${new URL(request.url).pathname}` },
       { status: 501 },
