@@ -18,9 +18,11 @@ if (!token || !account)
 const workersApi = `https://api.cloudflare.com/client/v4/accounts/${account}/workers`
 async function cloudflare(method, url) {
   const response = await fetch(url, { method, headers: { Authorization: `Bearer ${token}` } })
-  // DELETE answers 204 with no body; a 404 means a parallel run already removed it.
-  if (method === 'DELETE' && (response.status === 204 || response.status === 404)) return null
-  const json = await response.json()
+  const text = await response.text()
+  // Domain DELETE answers with an empty body; a 404 means a parallel run (deploy and
+  // branch-delete cleanup often overlap) already removed it.
+  if (method === 'DELETE' && (response.status === 404 || (response.ok && !text))) return null
+  const json = JSON.parse(text)
   if (!json.success) throw new Error(`${method} ${url}: ${JSON.stringify(json.errors)}`)
   return json.result
 }
