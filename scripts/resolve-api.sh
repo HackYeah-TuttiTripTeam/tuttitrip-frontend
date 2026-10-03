@@ -36,7 +36,8 @@ api_host() {
 
 backend_branch_exists() {
   [ -z "${BACKEND_REPO_TOKEN:-}" ] && return 0 # cannot check, rely on the probe
-  GH_TOKEN="$BACKEND_REPO_TOKEN" gh api "repos/$backend_repo/branches/$1" --silent 2>/dev/null
+  curl -fsS -o /dev/null -H "Authorization: Bearer $BACKEND_REPO_TOKEN" \
+    "https://api.github.com/repos/$backend_repo/branches/$1" 2>/dev/null
 }
 
 is_live() {

@@ -196,7 +196,7 @@ ends with a smoke test of `/` and a deep link.
 
 **Preview cleanup.** Cloudflare preview aliases (`versions upload
 --preview-alias`) cannot be deleted, so previews are separate Workers instead.
-`scripts/cleanup-previews.sh` lists Workers named `tuttitrip-preview-*`,
+`scripts/cleanup-previews.mjs` lists Workers named `tuttitrip-preview-*`,
 compares them with `git ls-remote --heads origin` (slugified) and deletes the
 ones whose branch is gone. It only ever matches `^tuttitrip-preview-[a-z0-9-]+$`,
 so the main/develop Workers and anything else in the account are never touched.
@@ -234,9 +234,14 @@ pnpm biome check --write . && pnpm tsc -b && pnpm test:arch
 Use the `open-pr` skill: PR into `develop` (`develop` into `main` for
 releases) with a structured description (what and why, list of changes, how to
 test, screenshots of desktop and mobile for UI changes, link to the preview
-from the bot comment). `main` and `develop` are meant to be protected: PR
-required, CI (`checks`) must pass, no force-push or deletion; head branches
-are deleted automatically after merge (which also deletes the preview).
+from the bot comment). Head branches are deleted automatically after merge
+(which also deletes the preview).
+
+Branch protection for `main` and `develop` (PR required, `checks` must pass,
+no force-push or deletion) is **not active**: GitHub refuses branch protection
+and rulesets on private repos of a free organization ("Upgrade to GitHub Pro or
+make this repository public"). Until the plan changes, treat these rules as a
+team convention: never push to `main`/`develop` directly, never force-push.
 
 No AI attribution anywhere: no `Co-Authored-By` trailers for tools, no
 "generated with" lines in commits, PRs or comments.

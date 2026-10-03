@@ -179,15 +179,15 @@ jobs:
 
           Podgląd zniknie automatycznie po usunięciu gałęzi.
           MD
-          scripts/pr-comment.sh "${{ github.event.pull_request.number }}" "$RUNNER_TEMP/comment.md"
+          node scripts/pr-comment.mjs --pr "${{ github.event.pull_request.number }}" --body "$RUNNER_TEMP/comment.md"
 
       - name: Explain the missing preview on the PR
         if: steps.creds.outputs.ok != 'true' && github.event_name == 'pull_request'
         run: |
           printf '### Podgląd niedostępny\n\nCI nie ma danych dostępowych do Cloudflare (sekret `CLOUDFLARE_API_TOKEN` albo zmienna `CLOUDFLARE_ACCOUNT_ID`), więc nie wdrożył `%s`. Build i testy przeszły.\n' \
             "$PREVIEW_WORKER" > "$RUNNER_TEMP/comment.md"
-          scripts/pr-comment.sh "${{ github.event.pull_request.number }}" "$RUNNER_TEMP/comment.md"
+          node scripts/pr-comment.mjs --pr "${{ github.event.pull_request.number }}" --body "$RUNNER_TEMP/comment.md"
 
       - name: Delete previews of deleted branches
         if: steps.creds.outputs.ok == 'true'
-        run: scripts/cleanup-previews.sh
+        run: node scripts/cleanup-previews.mjs
