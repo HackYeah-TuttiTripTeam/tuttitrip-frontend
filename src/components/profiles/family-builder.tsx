@@ -12,6 +12,8 @@ import { PersonRow } from './person-row'
 
 interface FamilyBuilderProps {
   people: Person[]
+  /** The roles could not be loaded: the list is shown without them, and says so. */
+  rolesFailed: boolean
   /** Host and co-host: add, edit and remove. Members get the list only. */
   canManage: boolean
   isDesktop: boolean
@@ -25,6 +27,7 @@ type Dialog = { kind: 'add' } | { kind: 'edit'; id: string } | null
 /** The people of a trip with age-based defaults; also the family card of the interview. */
 export function FamilyBuilder({
   people,
+  rolesFailed,
   canManage,
   isDesktop,
   onAdd,
@@ -56,6 +59,12 @@ export function FamilyBuilder({
         </div>
         {canManage && people.length > 0 && addButton}
       </div>
+
+      {rolesFailed && (
+        <p role="status" className="text-muted-foreground text-sm">
+          {m.people_roles_failed()}
+        </p>
+      )}
 
       {people.length === 0 ? (
         <StatusMessage

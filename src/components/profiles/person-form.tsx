@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { type FieldErrors, type UseFormReturn, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import type { Profile } from '@/api/queries/profiles'
 import { Button } from '@/components/ui/button'
@@ -86,6 +86,51 @@ function SubmitError({ message }: { message: string | null }) {
   ) : null
 }
 
+interface NameAgeFieldsProps {
+  /** Distinguishes ids when two forms are mounted at once. */
+  idPrefix: string
+  form: Pick<UseFormReturn<{ display_name: string; age: number }>, 'register'> & {
+    errors: FieldErrors<{ display_name: string; age: number }>
+  }
+  placeholder?: string
+  ageHint?: string
+}
+
+function NameAgeFields({ idPrefix, form, placeholder, ageHint }: NameAgeFieldsProps) {
+  const { register, errors } = form
+  return (
+    <>
+      <Field data-invalid={Boolean(errors.display_name)}>
+        <FieldLabel htmlFor={`${idPrefix}-name`}>{m.people_form_name_label()}</FieldLabel>
+        <Input
+          id={`${idPrefix}-name`}
+          autoComplete="off"
+          placeholder={placeholder}
+          aria-invalid={Boolean(errors.display_name)}
+          className={inputClass}
+          {...register('display_name')}
+        />
+        <FieldError errors={[errors.display_name]} />
+      </Field>
+      <Field data-invalid={Boolean(errors.age)}>
+        <FieldLabel htmlFor={`${idPrefix}-age`}>{m.people_form_age_label()}</FieldLabel>
+        <Input
+          id={`${idPrefix}-age`}
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={120}
+          aria-invalid={Boolean(errors.age)}
+          className={inputClass}
+          {...register('age', { valueAsNumber: true })}
+        />
+        {ageHint && <FieldDescription>{ageHint}</FieldDescription>}
+        <FieldError errors={[errors.age]} />
+      </Field>
+    </>
+  )
+}
+
 interface AddPersonFormProps {
   onSubmit: (values: AddPersonValues) => Promise<SaveResult>
 }
@@ -109,33 +154,12 @@ export function AddPersonForm({ onSubmit }: AddPersonFormProps) {
       })}
     >
       <FieldGroup className="gap-5">
-        <Field data-invalid={Boolean(errors.display_name)}>
-          <FieldLabel htmlFor="person-name">{m.people_form_name_label()}</FieldLabel>
-          <Input
-            id="person-name"
-            autoComplete="off"
-            placeholder={m.people_form_name_placeholder()}
-            aria-invalid={Boolean(errors.display_name)}
-            className={inputClass}
-            {...form.register('display_name')}
-          />
-          <FieldError errors={[errors.display_name]} />
-        </Field>
-        <Field data-invalid={Boolean(errors.age)}>
-          <FieldLabel htmlFor="person-age">{m.people_form_age_label()}</FieldLabel>
-          <Input
-            id="person-age"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={120}
-            aria-invalid={Boolean(errors.age)}
-            className={inputClass}
-            {...form.register('age', { valueAsNumber: true })}
-          />
-          <FieldDescription>{m.people_form_defaults_hint()}</FieldDescription>
-          <FieldError errors={[errors.age]} />
-        </Field>
+        <NameAgeFields
+          idPrefix="add-person"
+          form={{ register: form.register, errors }}
+          placeholder={m.people_form_name_placeholder()}
+          ageHint={m.people_form_defaults_hint()}
+        />
       </FieldGroup>
       <SubmitError message={error} />
       <Button type="submit" disabled={isSubmitting} className="h-11 md:h-9">
@@ -182,7 +206,7 @@ export function EditPersonForm({ profile, onSubmit, onDelete }: EditPersonFormPr
       <Input
         id={`person-${key}`}
         type="number"
-        inputMode="decimal"
+        inputMode={step.includes('.') ? 'decimal' : 'numeric'}
         step={step}
         aria-invalid={Boolean(errors[key])}
         className={inputClass}
@@ -214,31 +238,7 @@ export function EditPersonForm({ profile, onSubmit, onDelete }: EditPersonFormPr
       })}
     >
       <FieldGroup className="gap-5">
-        <Field data-invalid={Boolean(errors.display_name)}>
-          <FieldLabel htmlFor="person-name">{m.people_form_name_label()}</FieldLabel>
-          <Input
-            id="person-name"
-            autoComplete="off"
-            aria-invalid={Boolean(errors.display_name)}
-            className={inputClass}
-            {...form.register('display_name')}
-          />
-          <FieldError errors={[errors.display_name]} />
-        </Field>
-        <Field data-invalid={Boolean(errors.age)}>
-          <FieldLabel htmlFor="person-age">{m.people_form_age_label()}</FieldLabel>
-          <Input
-            id="person-age"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={120}
-            aria-invalid={Boolean(errors.age)}
-            className={inputClass}
-            {...form.register('age', { valueAsNumber: true })}
-          />
-          <FieldError errors={[errors.age]} />
-        </Field>
+        <NameAgeFields idPrefix="edit-person" form={{ register: form.register, errors }} />
         {numberField('segment_km', m.people_form_segment_label(), '0.1')}
         {numberField('daily_km', m.people_form_daily_label(), '0.5')}
         {numberField('active_hours', m.people_form_active_label(), '0.5')}

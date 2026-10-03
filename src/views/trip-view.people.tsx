@@ -19,7 +19,7 @@ interface TripPeopleViewProps {
  */
 export function TripPeopleView({ tripId, canManage }: TripPeopleViewProps) {
   const session = useSession()
-  const { people, isPending, problem, refetch } = useProfiles(tripId, session.status)
+  const { people, rolesFailed, isPending, problem, refetch } = useProfiles(tripId, session.status)
   const actions = useProfileActions(tripId)
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
 
@@ -45,6 +45,7 @@ export function TripPeopleView({ tripId, canManage }: TripPeopleViewProps) {
   return (
     <FamilyBuilder
       people={people}
+      rolesFailed={rolesFailed}
       canManage={canManage}
       isDesktop={isDesktop}
       onAdd={actions.add}

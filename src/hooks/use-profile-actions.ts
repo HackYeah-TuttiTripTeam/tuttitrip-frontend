@@ -8,22 +8,21 @@ import { useUpdateProfile } from './use-update-profile'
 
 const OK: SaveResult = { ok: true }
 
+const STATUS_MESSAGES: Record<number, () => string> = {
+  403: m.people_error_forbidden,
+  409: m.people_error_has_account,
+  422: m.people_error_invalid,
+}
+
 function failure(error: unknown): SaveResult {
   const status = error instanceof ApiError ? error.status : null
   const message =
-    status === 403
-      ? m.people_error_forbidden()
-      : status === 409
-        ? m.people_error_has_account()
-        : status === 422
-          ? m.people_error_invalid()
-          : error instanceof TypeError
-            ? m.people_error_offline()
-            : m.people_error_generic()
+    (status !== null ? STATUS_MESSAGES[status]?.() : undefined) ??
+    (error instanceof TypeError ? m.people_error_offline() : m.people_error_generic())
   return { ok: false, message }
 }
 
-/** Create, correct and remove people of one trip; the marks store remembers what the host changed. */
+/** Create, correct and remove people of one trip. */
 export function useProfileActions(tripId: string) {
   const create = useCreateProfile(tripId)
   const update = useUpdateProfile(tripId)
