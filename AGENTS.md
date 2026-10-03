@@ -185,7 +185,7 @@ One Worker per environment (wrangler environments):
 | --- | --- | --- |
 | `main` | `tuttitrip-frontend` | https://tuttitrip.gburek.app |
 | `develop` | `tuttitrip-frontend-develop` | https://tuttitrip-develop.gburek.app |
-| PR from any other branch | `tuttitrip-preview-<slug>` (`--env preview --name ...`, slug max 45) | `https://tuttitrip-preview-<slug>.<account>.workers.dev` |
+| PR from any other branch | `tuttitrip-preview-<slug>` (`--env preview --name ...`, slug max 45) | `https://tuttitrip-preview-<slug>.gburek.app` |
 
 `.github/workflows/frontend-ci.yml`, on `runs-on: [self-hosted, hackathon]`:
 `checks` = install, `biome ci`, resolve API + `api:sync`, `tsc -b`,
@@ -202,11 +202,18 @@ that belongs to something else. The two Workers were bootstrapped without
 routes and their domains attached with `override_existing_dns_record: false`;
 a new environment needs the same treatment before its first CI deploy.
 
-**Preview cleanup.** Cloudflare preview aliases (`versions upload
---preview-alias`) cannot be deleted, so previews are separate Workers instead.
+**Previews.** Cloudflare preview aliases (`versions upload --preview-alias`)
+cannot be deleted, so every PR gets its own Worker. Its Custom Domain
+`tuttitrip-preview-<slug>.gburek.app` is attached by
+`scripts/attach-domain.mjs` with `override_existing_dns_record: false`
+(workers.dev is not used: on this account it sits behind Cloudflare Access).
+The backend's CORS regex `^https://tuttitrip(-[a-z0-9-]+)?\.gburek\.app$`
+already covers these hostnames.
+
+**Preview cleanup.**
 `scripts/cleanup-previews.mjs` lists Workers named `tuttitrip-preview-*`,
 compares them with `git ls-remote --heads origin` (slugified) and deletes the
-ones whose branch is gone. It only ever matches `^tuttitrip-preview-[a-z0-9-]+$`,
+ones whose branch is gone, detaching their Custom Domains first. It only ever matches `^tuttitrip-preview-[a-z0-9-]+$`,
 so the main/develop Workers and anything else in the account are never touched.
 It runs after every deploy and on the GitHub `delete` event
 (`frontend-cleanup.yml`), which also rewrites the PR's preview comment to

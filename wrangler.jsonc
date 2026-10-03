@@ -2,8 +2,9 @@
 // One Worker per environment; see AGENTS.md "Deployment" and .github/workflows/frontend-ci.yml.
 //   main            -> worker tuttitrip-frontend          -> https://tuttitrip.gburek.app
 //   develop         -> worker tuttitrip-frontend-develop  -> https://tuttitrip-develop.gburek.app
-//   any other branch-> worker tuttitrip-preview-<slug>    -> https://tuttitrip-preview-<slug>.<account>.workers.dev
-//                      (deployed with --env preview --name ..., deleted when the branch is gone)
+//   pull request    -> worker tuttitrip-preview-<slug>    -> https://tuttitrip-preview-<slug>.gburek.app
+//                      (deployed with --env preview --name ..., domain attached by
+//                      scripts/attach-domain.mjs, both deleted when the branch is gone)
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "tuttitrip-frontend",
@@ -24,9 +25,10 @@
       "routes": [{ "pattern": "tuttitrip-develop.gburek.app", "custom_domain": true }]
     },
     "preview": {
-      // CI overrides the name per branch: --name tuttitrip-preview-<slug>
+      // CI overrides the name per branch: --name tuttitrip-preview-<slug>.
+      // No workers.dev: that subdomain sits behind Cloudflare Access on this account.
       "name": "tuttitrip-preview",
-      "workers_dev": true,
+      "workers_dev": false,
       "preview_urls": false,
       "routes": []
     }
