@@ -1,3 +1,4 @@
+import { ArrowDown, ArrowUp, ArrowUpDown } from '@keyline-icons/react'
 import {
   createColumnHelper,
   functionalUpdate,
@@ -6,7 +7,6 @@ import {
   tableFeatures,
   useTable,
 } from '@tanstack/react-table'
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,

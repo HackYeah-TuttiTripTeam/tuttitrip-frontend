@@ -1,4 +1,4 @@
-import { LogIn, LogOut, UserRound } from 'lucide-react'
+import { CircleUser, Door, DoorOpen } from '@keyline-icons/react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -38,7 +38,7 @@ export function AccountAvatar({
     <Avatar className={className}>
       {account.userPicture && <AvatarImage src={account.userPicture} alt="" />}
       <AvatarFallback className="text-xs font-medium">
-        {account.status === 'authenticated' ? initials(account.userName) : <UserRound />}
+        {account.status === 'authenticated' ? initials(account.userName) : <CircleUser />}
       </AvatarFallback>
     </Avatar>
   )
@@ -61,7 +61,7 @@ export function AccountMenu({
   if (account.status === 'anonymous') {
     return (
       <button type="button" onClick={account.onLogin} className={className}>
-        <LogIn />
+        <DoorOpen />
         Zaloguj się
       </button>
     )
@@ -83,7 +83,7 @@ export function AccountMenu({
             <DropdownMenuLabel className="truncate">{account.userName}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={account.onLogout}>
-              <LogOut />
+              <Door />
               Wyloguj się
             </DropdownMenuItem>
           </>
