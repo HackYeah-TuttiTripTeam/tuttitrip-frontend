@@ -17,12 +17,12 @@ import { useCreateTrip } from '@/hooks/use-create-trip'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
 import { useSession } from '@/hooks/use-session'
 import { useTrips } from '@/hooks/use-trips'
-import { plural } from '@/lib/format'
+import { isDev } from '@/lib/env'
 import type { SortDirection, TripSortKey } from '@/loaders/trips'
+import { m } from '@/paraglide/messages'
 import { useUiStore } from '@/stores/ui-store'
 
 const route = getRouteApi('/trips')
-const TRIP_FORMS = ['wyjazd', 'wyjazdy', 'wyjazdów'] as const
 
 export function TripsView() {
   const search = route.useSearch()
@@ -52,13 +52,13 @@ export function TripsView() {
     <div className="flex flex-col gap-6">
       <div className="flex items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="font-semibold text-2xl tracking-tight md:text-3xl">Wyjazdy</h1>
+          <h1 className="font-semibold text-2xl tracking-tight md:text-3xl">{m.trips_title()}</h1>
           <p className="text-muted-foreground text-sm" aria-live="polite">
             {showList && total > 0
               ? search.q
-                ? `${plural(trips.length, TRIP_FORMS)} z ${total}`
-                : plural(total, TRIP_FORMS)
-              : 'Plany, które układacie razem.'}
+                ? m.trips_count_filtered({ count: trips.length, total })
+                : m.trips_count({ count: total })
+              : m.trips_tagline()}
           </p>
         </div>
       </div>
@@ -79,76 +79,77 @@ export function TripsView() {
         <StatusMessage
           role="alert"
           icon={<TriangleAlert />}
-          title="Logowanie nie powiodło się"
-          action={<Button onClick={session.login}>Spróbuj ponownie</Button>}
+          title={m.trips_login_failed_title()}
+          action={<Button onClick={session.login}>{m.action_retry()}</Button>}
         >
           {session.error}
         </StatusMessage>
       ) : needsLogin ? (
         <StatusMessage
           icon={<KeyRound />}
-          title="Zaloguj się, żeby zobaczyć wyjazdy"
+          title={m.trips_login_required_title()}
           action={
             session.status === 'disabled' ? undefined : (
-              <Button onClick={session.login}>Zaloguj się</Button>
+              <Button onClick={session.login}>{m.account_login()}</Button>
             )
           }
         >
-          {session.status === 'disabled'
-            ? 'API wymaga logowania, a Auth0 nie jest skonfigurowane. Uzupełnij VITE_AUTH0_* w .env.local.'
-            : 'Wyjazdy są przypisane do konta organizatora. Możesz użyć Google albo Discorda.'}
+          {session.status !== 'disabled'
+            ? m.trips_login_required_body()
+            : isDev
+              ? m.trips_login_required_auth_disabled_dev()
+              : m.trips_login_required_auth_disabled()}
         </StatusMessage>
       ) : problem === 'offline' ? (
         <StatusMessage
           role="alert"
           icon={<CloudOff />}
-          title="Brak połączenia z API"
+          title={m.trips_offline_title()}
           action={
             <Button variant="outline" onClick={refetch}>
-              Spróbuj ponownie
+              {m.action_retry()}
             </Button>
           }
         >
-          Nie udało się połączyć z serwerem. Sprawdź internet albo czy backend działa.
+          {m.trips_offline_body()}
         </StatusMessage>
       ) : problem ? (
         <StatusMessage
           role="alert"
           icon={<TriangleAlert />}
-          title="Nie udało się wczytać wyjazdów"
+          title={m.trips_load_failed_title()}
           action={
             <Button variant="outline" onClick={refetch}>
-              Spróbuj ponownie
+              {m.action_retry()}
             </Button>
           }
         >
-          Serwer odpowiedział błędem. Spróbuj za chwilę.
+          {m.trips_load_failed_body()}
         </StatusMessage>
       ) : total === 0 ? (
         <StatusMessage
           icon={<PlaneTakeoff />}
-          title="Pierwszy wyjazd zaczyna się od nazwy"
+          title={m.trips_empty_title()}
           action={
             <Button onClick={openCreate}>
               <Plus />
-              Nowy wyjazd
+              {m.action_new_trip()}
             </Button>
           }
         >
-          Wpisz, dokąd i kiedy jedziecie. Preferencje każdej osoby zbierze potem wywiad, a plan
-          ułoży się tak, żeby nikt nie wyszedł na tym gorzej.
+          {m.trips_empty_body()}
         </StatusMessage>
       ) : trips.length === 0 ? (
         <StatusMessage
           icon={<SearchX />}
-          title={`Nic nie pasuje do „${search.q}”`}
+          title={m.trips_no_match_title({ query: search.q })}
           action={
             <Button variant="outline" onClick={() => setQuery('')}>
-              Wyczyść wyszukiwanie
+              {m.trips_no_match_clear()}
             </Button>
           }
         >
-          Szukamy w nazwach i celach podróży.
+          {m.trips_no_match_body()}
         </StatusMessage>
       ) : (
         <TripsTable trips={trips} sort={search.sort} dir={search.dir} onSortChange={setSort} />
@@ -158,14 +159,12 @@ export function TripsView() {
         open={createTripOpen}
         onOpenChange={setCreateTripOpen}
         isDesktop={isDesktop}
-        title="Nowy wyjazd"
-        description="Na start wystarczy nazwa. Resztę uzupełnicie w wywiadzie."
+        title={m.action_new_trip()}
+        description={m.trips_create_description()}
       >
         <CreateTripForm
           isSubmitting={createTrip.isPending}
-          submitError={
-            createTrip.isError ? 'Nie udało się utworzyć wyjazdu. Spróbuj ponownie.' : null
-          }
+          submitError={createTrip.isError ? m.trips_create_failed() : null}
           onSubmit={(values) =>
             createTrip.mutate(
               { body: { name: values.name, destination: values.destination || null } },

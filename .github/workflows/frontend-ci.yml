@@ -68,6 +68,9 @@ jobs:
       - name: Architecture tests
         run: pnpm test:arch
 
+      - name: Unit tests
+        run: pnpm test
+
       - name: Build
         run: pnpm exec vite build
         # No API URL in the bundle: the app calls /api/v1 on its own origin and

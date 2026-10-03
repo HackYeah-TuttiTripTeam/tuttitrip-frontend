@@ -1,5 +1,6 @@
 import createFetchClient, { type Middleware } from 'openapi-fetch'
 import createClient from 'openapi-react-query'
+import { getLocale } from '@/paraglide/runtime'
 import type { components, paths } from './schema'
 
 export type Schemas = components['schemas']
@@ -34,9 +35,18 @@ const authMiddleware: Middleware = {
   },
 }
 
+/** Tells the backend (and the interview agent) which language to answer in. */
+const languageMiddleware: Middleware = {
+  onRequest({ request }) {
+    request.headers.set('Accept-Language', getLocale())
+    return request
+  },
+}
+
 // Same origin: the paths in schema.d.ts start with /api/v1, and /api/* is proxied
 // to the backend by the Worker (deployed) or the Vite dev server (local).
 export const fetchClient = createFetchClient<paths>()
+fetchClient.use(languageMiddleware)
 fetchClient.use(authMiddleware)
 
 /** Type-safe TanStack Query bindings for every endpoint in schema.d.ts. */

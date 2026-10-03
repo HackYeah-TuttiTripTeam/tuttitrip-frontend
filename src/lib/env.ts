@@ -1,5 +1,8 @@
 const read = (value: string | undefined) => value?.trim() || undefined
 
+/** True in `vite dev`; setup hints for developers are shown only then. */
+export const isDev = import.meta.env.DEV
+
 /** Deployment name shown in the UI: main, develop, a branch slug or local. */
 export const appEnv = read(import.meta.env.VITE_APP_ENV) ?? 'local'
 

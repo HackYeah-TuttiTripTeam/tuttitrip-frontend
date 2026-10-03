@@ -1,0 +1,53 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { overwriteGetLocale } from '@/paraglide/runtime'
+import { compareText, formatDate, formatMoney, formatNumber, formatTime, lowerCase } from './format'
+
+const useLocale = (locale: 'pl' | 'en') => overwriteGetLocale(() => locale)
+
+afterEach(() => vi.useRealTimers())
+
+describe('format', () => {
+  it('writes amounts per language', () => {
+    useLocale('pl')
+    expect(formatMoney(1240)).toBe('1\u00a0240\u00a0zł')
+    expect(formatMoney(12.5)).toBe('12,50\u00a0zł')
+    useLocale('en')
+    expect(formatMoney(1240)).toBe('PLN\u00a01,240')
+  })
+
+  it('writes numbers per language', () => {
+    useLocale('pl')
+    expect(formatNumber(0.87)).toBe('0,87')
+    useLocale('en')
+    expect(formatNumber(0.87)).toBe('0.87')
+  })
+
+  it('writes dates without a year in the current year', () => {
+    vi.useFakeTimers({ now: new Date('2026-10-01T12:00:00') })
+    useLocale('pl')
+    expect(formatDate('2026-10-03T10:00:00')).toBe('sob 3 paź')
+    useLocale('en')
+    expect(formatDate('2026-10-03T10:00:00')).toBe('Sat, Oct 3')
+  })
+
+  it('adds the year for other years', () => {
+    vi.useFakeTimers({ now: new Date('2026-10-01T12:00:00') })
+    useLocale('pl')
+    expect(formatDate('2025-10-04T10:00:00')).toBe('sob 4 paź 2025')
+    useLocale('en')
+    expect(formatDate('2025-10-04T10:00:00')).toBe('Sat, Oct 4, 2025')
+  })
+
+  it('writes times per language', () => {
+    useLocale('pl')
+    expect(formatTime('2026-10-03T09:30:00')).toBe('09:30')
+    useLocale('en')
+    expect(formatTime('2026-10-03T09:30:00')).toBe('9:30 AM')
+  })
+
+  it('sorts and lower-cases by language rules', () => {
+    useLocale('pl')
+    expect(['Zakopane', 'Łódź', 'Lublin'].sort(compareText)).toEqual(['Lublin', 'Łódź', 'Zakopane'])
+    expect(lowerCase('ŁÓDŹ')).toBe('łódź')
+  })
+})

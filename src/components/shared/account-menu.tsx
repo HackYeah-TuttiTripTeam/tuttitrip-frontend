@@ -8,6 +8,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { isDev } from '@/lib/env'
+import { m } from '@/paraglide/messages'
 import { barItemClass, tabClass } from './nav-classes'
 
 export interface AccountState {
@@ -62,12 +64,13 @@ export function AccountMenu({
     return (
       <button type="button" onClick={account.onLogin} className={className}>
         <DoorOpen />
-        Zaloguj się
+        {m.account_login()}
       </button>
     )
   }
 
-  const label = account.status === 'authenticated' ? (account.userName ?? 'Konto') : 'Konto'
+  const label =
+    account.status === 'authenticated' ? (account.userName ?? m.account_label()) : m.account_label()
 
   return (
     <DropdownMenu>
@@ -84,15 +87,19 @@ export function AccountMenu({
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={account.onLogout}>
               <Door />
-              Wyloguj się
+              {m.account_logout()}
             </DropdownMenuItem>
           </>
         ) : (
-          <DropdownMenuLabel className="font-normal text-muted-foreground leading-relaxed">
-            {account.status === 'loading'
-              ? 'Sprawdzam sesję…'
-              : 'Logowanie jest wyłączone: uzupełnij VITE_AUTH0_DOMAIN i VITE_AUTH0_CLIENT_ID w .env.local.'}
-          </DropdownMenuLabel>
+          <>
+            <DropdownMenuLabel className="font-normal text-muted-foreground leading-relaxed">
+              {account.status === 'loading'
+                ? m.account_checking_session()
+                : isDev
+                  ? m.account_auth_disabled_dev()
+                  : m.account_auth_disabled()}
+            </DropdownMenuLabel>
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

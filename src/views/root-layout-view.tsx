@@ -2,6 +2,7 @@ import { Outlet, useNavigate } from '@tanstack/react-router'
 import { lazy, Suspense } from 'react'
 import { AppShell } from '@/components/shared/app-shell'
 import { useApiAuthBridge } from '@/hooks/use-api-auth-bridge'
+import { useLocale } from '@/hooks/use-locale'
 import { useSession } from '@/hooks/use-session'
 import { appEnv } from '@/lib/env'
 import { useUiStore } from '@/stores/ui-store'
@@ -27,6 +28,7 @@ const Devtools = import.meta.env.DEV
 export function RootLayoutView() {
   useApiAuthBridge()
   const session = useSession()
+  const { locale, setLocale } = useLocale()
   const setCreateTripOpen = useUiStore((state) => state.setCreateTripOpen)
   const navigate = useNavigate()
 
@@ -40,6 +42,7 @@ export function RootLayoutView() {
           onLogin: session.login,
           onLogout: session.logout,
         }}
+        language={{ locale, onChange: setLocale }}
         envLabel={appEnv === 'main' ? null : appEnv}
         onCreateTrip={() => {
           // Creating a trip needs an account; ask guests to sign in first.

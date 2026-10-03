@@ -4,10 +4,13 @@ import { RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { authConfig } from '@/lib/env'
+import { getLocale, syncDocumentLanguage } from '@/lib/i18n'
 import { registerServiceWorker } from '@/lib/pwa'
 import { queryClient } from '@/lib/query-client'
 import { router } from './router'
 import '@/styles/index.css'
+
+syncDocumentLanguage()
 
 const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Missing #root element')
@@ -41,6 +44,7 @@ createRoot(rootElement).render(
         clientId={authConfig.clientId}
         authorizationParams={{
           redirect_uri: window.location.origin,
+          ui_locales: getLocale(),
           audience: authConfig.audience,
         }}
         // Refresh tokens + localStorage keep the session alive in installed PWAs

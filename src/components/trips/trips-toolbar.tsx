@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { m } from '@/paraglide/messages'
 import { type SortDirection, TRIP_SORT_LABELS, type TripSortKey } from './trip-columns'
 
 interface TripsToolbarProps {
@@ -36,8 +37,8 @@ export function TripsToolbar({ query, onQueryChange, sort, dir, onSortChange }: 
           enterKeyHint="search"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="Szukaj po nazwie lub celu"
-          aria-label="Szukaj wyjazdów"
+          placeholder={m.trips_search_placeholder()}
+          aria-label={m.trips_search_label()}
           className="h-11 pr-10 pl-9 sm:h-9 [&::-webkit-search-cancel-button]:hidden"
         />
         {query && (
@@ -45,7 +46,7 @@ export function TripsToolbar({ query, onQueryChange, sort, dir, onSortChange }: 
             variant="ghost"
             size="icon"
             onClick={() => onQueryChange('')}
-            aria-label="Wyczyść wyszukiwanie"
+            aria-label={m.trips_no_match_clear()}
             className="-translate-y-1/2 absolute top-1/2 right-1 sm:size-8"
           >
             <X />
@@ -59,7 +60,7 @@ export function TripsToolbar({ query, onQueryChange, sort, dir, onSortChange }: 
           onValueChange={(value) => isSortKey(value) && onSortChange(value, dir)}
         >
           <SelectTrigger
-            aria-label="Sortuj według"
+            aria-label={m.trips_sort_by()}
             className="h-11 flex-1 sm:h-9 sm:w-44 sm:flex-none"
           >
             <SelectValue />
@@ -67,7 +68,7 @@ export function TripsToolbar({ query, onQueryChange, sort, dir, onSortChange }: 
           <SelectContent>
             {Object.entries(TRIP_SORT_LABELS).map(([key, label]) => (
               <SelectItem key={key} value={key}>
-                {label}
+                {label()}
               </SelectItem>
             ))}
           </SelectContent>
@@ -76,11 +77,7 @@ export function TripsToolbar({ query, onQueryChange, sort, dir, onSortChange }: 
           variant="outline"
           size="icon"
           onClick={() => onSortChange(sort, ascending ? 'desc' : 'asc')}
-          aria-label={
-            ascending
-              ? 'Sortowanie rosnące, zmień na malejące'
-              : 'Sortowanie malejące, zmień na rosnące'
-          }
+          aria-label={ascending ? m.trips_sort_ascending() : m.trips_sort_descending()}
           className="size-11 sm:size-9"
         >
           {ascending ? <ArrowUpNarrowWide /> : <ArrowDownWideNarrow />}

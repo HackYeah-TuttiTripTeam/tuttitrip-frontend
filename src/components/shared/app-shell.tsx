@@ -2,12 +2,15 @@ import { Map as MapIcon, Plus } from '@keyline-icons/react'
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
+import { m } from '@/paraglide/messages'
 import { AccountMenu, type AccountState } from './account-menu'
 import { BrandMark } from './brand-mark'
+import { LanguageMenu, type LanguageState } from './language-menu'
 import { tabClass } from './nav-classes'
 
 interface AppShellProps {
   account: AccountState
+  language: LanguageState
   /** Deployment name; shown as a badge everywhere except production. */
   envLabel: string | null
   onCreateTrip: () => void
@@ -18,14 +21,14 @@ interface AppShellProps {
  * Desktop: one top bar with navigation, the primary action and the account.
  * Mobile: a slim top bar plus a bottom action bar within thumb reach.
  */
-export function AppShell({ account, envLabel, onCreateTrip, children }: AppShellProps) {
+export function AppShell({ account, language, envLabel, onCreateTrip, children }: AppShellProps) {
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
       <a
         href="#main"
         className="sr-only z-50 rounded-md bg-background px-3 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
       >
-        Przejdź do treści
+        {m.shell_skip_to_content()}
       </a>
 
       <header className="sticky top-0 z-40 border-b bg-background pt-[env(safe-area-inset-top)]">
@@ -43,21 +46,24 @@ export function AppShell({ account, envLabel, onCreateTrip, children }: AppShell
             </span>
           )}
 
-          <nav aria-label="Główna" className="hidden h-full md:flex">
+          <nav aria-label={m.shell_nav_main()} className="hidden h-full md:flex">
             <Link
               to="/trips"
               className="flex h-full items-center border-transparent border-b-2 text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:underline [&.active]:border-primary [&.active]:text-foreground"
             >
-              Wyjazdy
+              {m.nav_trips()}
             </Link>
           </nav>
 
-          <div className="ml-auto hidden items-center gap-3 md:flex">
-            <Button onClick={onCreateTrip}>
-              <Plus />
-              Nowy wyjazd
-            </Button>
-            <AccountMenu account={account} variant="bar" />
+          <div className="ml-auto flex items-center gap-1 md:gap-3">
+            <LanguageMenu language={language} />
+            <div className="hidden items-center gap-3 md:flex">
+              <Button onClick={onCreateTrip}>
+                <Plus />
+                {m.action_new_trip()}
+              </Button>
+              <AccountMenu account={account} variant="bar" />
+            </div>
           </div>
         </div>
       </header>
@@ -70,19 +76,19 @@ export function AppShell({ account, envLabel, onCreateTrip, children }: AppShell
       </main>
 
       <nav
-        aria-label="Akcje"
+        aria-label={m.shell_nav_actions()}
         className="fixed inset-x-0 bottom-0 z-40 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         <div className="mx-auto grid h-16 max-w-md grid-cols-3 items-center px-2">
           <Link to="/trips" className={tabClass}>
             <MapIcon />
-            Wyjazdy
+            {m.nav_trips()}
           </Link>
           <div className="flex justify-center">
             <Button
               onClick={onCreateTrip}
               size="icon-lg"
-              aria-label="Nowy wyjazd"
+              aria-label={m.action_new_trip()}
               className="size-14 rounded-full shadow-lg shadow-primary/25 [&_svg:not([class*='size-'])]:size-6"
             >
               <Plus />
