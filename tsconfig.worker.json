@@ -22,5 +22,11 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["worker", "src/lib/seo.ts", "src/paraglide"]
+  "include": [
+    "worker",
+    "src/lib/seo.ts",
+    "src/lib/seo-shell.ts",
+    "src/lib/photo-data.ts",
+    "src/paraglide"
+  ]
 }

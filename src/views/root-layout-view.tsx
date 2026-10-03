@@ -1,5 +1,5 @@
 import { HeadContent, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { AppShell } from '@/components/shared/app-shell'
 import { BootScreen } from '@/components/shared/boot-screen'
 import { PublicShell } from '@/components/shared/public-shell'
@@ -9,6 +9,7 @@ import { useHomeRedirect } from '@/hooks/use-home-redirect'
 import { useLocale } from '@/hooks/use-locale'
 import { useSession } from '@/hooks/use-session'
 import { appEnv } from '@/lib/env'
+import { hasStoredSession } from '@/lib/session-hint'
 import { shellFor } from '@/lib/shell'
 import { useUiStore } from '@/stores/ui-store'
 
@@ -38,8 +39,10 @@ export function RootLayoutView() {
   const setCreateTripOpen = useUiStore((state) => state.setCreateTripOpen)
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
-  const shell = shellFor(pathname, session.status)
-  useHomeRedirect(pathname, session.status)
+  // Read once: a session stored while the page is open is Auth0's business, not a reason to blink.
+  const [storedSession] = useState(hasStoredSession)
+  const shell = shellFor(pathname, session.status, storedSession)
+  useHomeRedirect(pathname, session.status, storedSession)
   const language = { locale, onChange: setLocale }
   const envLabel = appEnv === 'main' ? null : appEnv
 

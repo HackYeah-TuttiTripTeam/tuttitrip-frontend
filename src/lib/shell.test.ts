@@ -12,6 +12,12 @@ describe('shellFor', () => {
     expect(shellFor('/', 'authenticated')).toBe('bare')
   })
 
+  it('shows the landing page at once to a browser with no stored session', () => {
+    expect(shellFor('/', 'loading', false)).toBe('public')
+    // A signed-in user is still sent on without a flash of the landing page.
+    expect(shellFor('/', 'authenticated', false)).toBe('bare')
+  })
+
   it('uses the public layout for /about and /contact in every state', () => {
     for (const status of ['loading', 'anonymous', 'authenticated', 'disabled'] as const) {
       expect(shellFor('/about', status)).toBe('public')

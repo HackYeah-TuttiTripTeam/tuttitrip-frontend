@@ -7,6 +7,7 @@
 // (curl, fetch); those go back to the assets, which apply the SPA fallback.
 
 import { pageSeo, requestLocale, robotsTxt, seoHeadHtml, seoPath, sitemapXml } from '../src/lib/seo'
+import { shellHtml } from '../src/lib/seo-shell'
 
 interface Env {
   /** Backend origin without a trailing slash, e.g. https://tuttitrip-api.gburek.app */
@@ -115,6 +116,10 @@ async function publicPage(request: Request, env: Env, url: URL): Promise<Respons
     .on('title', { element: (element) => element.remove() })
     .on('meta[name="description"]', { element: (element) => element.remove() })
     .on('head', { element: (element) => element.append(seoHeadHtml(seo), { html: true }) })
+    // The first screen, for the seconds before the app's scripts have run (lib/seo-shell.ts).
+    .on('div#root', {
+      element: (element) => element.append(shellHtml(path, locale), { html: true }),
+    })
     .transform(response)
 
   // The answer depends on ?lang and on Accept-Language.

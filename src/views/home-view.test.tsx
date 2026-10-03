@@ -38,6 +38,7 @@ function renderAt(url: string) {
 
 afterEach(() => {
   cleanup()
+  localStorage.clear()
   queryClient.clear()
   session.status = 'anonymous'
 })
@@ -52,7 +53,14 @@ describe('public pages', () => {
     expect(footer.querySelector('a[href="/contact"]')?.textContent).toBe(m.nav_contact())
   })
 
-  it('shows nothing of the landing page while the session loads', () => {
+  it('shows the landing page while the session loads when no session is stored', async () => {
+    session.status = 'loading'
+    renderAt('/')
+    expect(await screen.findByRole('heading', { level: 1, name: m.home_title() })).toBeTruthy()
+  })
+
+  it('shows nothing of the landing page while a stored session loads', () => {
+    localStorage.setItem('@@auth0spajs@@::client::audience::scope', '{}')
     session.status = 'loading'
     const router = renderAt('/')
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull()

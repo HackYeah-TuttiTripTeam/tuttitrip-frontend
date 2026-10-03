@@ -45,7 +45,12 @@ export function ContactBody() {
           className="overflow-hidden rounded-lg border"
           style={{ aspectRatio: `${width} / ${height}` }}
         >
-          <Picture id="zespol" alt={m.contact_photo_alt()} sizes="(min-width: 768px) 50vw, 100vw" />
+          <Picture
+            id="zespol"
+            alt={m.contact_photo_alt()}
+            sizes="(min-width: 768px) 50vw, 100vw"
+            priority
+          />
         </div>
         <figcaption className="flex flex-col gap-0.5">
           <span className="font-bold font-heading text-lg tracking-tight">

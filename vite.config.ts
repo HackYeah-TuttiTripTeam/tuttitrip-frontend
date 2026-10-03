@@ -22,6 +22,18 @@ export default defineConfig(({ mode, command }) => {
 
   return {
     define: { __API_MOCK__: JSON.stringify(apiMock) },
+    build: {
+      rollupOptions: {
+        output: {
+          // Photos keep their names, so the Worker can point to them from the first HTML
+          // (lib/photo-data.ts, worker/index.ts). Everything else is hashed as usual.
+          assetFileNames: (asset) =>
+            asset.originalFileNames.some((name) => name.includes('src/assets/photos/'))
+              ? 'assets/photos/[name][extname]'
+              : 'assets/[name]-[hash][extname]',
+        },
+      },
+    },
     server: { proxy: apiProxy },
     preview: { proxy: apiProxy },
     plugins: [
