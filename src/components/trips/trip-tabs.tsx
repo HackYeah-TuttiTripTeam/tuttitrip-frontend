@@ -23,10 +23,12 @@ interface TripTabsProps {
   onTabChange: (tab: TripTab) => void
   /** Decides which actions the panels offer; passed down so panels never read the API. */
   role: Trip['my_role']
+  /** The content of the Plan tab: a view, so this component stays free of the data layer. */
+  planPanel: ReactNode
 }
 
-/** Wywiad, Osoby, Plan: a three-segment switch. The panels are placeholders for the next issues. */
-export function TripTabs({ tab, onTabChange, role }: TripTabsProps) {
+/** Wywiad, Osoby, Plan: a three-segment switch. The Interview and People panels are placeholders for the next issues. */
+export function TripTabs({ tab, onTabChange, role, planPanel }: TripTabsProps) {
   const canManage = role !== 'member'
   return (
     <Tabs
@@ -55,11 +57,7 @@ export function TripTabs({ tab, onTabChange, role }: TripTabsProps) {
           {canManage ? m.trip_people_body_manage() : m.trip_people_body_member()}
         </StatusMessage>
       </TabsContent>
-      <TabsContent value="plan">
-        <StatusMessage icon={<Calendar />} title={m.trip_plan_title()}>
-          {m.trip_plan_body()}
-        </StatusMessage>
-      </TabsContent>
+      <TabsContent value="plan">{planPanel}</TabsContent>
     </Tabs>
   )
 }

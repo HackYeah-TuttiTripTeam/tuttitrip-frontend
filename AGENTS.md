@@ -118,7 +118,8 @@ options from `src/api/queries/`, so a route never touches the API directly.
 ## Architecture rules (`pnpm test:arch`, Biome)
 
 1. **Views do not import other views.** Shared UI goes to `components/`,
-   shared logic to `hooks/`. (dependency-cruiser `views-no-cross-import`)
+   shared logic to `hooks/`. One exception: `trip-view` embeds `trip-plan-view`, the content of
+   its Plan tab. (dependency-cruiser `views-no-cross-import`)
 2. **`components/**` are presentational.** No imports from `views/`, `hooks/`,
    `stores/`, `loaders/`, `routes/`, and no runtime use of the API client,
    TanStack Query, Zustand or Auth0. Type-only imports of API/loader types are

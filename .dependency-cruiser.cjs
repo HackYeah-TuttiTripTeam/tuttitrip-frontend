@@ -12,7 +12,11 @@ module.exports = {
         'Rule 1: a view must not import another view. Move shared UI to components/ and shared logic to hooks/.',
       severity: 'error',
       from: { path: '^src/views/([^/.]+)' },
-      to: { path: '^src/views/', pathNot: '^src/views/$1([./]|$)' },
+      // trip-plan-view is the Plan tab of trip-view: the one panel view a parent view embeds.
+      to: {
+        path: '^src/views/',
+        pathNot: ['^src/views/$1([./]|$)', '^src/views/trip-plan-view\\.tsx$'],
+      },
     },
     {
       name: 'components-are-presentational',

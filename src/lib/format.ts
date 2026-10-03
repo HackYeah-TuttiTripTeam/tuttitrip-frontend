@@ -94,3 +94,34 @@ export function formatDateRange(start: string | null, end: string | null): strin
   if (!end || end === start) return from
   return `${from} – ${formatDate(dateOnly(end))}`
 }
+
+/** "20 wrz" / "Sep 20"; the year is added only when it is not the current one. */
+export function formatDayMonth(iso: string): string {
+  const date = new Date(iso)
+  const sameYear = date.getFullYear() === new Date().getFullYear()
+  return new Intl.DateTimeFormat(INTL_TAG[getLocale()], {
+    day: 'numeric',
+    month: 'short',
+    year: sameYear ? undefined : 'numeric',
+  }).format(date)
+}
+
+/** "10:00:00" (an API time of day without a date) -> "10:00" / "10:00 AM". */
+export function formatClock(time: string): string {
+  const [hours = 0, minutes = 0] = time.split(':').map(Number)
+  return formatTime(new Date(2000, 0, 1, hours, minutes))
+}
+
+/**
+ * The API sends money as decimal strings ("575.00"). Intl formats the string itself, so no float
+ * ever sits between the backend's exact value and the screen. Whole amounts lose the ".00".
+ */
+export function formatDecimal(amount: string, currency = 'PLN'): string {
+  const whole = /^-?\d+(\.0+)?$/.test(amount)
+  return new Intl.NumberFormat(INTL_TAG[getLocale()], {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: whole ? 0 : 2,
+    useGrouping: 'always',
+  }).format(amount as `${number}`)
+}

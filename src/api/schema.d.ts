@@ -591,6 +591,80 @@ export interface paths {
         patch: operations["update_trip_api_v1_trips__trip_id__patch"];
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Members
+         * @description List the trip's members with their roles (name from their profile).
+         *
+         *     Args:
+         *         membership: The caller's membership (any role).
+         *         session: Database session.
+         *
+         *     Returns:
+         *         Members, highest role first.
+         *
+         *     Wymagane uprawnienie: `trips.members:READ`.
+         */
+        get: operations["list_members_api_v1_trips__trip_id__members_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/members/{profile_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Member
+         * @description Remove a member; their profile stays on the trip without an account.
+         *
+         *     A co-host removes members, the host removes members and co-hosts, nobody
+         *     removes the host.
+         *
+         *     Args:
+         *         profile_id: Profile of the member.
+         *         membership: The caller's membership (co-host or host).
+         *         session: Database session.
+         *
+         *     Wymagane uprawnienie: `trips.members:WRITE`.
+         */
+        delete: operations["remove_member_api_v1_trips__trip_id__members__profile_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Member
+         * @description Make a member a co-host or a plain member (host only).
+         *
+         *     Args:
+         *         profile_id: Profile of the member.
+         *         data: The new role.
+         *         membership: The caller's membership (host).
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The member after the change.
+         *
+         *     Wymagane uprawnienie: `trips.members:WRITE`.
+         */
+        patch: operations["update_member_api_v1_trips__trip_id__members__profile_id__patch"];
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/profiles": {
         parameters: {
             query?: never;
@@ -1419,6 +1493,37 @@ export interface components {
             access: {
                 [key: string]: components["schemas"]["Access"];
             };
+        };
+        /**
+         * MemberRead
+         * @description A person on the trip who has an account, with their trip role.
+         */
+        MemberRead: {
+            /**
+             * Profile Id
+             * Format: uuid
+             * @description Use it in the member routes.
+             */
+            profile_id: string;
+            /** Display Name */
+            display_name: string;
+            role: components["schemas"]["TripRole"];
+            /**
+             * Is Me
+             * @description Whether this member is the caller.
+             */
+            is_me: boolean;
+        };
+        /**
+         * MemberRoleUpdate
+         * @description Payload for changing a member's role (the host role cannot be given).
+         */
+        MemberRoleUpdate: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "member" | "co_host";
         };
         /**
          * OpeningHours
@@ -3513,6 +3618,145 @@ export interface operations {
                 content?: never;
             };
             /** @description Brak uprawnienia `trips.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_members_api_v1_trips__trip_id__members_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberRead"][];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.members:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_member_api_v1_trips__trip_id__members__profile_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.members:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_member_api_v1_trips__trip_id__members__profile_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberRoleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.members:WRITE` */
             403: {
                 headers: {
                     [name: string]: unknown;
