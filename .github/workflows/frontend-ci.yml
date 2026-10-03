@@ -24,6 +24,7 @@ jobs:
     timeout-minutes: 15
     outputs:
       api_url: ${{ steps.api.outputs.api_url }}
+      api_live: ${{ steps.api.outputs.api_live }}
       api_branch: ${{ steps.api.outputs.api_branch }}
       app_env: ${{ steps.api.outputs.app_env }}
       preview_worker: ${{ steps.api.outputs.preview_worker }}
@@ -48,10 +49,10 @@ jobs:
         id: api
         run: scripts/resolve-api.sh "${{ github.head_ref || github.ref_name }}" | tee -a "$GITHUB_OUTPUT"
 
-      - name: Sync API contract (openapi.json -> schema.d.ts)
+      - name: Sync API contract (/api/v1/openapi.json -> schema.d.ts)
         if: steps.api.outputs.api_live == 'true'
         run: |
-          pnpm api:sync --url "${{ steps.api.outputs.api_url }}/openapi.json"
+          pnpm api:sync --url "${{ steps.api.outputs.api_schema_url }}"
           if ! git diff --quiet -- src/api/schema.d.ts; then
             echo "::warning file=src/api/schema.d.ts::Backend '${{ steps.api.outputs.api_branch }}' changed the API. Run 'pnpm api:sync' locally and commit src/api/schema.d.ts."
             git --no-pager diff --stat -- src/api/schema.d.ts
@@ -69,8 +70,9 @@ jobs:
 
       - name: Build
         run: pnpm exec vite build
+        # No API URL in the bundle: the app calls /api/v1 on its own origin and
+        # the Worker proxies it (API_ORIGIN, see wrangler.jsonc and the deploy job).
         env:
-          VITE_API_URL: ${{ steps.api.outputs.api_url }}
           VITE_APP_ENV: ${{ steps.api.outputs.app_env }}
           VITE_AUTH0_DOMAIN: ${{ vars.AUTH0_DOMAIN }}
           VITE_AUTH0_CLIENT_ID: ${{ vars.AUTH0_CLIENT_ID }}
@@ -101,6 +103,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       GH_TOKEN: ${{ github.token }}
       PREVIEW_WORKER: ${{ needs.checks.outputs.preview_worker }}
+      API_ORIGIN: ${{ needs.checks.outputs.api_url }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -137,7 +140,9 @@ jobs:
                        echo "url=https://tuttitrip.gburek.app" >> "$GITHUB_OUTPUT" ;;
             push/develop) echo "command=deploy --env develop" >> "$GITHUB_OUTPUT"
                           echo "url=https://tuttitrip-develop.gburek.app" >> "$GITHUB_OUTPUT" ;;
-            *) echo "command=deploy --env preview --name $PREVIEW_WORKER" >> "$GITHUB_OUTPUT" ;;
+            # main/develop take API_ORIGIN from wrangler.jsonc; a preview proxies to
+            # the backend resolve-api.sh picked (same branch, else develop, else main).
+            *) echo "command=deploy --env preview --name $PREVIEW_WORKER --var API_ORIGIN:$API_ORIGIN" >> "$GITHUB_OUTPUT" ;;
           esac
 
       - name: Make sure the custom domain is ours to deploy
@@ -167,17 +172,28 @@ jobs:
         if: steps.creds.outputs.ok == 'true'
         run: echo "url=${{ steps.cmd.outputs.url || format('https://{0}.gburek.app', needs.checks.outputs.preview_worker) }}" >> "$GITHUB_OUTPUT"
 
-      - name: Smoke test (app shell + SPA deep link)
+      - name: Smoke test (app shell + SPA deep link + API proxy)
         if: steps.creds.outputs.ok == 'true'
+        env:
+          # A preview whose backend did not answer at build time skips the proxy check.
+          CHECK_API: ${{ github.event_name == 'push' || needs.checks.outputs.api_live == 'true' }}
         run: |
           url="${{ steps.url.outputs.url }}"
+          app_ok() {
+            curl -fsS "$url/" | grep -q '<div id="root">' &&
+              curl -fsS -H 'Sec-Fetch-Mode: navigate' "$url/trips?sort=name" | grep -q '<div id="root">' &&
+              curl -fsS "$url/trips?sort=name" | grep -q '<div id="root">'
+          }
+          # /api must reach the backend, never the SPA fallback (index.html).
+          api_ok() {
+            [ "$CHECK_API" != true ] ||
+              curl -fsS -H 'Sec-Fetch-Mode: navigate' "$url/api/v1/health/live" | grep -q '"status":"ok"'
+          }
           for _ in $(seq 20); do
-            if curl -fsS "$url/" | grep -q '<div id="root">' && curl -fsS "$url/trips?sort=name" | grep -q '<div id="root">'; then
-              echo "OK: $url"; exit 0
-            fi
+            if app_ok && api_ok; then echo "OK: $url (API proxy checked: $CHECK_API)"; exit 0; fi
             sleep 6
           done
-          echo "::error::$url did not serve the app"; exit 1
+          echo "::error::$url did not serve the app and the /api proxy"; exit 1
 
       - name: Comment preview URL on the PR
         if: steps.creds.outputs.ok == 'true' && github.event_name == 'pull_request'

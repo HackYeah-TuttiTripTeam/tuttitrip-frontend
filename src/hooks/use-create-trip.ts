@@ -4,7 +4,7 @@ import { tripsQueryOptions } from '@/api/queries/trips'
 
 export function useCreateTrip() {
   const queryClient = useQueryClient()
-  return $api.useMutation('post', '/trips', {
+  return $api.useMutation('post', '/api/v1/trips', {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: tripsQueryOptions().queryKey }),
   })
 }

@@ -5,10 +5,12 @@
 #
 # Picks the backend deployment for the same branch name, falling back to the
 # nearest "higher" branch: feature/x -> develop -> main. A candidate counts only
-# if its /openapi.json answers. main always maps to production.
+# if its /api/v1/openapi.json answers: a deployment still on the old unversioned
+# paths cannot serve this client, so it is skipped. main always maps to production.
 #
 # Prints KEY=VALUE lines (append them to $GITHUB_OUTPUT in CI):
-#   api_url     base URL to build with (VITE_API_URL)
+#   api_url     backend origin: the preview Worker proxies /api/* to it (API_ORIGIN)
+#   api_schema_url  its OpenAPI document (api:sync)
 #   api_branch  backend branch that was picked (main, develop or the branch)
 #   api_live    true if that deployment answered, false if nothing did and
 #               api_url is only the expected URL (keep the committed schema)
@@ -22,6 +24,7 @@ set -euo pipefail
 branch="${1:?usage: resolve-api.sh <branch>}"
 domain="${TT_DOMAIN:-gburek.app}"
 backend_repo="${BACKEND_REPO:-HackYeah-TuttiTripTeam/tuttitrip-backend}"
+openapi_path=/api/v1/openapi.json
 
 here=$(dirname "$0")
 # Backend hostnames: "tuttitrip-api-" + slug must fit a 63-char DNS label (49).
@@ -41,7 +44,7 @@ backend_branch_exists() {
 }
 
 is_live() {
-  curl -fsS -o /dev/null --max-time 10 --retry 2 --retry-delay 2 "https://$(api_host "$1")/openapi.json"
+  curl -fsS -o /dev/null --max-time 10 --retry 2 --retry-delay 2 "https://$(api_host "$1")$openapi_path"
 }
 
 case "$branch" in
@@ -70,6 +73,7 @@ if [ -z "$picked" ]; then
 fi
 
 echo "api_url=https://$(api_host "$picked")"
+echo "api_schema_url=https://$(api_host "$picked")$openapi_path"
 echo "api_branch=$picked"
 echo "api_live=$live"
 echo "app_env=$env_label"

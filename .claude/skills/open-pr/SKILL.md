@@ -9,7 +9,7 @@ description: Open a pull request for tuttitrip-frontend with a structured Polish
    `feature/<short-description>`, based on `develop`. Releases are PRs `develop` -> `main`.
 2. **Verify.** `pnpm biome check --write . && pnpm tsc -b && pnpm test:arch && pnpm build`.
    Fix everything; do not skip hooks or disable rules to get green.
-3. **Contract.** If the backend changed, `pnpm api:sync --url <backend>/openapi.json` and commit
+3. **Contract.** If the backend changed, `pnpm api:sync --url <backend>/api/v1/openapi.json` and commit
    `src/api/schema.d.ts` in the same PR.
 4. **UI changes** need the `impeccable-review` skill and screenshots (desktop 1280px and mobile
    390px). Upload them by dragging into the PR on GitHub, or link the preview URL the CI bot posts.
