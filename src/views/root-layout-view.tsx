@@ -56,6 +56,7 @@ export function RootLayoutView() {
         <PublicShell
           status={session.status}
           language={language}
+          theme={{ theme, resolved, onChange: setTheme }}
           envLabel={envLabel}
           onLogin={session.login}
           onSignup={session.signup}

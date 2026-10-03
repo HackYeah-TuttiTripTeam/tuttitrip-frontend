@@ -4,11 +4,13 @@ import { m } from '@/paraglide/messages'
 import type { LanguageState } from './language-menu'
 import { PublicHeader } from './public-header'
 import { SiteFooter } from './site-footer'
+import { type ThemeState, ThemeToggle } from './theme-toggle'
 
 export interface PublicShellProps {
   /** Guests get login and sign-up, signed-in users a link to their trips. */
   status: SessionStatus
   language: LanguageState
+  theme: ThemeState
   /** Deployment name; shown as a badge everywhere except production. */
   envLabel: string | null
   onLogin: () => void
@@ -20,6 +22,7 @@ export interface PublicShellProps {
 export function PublicShell({
   status,
   language,
+  theme,
   envLabel,
   onLogin,
   onSignup,
@@ -37,6 +40,7 @@ export function PublicShell({
       <PublicHeader
         status={status}
         language={language}
+        extras={<ThemeToggle state={theme} />}
         envLabel={envLabel}
         onLogin={onLogin}
         onSignup={onSignup}
@@ -46,7 +50,7 @@ export function PublicShell({
         {children}
       </main>
 
-      <SiteFooter language={language} />
+      <SiteFooter language={language} extras={<ThemeToggle state={theme} />} />
     </div>
   )
 }
