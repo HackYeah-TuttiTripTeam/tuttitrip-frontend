@@ -20,6 +20,8 @@ export interface paths {
          *
          *     Returns:
          *         The health report.
+         *
+         *     Publiczny: nie wymaga logowania.
          */
         get: operations["health_api_v1_health_get"];
         put?: never;
@@ -43,6 +45,8 @@ export interface paths {
          *
          *     Returns:
          *         A constant ``ok``.
+         *
+         *     Publiczny: nie wymaga logowania.
          */
         get: operations["live_api_v1_health_live_get"];
         put?: never;
@@ -62,15 +66,310 @@ export interface paths {
         };
         /**
          * Read Me
-         * @description Return the identity behind the access token.
+         * @description Return the caller's identity and effective permissions.
+         *
+         *     ``access`` maps every feature the caller can use to ``READ`` or ``WRITE``
+         *     (groups already resolved), so the client can hide what is not allowed.
          *
          *     Args:
          *         user: The authenticated caller.
+         *         permissions: The caller's effective permissions.
          *
          *     Returns:
-         *         The caller's subject, scopes, permissions and roles.
+         *         Identity, Auth0 roles and the flattened permission map.
+         *
+         *     Wymagane uprawnienie: `accounts.profile:READ`.
          */
         get: operations["read_me_api_v1_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permissions/features": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Features
+         * @description The feature tree with Polish descriptions (root ``*``).
+         *
+         *     Returns:
+         *         The tree.
+         *
+         *     Wymagane uprawnienie: `admin.permissions:READ`.
+         */
+        get: operations["list_features_api_v1_admin_permissions_features_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permissions/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Roles
+         * @description All roles with their grants.
+         *
+         *     Args:
+         *         session: Database session.
+         *
+         *     Returns:
+         *         Roles by name.
+         *
+         *     Wymagane uprawnienie: `admin.permissions:READ`.
+         */
+        get: operations["list_roles_api_v1_admin_permissions_roles_get"];
+        put?: never;
+        /**
+         * Create Role
+         * @description Create a role. Grants above your own level are refused (403).
+         *
+         *     Args:
+         *         data: Name, description and grants.
+         *         actor: The admin.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The created role.
+         *
+         *     Wymagane uprawnienie: `admin.permissions:WRITE`.
+         */
+        post: operations["create_role_api_v1_admin_permissions_roles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permissions/roles/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Role
+         * @description Replace a role's description and grants (``superadmin`` is read-only).
+         *
+         *     Args:
+         *         name: Role name.
+         *         data: Description and the full list of grants.
+         *         actor: The admin.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The updated role.
+         *
+         *     Wymagane uprawnienie: `admin.permissions:WRITE`.
+         */
+        put: operations["update_role_api_v1_admin_permissions_roles__name__put"];
+        post?: never;
+        /**
+         * Delete Role
+         * @description Delete a role and its assignments (system roles cannot be deleted).
+         *
+         *     Args:
+         *         name: Role name.
+         *         actor: The admin.
+         *         session: Database session.
+         *
+         *     Wymagane uprawnienie: `admin.permissions:WRITE`.
+         */
+        delete: operations["delete_role_api_v1_admin_permissions_roles__name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permissions/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Users
+         * @description Users (Auth0 ``sub``) with an assigned role or a direct grant.
+         *
+         *     Args:
+         *         session: Database session.
+         *
+         *     Returns:
+         *         Subjects, sorted.
+         *
+         *     Wymagane uprawnienie: `admin.permissions:READ`.
+         */
+        get: operations["list_users_api_v1_admin_permissions_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permissions/users/{sub}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read User
+         * @description A user's roles, direct grants and effective levels (without the claim).
+         *
+         *     Args:
+         *         sub: Auth0 subject (URL-encoded).
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The user's permissions.
+         *
+         *     Wymagane uprawnienie: `admin.permissions:READ`.
+         */
+        get: operations["read_user_api_v1_admin_permissions_users__sub__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permissions/users/{sub}/roles/{role}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Assign Role
+         * @description Assign a role (idempotent). ``superadmin`` only comes from Auth0 (403).
+         *
+         *     Args:
+         *         sub: Auth0 subject of the user.
+         *         role: Role name.
+         *         actor: The admin.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The user's permissions afterwards.
+         *
+         *     Wymagane uprawnienie: `admin.permissions:WRITE`.
+         */
+        put: operations["assign_role_api_v1_admin_permissions_users__sub__roles__role__put"];
+        post?: never;
+        /**
+         * Revoke Role
+         * @description Revoke a role (idempotent).
+         *
+         *     Args:
+         *         sub: Auth0 subject of the user.
+         *         role: Role name.
+         *         actor: The admin.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The user's permissions afterwards.
+         *
+         *     Wymagane uprawnienie: `admin.permissions:WRITE`.
+         */
+        delete: operations["revoke_role_api_v1_admin_permissions_users__sub__roles__role__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permissions/users/{sub}/grants/{feature}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Grant
+         * @description Grant a level on a feature directly (not above your own level).
+         *
+         *     Args:
+         *         sub: Auth0 subject of the user.
+         *         feature: Feature code (its subtree is included).
+         *         data: The level.
+         *         actor: The admin.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The user's permissions afterwards.
+         *
+         *     Wymagane uprawnienie: `admin.permissions:WRITE`.
+         */
+        put: operations["set_grant_api_v1_admin_permissions_users__sub__grants__feature__put"];
+        post?: never;
+        /**
+         * Revoke Grant
+         * @description Remove a direct grant (idempotent).
+         *
+         *     Args:
+         *         sub: Auth0 subject of the user.
+         *         feature: Feature code.
+         *         actor: The admin.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The user's permissions afterwards.
+         *
+         *     Wymagane uprawnienie: `admin.permissions:WRITE`.
+         */
+        delete: operations["revoke_grant_api_v1_admin_permissions_users__sub__grants__feature__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/permissions/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Audit
+         * @description Recent changes of roles and grants, newest first.
+         *
+         *     Args:
+         *         session: Database session.
+         *         sub: Only entries about this user.
+         *         limit: Maximum number of entries.
+         *
+         *     Returns:
+         *         Audit entries.
+         *
+         *     Wymagane uprawnienie: `admin.permissions:READ`.
+         */
+        get: operations["list_audit_api_v1_admin_permissions_audit_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -97,6 +396,8 @@ export interface paths {
          *
          *     Returns:
          *         The workflow id to poll at ``GET /jobs/ping/{id}``.
+         *
+         *     Publiczny: nie wymaga logowania.
          */
         post: operations["ping_api_v1_jobs_ping_post"];
         delete?: never;
@@ -122,6 +423,8 @@ export interface paths {
          *
          *     Returns:
          *         The job state.
+         *
+         *     Publiczny: nie wymaga logowania.
          */
         get: operations["ping_status_api_v1_jobs_ping__workflow_id__get"];
         put?: never;
@@ -150,6 +453,8 @@ export interface paths {
          *
          *     Returns:
          *         The job state.
+         *
+         *     Wymagane uprawnienie: `jobs:READ`.
          */
         get: operations["get_job_api_v1_jobs__workflow_id__get"];
         put?: never;
@@ -180,6 +485,8 @@ export interface paths {
          *
          *     Returns:
          *         The job state after cancelling.
+         *
+         *     Wymagane uprawnienie: `jobs:WRITE`.
          */
         post: operations["cancel_job_api_v1_jobs__workflow_id__cancel_post"];
         delete?: never;
@@ -197,20 +504,22 @@ export interface paths {
         };
         /**
          * List Trips
-         * @description List the caller's trips.
+         * @description List the trips the caller belongs to, with their role on each.
          *
          *     Args:
-         *         user: The authenticated organizer.
+         *         user: The authenticated caller.
          *         session: Database session.
          *
          *     Returns:
          *         Trips, newest first.
+         *
+         *     Wymagane uprawnienie: `trips.core:READ`.
          */
         get: operations["list_trips_api_v1_trips_get"];
         put?: never;
         /**
          * Create Trip
-         * @description Create a trip owned by the caller.
+         * @description Create a trip; the caller becomes its host.
          *
          *     Args:
          *         data: Trip payload.
@@ -219,12 +528,67 @@ export interface paths {
          *
          *     Returns:
          *         The created trip.
+         *
+         *     Wymagane uprawnienie: `trips.core:WRITE`.
          */
         post: operations["create_trip_api_v1_trips_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Trip
+         * @description Read one trip: dates, kind, city, day window and budget.
+         *
+         *     Args:
+         *         membership: The caller's membership (any role).
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The trip.
+         *
+         *     Wymagane uprawnienie: `trips.core:READ`.
+         */
+        get: operations["get_trip_api_v1_trips__trip_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Trip
+         * @description Delete the trip with its profiles, expenses and members (host only).
+         *
+         *     Args:
+         *         membership: The caller's membership (host).
+         *         session: Database session.
+         *
+         *     Wymagane uprawnienie: `trips.core:WRITE`.
+         */
+        delete: operations["delete_trip_api_v1_trips__trip_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Trip
+         * @description Change trip details (co-host or host); only sent fields change.
+         *
+         *     Args:
+         *         data: Fields to change.
+         *         membership: The caller's membership (co-host or host).
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The updated trip.
+         *
+         *     Wymagane uprawnienie: `trips.core:WRITE`.
+         */
+        patch: operations["update_trip_api_v1_trips__trip_id__patch"];
         trace?: never;
     };
     "/api/v1/trips/{trip_id}/profiles": {
@@ -236,23 +600,113 @@ export interface paths {
         };
         /**
          * List Profiles
-         * @description List the people on one of the caller's trips.
+         * @description List the people on a trip the caller belongs to.
          *
          *     Args:
-         *         trip_id: Trip id.
-         *         user: The authenticated organizer.
+         *         membership: The caller's membership of ``{trip_id}``.
          *         session: Database session.
          *
          *     Returns:
          *         The trip's profiles.
+         *
+         *     Wymagane uprawnienie: `profiles.core:READ`.
          */
         get: operations["list_profiles_api_v1_trips__trip_id__profiles_get"];
         put?: never;
+        /**
+         * Create Profile
+         * @description Add a person; comfort fields not given come from their age.
+         *
+         *     Args:
+         *         data: Name, age, optional account link and comfort overrides.
+         *         membership: The caller's co-host (or higher) membership.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The created profile.
+         *
+         *     Wymagane uprawnienie: `profiles.core:WRITE`.
+         */
+        post: operations["create_profile_api_v1_trips__trip_id__profiles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/profiles/weights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Weights
+         * @description Set weights by a preset or a list (``max/min`` must stay at most 3).
+         *
+         *     Args:
+         *         data: A preset or explicit weights.
+         *         membership: The caller's co-host (or higher) membership.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         All profiles of the trip with the new weights.
+         *
+         *     Wymagane uprawnienie: `profiles.core:WRITE`.
+         */
+        put: operations["set_weights_api_v1_trips__trip_id__profiles_weights_put"];
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/profiles/{profile_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Profile
+         * @description Remove a person from the trip.
+         *
+         *     Args:
+         *         profile_id: Profile to delete.
+         *         membership: The caller's co-host (or higher) membership.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         An empty 204 response.
+         *
+         *     Wymagane uprawnienie: `profiles.core:WRITE`.
+         */
+        delete: operations["delete_profile_api_v1_trips__trip_id__profiles__profile_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Profile
+         * @description Edit your own profile, or any profile as a co-host or higher.
+         *
+         *     Args:
+         *         profile_id: Profile to edit.
+         *         data: Fields to change.
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The updated profile.
+         *
+         *     Wymagane uprawnienie: `profiles.core:WRITE`.
+         */
+        patch: operations["update_profile_api_v1_trips__trip_id__profiles__profile_id__patch"];
         trace?: never;
     };
     "/api/v1/planning/jobs": {
@@ -268,6 +722,8 @@ export interface paths {
          * Start Plan Job
          * @description Enqueue plan generation; poll ``GET /jobs/{workflow_id}`` for the result.
          *
+         *     The caller must be at least a co-host of the trip (404 when not on it).
+         *
          *     Args:
          *         data: Trip and free-text request.
          *         user: The authenticated organizer.
@@ -276,6 +732,8 @@ export interface paths {
          *
          *     Returns:
          *         The workflow id.
+         *
+         *     Wymagane uprawnienie: `planning.proposals:WRITE`.
          */
         post: operations["start_plan_job_api_v1_planning_jobs_post"];
         delete?: never;
@@ -302,8 +760,58 @@ export interface paths {
          *
          *     Returns:
          *         The weighted log welfare.
+         *
+         *     Wymagane uprawnienie: `planning.fairness:READ`.
          */
         post: operations["score_api_v1_planning_fairness_score_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate a plan with the fairness measure (STUB)
+         * @description STUB: until backend#50 the content is a fixed sample (section 7 of `docs/algorytm.md`); the shape is final.
+         *
+         *     Generates a plan with the fairness measure, ledger, verdicts and budget. Repeating the call with the same `input_hash` returns 200 with the existing version instead of 201 (the stub always returns 201).
+         *
+         *     Wymagane uprawnienie: `planning.plans:WRITE`.
+         */
+        post: operations["create_plan_api_v1_trips__trip_id__plans_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/plans/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Latest plan of the trip (STUB)
+         * @description STUB: until backend#50 the content is a fixed sample (section 7 of `docs/algorytm.md`); the shape is final.
+         *
+         *     Returns 404 `No plan yet` when the trip has no plan (the empty state of the plan view); the stub always has one and never returns it.
+         *
+         *     Wymagane uprawnienie: `planning.plans:READ`.
+         */
+        get: operations["get_latest_plan_api_v1_trips__trip_id__plans_latest_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -328,6 +836,8 @@ export interface paths {
          *
          *     Returns:
          *         All violations.
+         *
+         *     Wymagane uprawnienie: `planning.linter:READ`.
          */
         post: operations["check_api_v1_planning_linter_check_post"];
         delete?: never;
@@ -345,15 +855,16 @@ export interface paths {
         };
         /**
          * List Expenses
-         * @description List expenses of one of the caller's trips.
+         * @description List expenses of a trip the caller belongs to.
          *
          *     Args:
-         *         trip_id: Trip id.
-         *         user: The authenticated organizer.
+         *         membership: The caller's membership of ``{trip_id}``.
          *         session: Database session.
          *
          *     Returns:
          *         The trip's expenses.
+         *
+         *     Wymagane uprawnienie: `expenses.core:READ`.
          */
         get: operations["list_expenses_api_v1_trips__trip_id__expenses_get"];
         put?: never;
@@ -382,8 +893,102 @@ export interface paths {
          *
          *     Returns:
          *         Balance per person.
+         *
+         *     Wymagane uprawnienie: `expenses.settlement:READ`.
          */
         post: operations["balances_api_v1_expenses_settlement_balances_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/places/cities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Cities
+         * @description List the cities the planner covers, with time zone and currency.
+         *
+         *     Args:
+         *         session: Database session.
+         *
+         *     Returns:
+         *         Cities ordered by name.
+         *
+         *     Wymagane uprawnienie: `places.catalog:READ`.
+         */
+        get: operations["list_cities_api_v1_places_cities_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/places": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Places
+         * @description List a page of the catalog places of a city, ordered by name.
+         *
+         *     Args:
+         *         session: Database session.
+         *         city: City slug.
+         *         category: Restrict to one category.
+         *         limit: Page size.
+         *         offset: Rows to skip.
+         *
+         *     Returns:
+         *         Places with prices and opening hours, each with its verification mark.
+         *
+         *     Wymagane uprawnienie: `places.catalog:READ`.
+         */
+        get: operations["list_places_api_v1_places_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/places/{place_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Place
+         * @description Fetch one catalog place.
+         *
+         *     Args:
+         *         place_id: Place id.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The place with prices and opening hours.
+         *
+         *     Raises:
+         *         HTTPException: 404 when the place does not exist.
+         *
+         *     Wymagane uprawnienie: `places.catalog:READ`.
+         */
+        get: operations["get_place_api_v1_places__place_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -395,11 +1000,57 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * Access
+         * @description Access level. ``WRITE`` implies ``READ`` (``READ < WRITE``).
+         * @enum {string}
+         */
+        Access: "READ" | "WRITE";
+        /**
          * AgeGroup
          * @description Age group that drives default constraints (distance, naps, pace).
          * @enum {string}
          */
-        AgeGroup: "child" | "teen" | "adult" | "senior";
+        AgeGroup: "toddler" | "child" | "teen" | "adult" | "senior";
+        /**
+         * Amenity
+         * @description Lodging amenity checked against the requirements contract.
+         * @enum {string}
+         */
+        Amenity: "pool" | "kitchen" | "parking" | "family_room" | "wifi" | "air_conditioning" | "breakfast" | "pets_allowed" | "elevator" | "wheelchair_accessible" | "washing_machine" | "balcony" | "crib" | "playground";
+        /**
+         * ApprovalStatus
+         * @description State of the organizer's approval of going over ``B_do``.
+         * @enum {string}
+         */
+        ApprovalStatus: "not_needed" | "pending" | "approved" | "rejected";
+        /**
+         * AuditEntryRead
+         * @description One recorded change of roles or grants.
+         */
+        AuditEntryRead: {
+            /** Id */
+            id: number;
+            /** Actor Sub */
+            actor_sub: string;
+            /**
+             * Action
+             * @example user.role.assign
+             */
+            action: string;
+            /** Target Sub */
+            target_sub: string | null;
+            /** Target Role */
+            target_role: string | null;
+            /** Change */
+            change: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /**
          * BalancesRequest
          * @description Payments to settle.
@@ -417,6 +1068,80 @@ export interface components {
             balances: {
                 [key: string]: string;
             };
+        };
+        /**
+         * BudgetZone
+         * @description Where the plan cost falls against the budget (E2 cost, E6).
+         * @enum {string}
+         */
+        BudgetZone: "below_b_from" | "up_to_b_to" | "in_margin";
+        /**
+         * CityRead
+         * @description A city the planner covers.
+         */
+        CityRead: {
+            /** Slug */
+            slug: string;
+            /** Name */
+            name: string;
+            /**
+             * Country
+             * @description ISO 3166-1 alpha-2.
+             */
+            country: string;
+            /**
+             * Timezone
+             * @description IANA zone; opening hours are in this time.
+             */
+            timezone: string;
+            /**
+             * Currency
+             * @description ISO 4217.
+             */
+            currency: string;
+            /** Center Lat */
+            center_lat: number;
+            /** Center Lon */
+            center_lon: number;
+            /** Bbox South */
+            bbox_south: number;
+            /** Bbox West */
+            bbox_west: number;
+            /** Bbox North */
+            bbox_north: number;
+            /** Bbox East */
+            bbox_east: number;
+        };
+        /**
+         * ConflictCode
+         * @description Why a conflict is reported; the UI writes the text (PL/EN).
+         * @enum {string}
+         */
+        ConflictCode: "lodging_hard_requirement" | "veto_blocks_place" | "budget_limit" | "floor_unreachable" | "other";
+        /**
+         * Cuisine
+         * @description Cuisine of a restaurant; shared with the cuisine minima (e.g. Indian).
+         * @enum {string}
+         */
+        Cuisine: "polish" | "italian" | "french" | "german" | "british" | "spanish" | "greek" | "turkish" | "middle_eastern" | "indian" | "chinese" | "japanese" | "thai" | "vietnamese" | "mexican" | "american" | "international";
+        /**
+         * Currency
+         * @description Trip currency.
+         * @enum {string}
+         */
+        Currency: "PLN" | "EUR" | "GBP";
+        /**
+         * DietTag
+         * @description Diet a place can serve; shared with the diets in people's preferences.
+         * @enum {string}
+         */
+        DietTag: "vegetarian" | "vegan" | "pescatarian" | "gluten_free" | "lactose_free" | "nut_free" | "halal" | "kosher";
+        /**
+         * DirectGrantSet
+         * @description Level of a direct grant.
+         */
+        DirectGrantSet: {
+            level: components["schemas"]["Access"];
         };
         /**
          * ExpenseRead
@@ -451,6 +1176,37 @@ export interface components {
             created_at: string;
         };
         /**
+         * ExplainEntry
+         * @description ``explain()``: why this place for this person.
+         */
+        ExplainEntry: {
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /**
+             * Match
+             * @description m_ip.
+             */
+            match: number;
+            /**
+             * Effort
+             * @description e_ip.
+             */
+            effort: number;
+            /**
+             * Utility
+             * @description u_ip (E1).
+             */
+            utility: number;
+        };
+        /**
          * FairnessRequest
          * @description Utilities of every person for a single candidate plan.
          */
@@ -466,6 +1222,68 @@ export interface components {
             /** Score */
             score: number;
         };
+        /**
+         * Feature
+         * @description A node of the feature tree. The value is its dotted code.
+         * @enum {string}
+         */
+        Feature: "*" | "accounts" | "accounts.profile" | "admin" | "admin.permissions" | "admin.users" | "admin.planning_weights" | "trips" | "trips.core" | "trips.members" | "trips.invitations" | "profiles" | "profiles.core" | "profiles.preferences" | "profiles.feedback" | "interview" | "planning" | "planning.proposals" | "planning.plans" | "planning.fairness" | "planning.linter" | "accommodation" | "search" | "expenses" | "expenses.core" | "expenses.settlement" | "jobs" | "places" | "places.catalog";
+        /**
+         * FeatureGrant
+         * @description ``level`` on ``feature`` and everything below it.
+         */
+        FeatureGrant: {
+            feature: components["schemas"]["Feature"];
+            level: components["schemas"]["Access"];
+        };
+        /**
+         * FeatureNode
+         * @description A node of the feature tree.
+         */
+        FeatureNode: {
+            code: components["schemas"]["Feature"];
+            /** Description */
+            description: string;
+            /** Children */
+            children?: components["schemas"]["FeatureNode"][];
+        };
+        /**
+         * FloorMiss
+         * @description A soft guarantee that could not be met; ``kind`` is the code.
+         */
+        FloorMiss: {
+            kind: components["schemas"]["FloorMissKind"];
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /**
+             * Shortfall
+             * @description How much is missing (points, days or places).
+             */
+            shortfall: number;
+            /**
+             * Day
+             * @description Day, for own_place_day.
+             */
+            day?: number | null;
+            /**
+             * Tag
+             * @description Tag, for tag_minimum.
+             */
+            tag?: string | null;
+            /** Params */
+            params?: {
+                [key: string]: string | number;
+            };
+        };
+        /**
+         * FloorMissKind
+         * @description Which soft guarantee (penalty 1000 in E5) was not met; the code.
+         * @enum {string}
+         */
+        FloorMissKind: "floor" | "own_place_day" | "tag_minimum";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -574,7 +1392,10 @@ export interface components {
             sub: string;
             /** Scopes */
             scopes: string[];
-            /** Permissions */
+            /**
+             * Permissions
+             * @description Auth0 RBAC permissions from the token (not TuttiTrip features).
+             */
             permissions: string[];
             /**
              * Roles
@@ -583,10 +1404,46 @@ export interface components {
             roles: string[];
             /**
              * Is Admin
-             * @description True for TuttiTrip administrators.
+             * @description True for TuttiTrip superadmins.
              */
             is_admin: boolean;
+            /**
+             * Access
+             * @description Effective level per feature code, flattened (groups resolved). A missing code means no access.
+             * @example {
+             *       "search": "READ",
+             *       "trips": "WRITE",
+             *       "trips.core": "WRITE"
+             *     }
+             */
+            access: {
+                [key: string]: components["schemas"]["Access"];
+            };
         };
+        /**
+         * OpeningHours
+         * @description Simple weekly opening hours in the city's local time zone.
+         *
+         *     A missing or empty weekday means closed that day. Parsing raw OSM
+         *     ``opening_hours`` strings belongs to the import, not to the solver.
+         */
+        OpeningHours: {
+            /** Weekly */
+            weekly?: {
+                [key: string]: components["schemas"]["TimeRange"][];
+            };
+            /**
+             * Closed Dates
+             * @description Dates closed regardless of the weekday.
+             */
+            closed_dates?: string[];
+        };
+        /**
+         * OsmType
+         * @description OpenStreetMap element type; ``osm_id`` is unique only per type.
+         * @enum {string}
+         */
+        OsmType: "node" | "way" | "relation";
         /**
          * Payment
          * @description Who paid how much, and who shares the cost (split equally).
@@ -598,6 +1455,57 @@ export interface components {
             amount: number | string;
             /** Participants */
             participants: string[];
+        };
+        /**
+         * PersonFairness
+         * @description One row of the fairness ledger.
+         */
+        PersonFairness: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Name */
+            name: string;
+            /**
+             * U
+             * @description Welfare in the group plan.
+             */
+            u: number;
+            /**
+             * U Star
+             * @description Welfare of the best plan alone.
+             */
+            u_star: number;
+            /**
+             * R
+             * @description min(1, (u+10)/(u_star+10)): 'x% of your maximum'.
+             */
+            r: number;
+            /**
+             * Floor
+             * @description Requested floor f_i.
+             */
+            floor: number;
+            /**
+             * Floor Eff
+             * @description min(f_i, 0.6 * u_star).
+             */
+            floor_eff: number;
+            /** Floor Met */
+            floor_met: boolean;
+            /**
+             * Domains
+             * @description Exactly five entries, one per domain.
+             */
+            domains: components["schemas"]["PlanDomainScore"][];
+            /**
+             * Own Place Days
+             * @description Days with a place of their own (m >= 0.6).
+             */
+            own_place_days: number;
+            weakest_domain: components["schemas"]["PlanDomainCode"];
         };
         /**
          * PersonUtility
@@ -615,6 +1523,319 @@ export interface components {
              * @default 1
              */
             weight: number;
+        };
+        /**
+         * PlaceCategory
+         * @description What kind of place it is; ``lodging`` places are stays priced per night.
+         * @enum {string}
+         */
+        PlaceCategory: "attraction" | "museum" | "restaurant" | "cafe" | "park" | "viewpoint" | "shopping" | "nightlife" | "entertainment" | "lodging";
+        /**
+         * PlaceHours
+         * @description Opening hours with their provenance.
+         */
+        PlaceHours: {
+            /** @description Null when no hours are known. */
+            opening_hours: components["schemas"]["OpeningHours"] | null;
+            /** Source Url */
+            source_url: string | null;
+            /**
+             * Verified
+             * @description True only for hours taken from a source.
+             */
+            verified: boolean;
+            /** Checked At */
+            checked_at: string | null;
+        };
+        /**
+         * PlaceKind
+         * @description Role of a place in a day.
+         * @enum {string}
+         */
+        PlaceKind: "attraction" | "food";
+        /**
+         * PlacePriceRead
+         * @description A ticket price with its provenance.
+         *
+         *     Free admission is a row with ``amount`` 0 and ``verified`` true. No row
+         *     means the price is unknown (unverified, the delta in E6). Without age
+         *     bounds the defaults apply: child up to 17, senior from 65, family 2+2.
+         */
+        PlacePriceRead: {
+            ticket_category: components["schemas"]["TicketCategory"];
+            /** @description Charged per person, per night or per group. */
+            unit: components["schemas"]["PriceUnit"];
+            /**
+             * Age Min
+             * @description Youngest age the concession covers.
+             */
+            age_min: number | null;
+            /**
+             * Age Max
+             * @description Oldest age the concession covers.
+             */
+            age_max: number | null;
+            /**
+             * Family Size
+             * @description People covered by a family ticket.
+             */
+            family_size: number | null;
+            /** Amount */
+            amount: string;
+            /** Currency */
+            currency: string;
+            /** Source Url */
+            source_url: string | null;
+            /** Verified */
+            verified: boolean;
+            /** Checked At */
+            checked_at: string | null;
+        };
+        /**
+         * PlaceRead
+         * @description A catalog place with its planning attributes.
+         */
+        PlaceRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** City Slug */
+            city_slug: string;
+            /** Name */
+            name: string;
+            category: components["schemas"]["PlaceCategory"];
+            /** Tags */
+            tags: components["schemas"]["PlaceTag"][];
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            osm_type: components["schemas"]["OsmType"] | null;
+            /** Osm Id */
+            osm_id: number | null;
+            /**
+             * Google Place Id
+             * @description Only for the Places UI Kit card; never used by the algorithm.
+             */
+            google_place_id: string | null;
+            hours: components["schemas"]["PlaceHours"];
+            /**
+             * Prices
+             * @description Free means a row with amount 0 and verified true. No row means the price is unknown (unverified).
+             */
+            prices: components["schemas"]["PlacePriceRead"][];
+            /**
+             * Typical Visit Min
+             * @description Typical visit length (tau_p), min.
+             */
+            typical_visit_min: number;
+            /**
+             * Segment Km
+             * @description Walking segment at the place (d_p), km.
+             */
+            segment_km: number;
+            /**
+             * Transfer Min
+             * @description Fixed transfer time (transfer_p), min.
+             */
+            transfer_min: number;
+            /**
+             * Queue Min
+             * @description Typical queue, min.
+             */
+            queue_min: number;
+            /**
+             * Stairs
+             * @description Stairs burden, 0 to 1.
+             */
+            stairs: number;
+            /** Wheelchair */
+            wheelchair: boolean | null;
+            /**
+             * Indoor
+             * @description Null when unknown (not the same as outdoors).
+             */
+            indoor: boolean | null;
+            /** Iconic */
+            iconic: boolean;
+            cuisine: components["schemas"]["Cuisine"] | null;
+            /** Diet Tags */
+            diet_tags: components["schemas"]["DietTag"][];
+            /**
+             * Amenities
+             * @description Lodging amenities.
+             */
+            amenities: components["schemas"]["Amenity"][];
+            /**
+             * Source Key
+             * @description Stable key of the import row.
+             */
+            source_key: string | null;
+            source: components["schemas"]["PlaceSource"];
+        };
+        /**
+         * PlaceSource
+         * @description Where the place record comes from. Google Places data is never stored.
+         * @enum {string}
+         */
+        PlaceSource: "sheet" | "osm";
+        /**
+         * PlaceTag
+         * @description Interest taxonomy shared by places and by people's interests.
+         * @enum {string}
+         */
+        PlaceTag: "history" | "architecture" | "art" | "museums" | "science" | "religion" | "music" | "nature" | "parks" | "views" | "beaches" | "sport" | "adventure" | "family" | "kids" | "nightlife" | "shopping" | "markets" | "local_food" | "street_food" | "relaxation" | "animals" | "playground" | "water" | "cycling" | "wellness";
+        /**
+         * PlanBudget
+         * @description Plan cost against the budget and the approval (E6); money in ``currency``.
+         */
+        PlanBudget: {
+            currency: components["schemas"]["Currency"];
+            /**
+             * Cost
+             * @description c(P).
+             */
+            cost: string;
+            /**
+             * B From
+             * @description B_od.
+             */
+            b_from: string;
+            /**
+             * B To
+             * @description B_do.
+             */
+            b_to: string;
+            /**
+             * B Max
+             * @description B_max (hard).
+             */
+            b_max: string;
+            zone: components["schemas"]["BudgetZone"];
+            /**
+             * Over Budget
+             * @description Amount above B_do (0 when within).
+             */
+            over_budget: string;
+            /**
+             * Needs Approval
+             * @description The organizer must approve going over B_do.
+             */
+            needs_approval: boolean;
+            /**
+             * Kappa
+             * @description Price per point (currency per pt); set iff needs_approval.
+             */
+            kappa?: string | null;
+            /**
+             * Gain Profile Id
+             * @description Who gains most from going over.
+             */
+            gain_profile_id?: string | null;
+            /**
+             * Gain Points
+             * @description Their gain in points.
+             */
+            gain_points?: number | null;
+            /**
+             * Strict Plan Id
+             * @description The P_strict alternative.
+             */
+            strict_plan_id?: string | null;
+            /** Strict Cost */
+            strict_cost?: string | null;
+            /** @default not_needed */
+            approval_status: components["schemas"]["ApprovalStatus"];
+        };
+        /**
+         * PlanConflict
+         * @description A conflict between people or constraints; always with a reason code.
+         */
+        PlanConflict: {
+            reason_code: components["schemas"]["ConflictCode"];
+            /** Params */
+            params?: {
+                [key: string]: string | number;
+            };
+            /** Profile Ids */
+            profile_ids?: string[];
+            /** Place Id */
+            place_id?: string | null;
+        };
+        /**
+         * PlanCreate
+         * @description Optional knobs for generating a plan.
+         */
+        PlanCreate: {
+            /**
+             * Alpha
+             * @description Fairness slider: 0 utility, 1 Nash, 3 near-egalitarian.
+             * @default 1
+             */
+            alpha: number;
+            /** @default default */
+            weight_preset: components["schemas"]["WeightPreset"];
+        };
+        /**
+         * PlanDay
+         * @description One day of the plan.
+         */
+        PlanDay: {
+            /**
+             * Index
+             * @description 1-based day number.
+             */
+            index: number;
+            /** Date */
+            date?: string | null;
+            /** Items */
+            items: components["schemas"]["PlanStop"][];
+        };
+        /**
+         * PlanDomainCode
+         * @description The five domains of satisfaction ``q_ij`` (E2).
+         * @enum {string}
+         */
+        PlanDomainCode: "attractions" | "food" | "pace" | "cost" | "lodging";
+        /**
+         * PlanDomainScore
+         * @description Satisfaction of one person in one domain.
+         */
+        PlanDomainScore: {
+            domain: components["schemas"]["PlanDomainCode"];
+            /**
+             * Q
+             * @description q_ij on a 0-100 scale; null exactly when not applicable.
+             */
+            q?: number | null;
+            /**
+             * Not Applicable
+             * @description The person's weight a_ij for this domain is 0.
+             * @default false
+             */
+            not_applicable: boolean;
+        };
+        /**
+         * PlanFairness
+         * @description The fairness measure and ledger.
+         */
+        PlanFairness: {
+            /**
+             * Group Size
+             * @description For 1 the UI shows domains instead of Jain.
+             */
+            group_size: number;
+            /**
+             * Jain
+             * @description Jain index of r; 1 for a single person.
+             */
+            jain: number;
+            /** Min R */
+            min_r: number;
+            /** Per Person */
+            per_person: components["schemas"]["PersonFairness"][];
         };
         /**
          * PlanItem
@@ -650,10 +1871,281 @@ export interface components {
             provider: "openrouter" | "local";
         };
         /**
+         * PlanLodging
+         * @description The lodging base (one for all nights).
+         */
+        PlanLodging: {
+            /** Name */
+            name: string;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Nights */
+            nights: number;
+            /**
+             * Cost Total
+             * @description All nights for the whole group; null: no data.
+             */
+            cost_total?: string | null;
+            /**
+             * S H
+             * @description Lodging contract S_h.
+             */
+            s_h: number;
+            /** Requirements */
+            requirements?: components["schemas"]["RequirementState"][];
+        };
+        /**
+         * PlanParams
+         * @description Parameters the plan was computed with.
+         */
+        PlanParams: {
+            /**
+             * Alpha
+             * @description Fairness slider (alpha of phi_alpha, E5).
+             */
+            alpha: number;
+            weight_preset: components["schemas"]["WeightPreset"];
+        };
+        /**
+         * PlanRead
+         * @description A plan with the fairness measure, ledger, verdicts and budget.
+         *
+         *     STUB: until backend#50 the content is a fixed sample; the shape is final.
+         */
+        PlanRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /** Version */
+            version: number;
+            /**
+             * Input Hash
+             * @description SHA-256 hex of the input.
+             */
+            input_hash: string;
+            /**
+             * Plan Hash
+             * @description SHA-256 prefix, 12 characters, reproducible.
+             */
+            plan_hash: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            params: components["schemas"]["PlanParams"];
+            /** Days */
+            days: components["schemas"]["PlanDay"][];
+            /** @description Null for a one-day trip. */
+            lodging?: components["schemas"]["PlanLodging"] | null;
+            fairness: components["schemas"]["PlanFairness"];
+            /** Floors Missed */
+            floors_missed?: components["schemas"]["FloorMiss"][];
+            /**
+             * Violation
+             * @description V(P) of E5; 0 when nothing is missed.
+             */
+            violation: number;
+            /** Conflicts */
+            conflicts?: components["schemas"]["PlanConflict"][];
+            /** Explain */
+            explain?: components["schemas"]["ExplainEntry"][];
+            /**
+             * Verdicts
+             * @description Null until backend#51; then one per candidate.
+             */
+            verdicts?: components["schemas"]["PlanVerdict"][] | null;
+            budget: components["schemas"]["PlanBudget"];
+            telemetry: components["schemas"]["PlanTelemetry"];
+        };
+        /**
+         * PlanStop
+         * @description One place in a day, in visiting order.
+         */
+        PlanStop: {
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            /** Name */
+            name: string;
+            kind: components["schemas"]["PlaceKind"];
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /**
+             * Start
+             * Format: time
+             * @description Arrival time.
+             */
+            start: string;
+            /**
+             * End
+             * Format: time
+             * @description Departure time.
+             */
+            end: string;
+            /** @description Leg to this stop; null for the first of the day. */
+            transfer?: components["schemas"]["StopTransfer"] | null;
+            /**
+             * Cost Per Person
+             * @description Price per person after inflation; null: no data.
+             */
+            cost_per_person?: string | null;
+            /**
+             * Price Base
+             * @description Price per person before inflating by delta.
+             */
+            price_base?: string | null;
+            /**
+             * Price Inflated
+             * @description Price per person after inflating by delta.
+             */
+            price_inflated?: string | null;
+            /** Price Verified */
+            price_verified: boolean;
+            /** Price Source Url */
+            price_source_url?: string | null;
+            /** Price Verified At */
+            price_verified_at?: string | null;
+            /** Hours Verified */
+            hours_verified: boolean;
+            /** Hours Source Url */
+            hours_source_url?: string | null;
+            /** Hours Verified At */
+            hours_verified_at?: string | null;
+            /**
+             * Google Place Id
+             * @description For the Places UI Kit card; no Places data is returned.
+             */
+            google_place_id?: string | null;
+        };
+        /**
+         * PlanTelemetry
+         * @description How the plan was computed.
+         */
+        PlanTelemetry: {
+            /**
+             * Solver
+             * @description Solver name; 'stub' while the response is fixed.
+             */
+            solver: string;
+            /** Steps */
+            steps: number;
+            /** Solo Runs */
+            solo_runs: number;
+            /** Elapsed Ms */
+            elapsed_ms: number;
+        };
+        /**
+         * PlanVerdict
+         * @description Verdict on one candidate place (filled by backend#51).
+         */
+        PlanVerdict: {
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            verdict: components["schemas"]["VerdictKind"];
+            /**
+             * V P
+             * @description Weighted opinion V_p (extension, outside v1.0).
+             */
+            v_p?: number | null;
+            /** Yes */
+            yes?: components["schemas"]["VoteReason"][];
+            /** No */
+            no?: components["schemas"]["VoteReason"][];
+            /** Substitute Place Id */
+            substitute_place_id?: string | null;
+            /**
+             * Explanation
+             * @description Written later by a model.
+             */
+            explanation?: string | null;
+        };
+        /**
+         * PriceUnit
+         * @description What a price is charged for: E6 multiplies ``night`` prices by the nights.
+         * @enum {string}
+         */
+        PriceUnit: "person" | "night" | "group";
+        /**
+         * ProfileCreate
+         * @description A new person; every comfort field defaults from the age.
+         */
+        ProfileCreate: {
+            /**
+             * User Sub
+             * @description Auth0 subject of a trip member this profile belongs to.
+             */
+            user_sub?: string | null;
+            /** Segment Km */
+            segment_km?: number | null;
+            /** Daily Km */
+            daily_km?: number | null;
+            /** Active Min */
+            active_min?: number | null;
+            /** Stairs Sensitivity */
+            stairs_sensitivity?: number | null;
+            /** Queue Patience Min */
+            queue_patience_min?: number | null;
+            /** Nap Start */
+            nap_start?: string | null;
+            /** Nap Minutes */
+            nap_minutes?: number | null;
+            /** Floor */
+            floor?: number | null;
+            /** Display Name */
+            display_name: string;
+            /** Age */
+            age: number;
+        };
+        /**
          * ProfileRead
          * @description A person on a trip.
          */
         ProfileRead: {
+            /**
+             * Segment Km
+             * @description Longest walk in one go.
+             */
+            segment_km: number;
+            /**
+             * Daily Km
+             * @description Daily walking distance.
+             */
+            daily_km: number;
+            /**
+             * Active Min
+             * @description Active minutes per day.
+             */
+            active_min: number;
+            /** Stairs Sensitivity */
+            stairs_sensitivity: number;
+            /** Queue Patience Min */
+            queue_patience_min: number;
+            /** Nap Start */
+            nap_start?: string | null;
+            /** Nap Minutes */
+            nap_minutes: number;
+            /**
+             * Floor
+             * @description Minimum welfare the person needs.
+             */
+            floor: number;
             /**
              * Id
              * Format: uuid
@@ -666,13 +2158,56 @@ export interface components {
             trip_id: string;
             /** Display Name */
             display_name: string;
+            /** Age */
+            age: number;
             age_group: components["schemas"]["AgeGroup"];
+            /** User Sub */
+            user_sub: string | null;
             /**
              * Weight
              * @description Vote multiplier in the fairness solver.
              */
             weight: number;
         };
+        /**
+         * ProfileUpdate
+         * @description Partial update; omitted fields stay (or follow a new age group).
+         *
+         *     ``user_sub`` is for co-hosts and above.
+         */
+        ProfileUpdate: {
+            /**
+             * User Sub
+             * @description Auth0 subject of a trip member this profile belongs to.
+             */
+            user_sub?: string | null;
+            /** Segment Km */
+            segment_km?: number | null;
+            /** Daily Km */
+            daily_km?: number | null;
+            /** Active Min */
+            active_min?: number | null;
+            /** Stairs Sensitivity */
+            stairs_sensitivity?: number | null;
+            /** Queue Patience Min */
+            queue_patience_min?: number | null;
+            /** Nap Start */
+            nap_start?: string | null;
+            /** Nap Minutes */
+            nap_minutes?: number | null;
+            /** Floor */
+            floor?: number | null;
+            /** Display Name */
+            display_name?: string | null;
+            /** Age */
+            age?: number | null;
+        };
+        /**
+         * ProfileWeightPreset
+         * @description Ready-made weight settings.
+         * @enum {string}
+         */
+        ProfileWeightPreset: "po_rowno" | "pod_dzieci" | "dzien_babci";
         /**
          * Progress
          * @description Value of the ``progress`` event.
@@ -683,6 +2218,113 @@ export interface components {
             /** Percent */
             percent: number;
         };
+        /**
+         * ReasonCode
+         * @description Why a person is against a place; shared with the verdict reasons.
+         * @enum {string}
+         */
+        ReasonCode: "too_expensive" | "too_far" | "not_my_style" | "too_crowded" | "too_hard_for_child" | "other";
+        /**
+         * RequirementState
+         * @description State of one lodging requirement (E2 lodging).
+         */
+        RequirementState: {
+            /** Feature */
+            feature: string;
+            /**
+             * Hard
+             * @description Hard requirements multiply S_h, soft ones average.
+             */
+            hard: boolean;
+            status: components["schemas"]["RequirementStatus"];
+        };
+        /**
+         * RequirementStatus
+         * @description Whether an offer satisfies a requirement.
+         * @enum {string}
+         */
+        RequirementStatus: "met" | "unmet" | "unconfirmed";
+        /**
+         * RoleCreate
+         * @description Payload for a new role.
+         */
+        RoleCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Grants */
+            grants?: components["schemas"]["FeatureGrant"][];
+        };
+        /**
+         * RoleRead
+         * @description A role with its grants.
+         */
+        RoleRead: {
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /**
+             * Is System
+             * @description Seeded role; cannot be deleted.
+             */
+            is_system: boolean;
+            /** Grants */
+            grants: components["schemas"]["FeatureGrant"][];
+        };
+        /**
+         * RoleUpdate
+         * @description Replaces a role's description and all its grants.
+         */
+        RoleUpdate: {
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Grants */
+            grants: components["schemas"]["FeatureGrant"][];
+        };
+        /**
+         * StopTransfer
+         * @description The leg to a stop from the previous one.
+         */
+        StopTransfer: {
+            /** Minutes */
+            minutes: number;
+            mode: components["schemas"]["TransferMode"];
+            /**
+             * Cost
+             * @description Null: no data.
+             */
+            cost?: string | null;
+        };
+        /**
+         * TicketCategory
+         * @description Who a ticket price is for.
+         * @enum {string}
+         */
+        TicketCategory: "adult" | "child" | "senior" | "student" | "family";
+        /**
+         * TimeRange
+         * @description One opening interval in the city's local time (``close`` may be 24:00).
+         */
+        TimeRange: {
+            /** Open */
+            open: string;
+            /** Close */
+            close: string;
+        };
+        /**
+         * TransferMode
+         * @description How people get to a stop.
+         * @enum {string}
+         */
+        TransferMode: "walk" | "transit" | "car" | "bike";
         /**
          * TripCreate
          * @description Payload for creating a trip.
@@ -712,6 +2354,135 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Start Date */
+            start_date: string | null;
+            /** End Date */
+            end_date: string | null;
+            /**
+             * Day Start
+             * Format: time
+             */
+            day_start: string;
+            /**
+             * Day End
+             * Format: time
+             */
+            day_end: string;
+            /** City Slug */
+            city_slug: string | null;
+            /** Currency */
+            currency: string | null;
+            /** Budget Total Min */
+            budget_total_min: string | null;
+            /** Budget Total Max */
+            budget_total_max: string | null;
+            /** Budget Day Min */
+            budget_day_min: string | null;
+            /** Budget Day Max */
+            budget_day_max: string | null;
+            /**
+             * Budget Flex Pct
+             * @description Flex of E6 in percent (0-50), the solver divides it by 100: B_max = B_do * (1 + flex_pct / 100).
+             */
+            budget_flex_pct: number;
+            /**
+             * Fairness Alpha
+             * @description Group goal alpha of E5 (0-3); 1 balances fairness and total utility.
+             */
+            fairness_alpha: number;
+            /** @description The caller's role on this trip. */
+            my_role: components["schemas"]["TripRole"];
+            /**
+             * Kind
+             * @description ``outing`` for a single day without a stay, otherwise ``trip``.
+             *
+             *     Returns:
+             *         The kind derived from the dates.
+             * @enum {string}
+             */
+            readonly kind: "trip" | "outing";
+        };
+        /**
+         * TripRole
+         * @description A person's role on one trip: ``member < co_host < host``.
+         *
+         *     The creator is the host. Trip roles are object-level: they say what a
+         *     user may do on *this* trip, on top of the global feature permissions.
+         * @enum {string}
+         */
+        TripRole: "member" | "co_host" | "host";
+        /**
+         * TripUpdate
+         * @description PATCH payload: only the fields that are sent change; ``null`` clears.
+         *
+         *     The service checks the merged state with ``check_trip(complete=True)``, so
+         *     a lone ``end_date`` is compared with the stored ``start_date``.
+         */
+        TripUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Destination */
+            destination?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Day Start */
+            day_start?: string | null;
+            /** Day End */
+            day_end?: string | null;
+            /** City Slug */
+            city_slug?: string | null;
+            /** Currency */
+            currency?: string | null;
+            /** Budget Total Min */
+            budget_total_min?: number | string | null;
+            /** Budget Total Max */
+            budget_total_max?: number | string | null;
+            /** Budget Day Min */
+            budget_day_min?: number | string | null;
+            /** Budget Day Max */
+            budget_day_max?: number | string | null;
+            /**
+             * Budget Flex Pct
+             * @description Flex of E6 in percent (0-50), the solver divides it by 100: B_max = B_do * (1 + flex_pct / 100).
+             */
+            budget_flex_pct?: number | null;
+            /**
+             * Fairness Alpha
+             * @description Group goal alpha of E5 (0-3); 1 balances fairness and total utility.
+             */
+            fairness_alpha?: number | null;
+        };
+        /**
+         * UserPermissionsRead
+         * @description A user's assignments as stored in the database.
+         */
+        UserPermissionsRead: {
+            /** Sub */
+            sub: string;
+            /**
+             * Roles
+             * @description Assigned roles; the default role 'user' applies on top.
+             */
+            roles: string[];
+            /**
+             * Grants
+             * @description Direct grants.
+             */
+            grants: components["schemas"]["FeatureGrant"][];
+            /**
+             * Effective
+             * @description Effective levels from the database (without the Auth0 claim).
+             * @example {
+             *       "search": "READ",
+             *       "trips": "WRITE",
+             *       "trips.core": "WRITE"
+             *     }
+             */
+            effective: {
+                [key: string]: components["schemas"]["Access"];
+            };
         };
         /** ValidationError */
         ValidationError: {
@@ -727,6 +2498,12 @@ export interface components {
             ctx?: Record<string, never>;
         };
         /**
+         * VerdictKind
+         * @description Verdict on one candidate place (HackYeah-TuttiTripTeam/tuttitrip-backend#51).
+         * @enum {string}
+         */
+        VerdictKind: "must" | "fits" | "iconic_not_yours" | "skip";
+        /**
          * Violation
          * @description A single broken rule.
          */
@@ -735,6 +2512,60 @@ export interface components {
             rule: string;
             /** Message */
             message: string;
+        };
+        /**
+         * VoteReason
+         * @description A person on one side of a verdict, with a reason code.
+         */
+        VoteReason: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            reason_code?: components["schemas"]["ReasonCode"] | null;
+        };
+        /**
+         * Weekday
+         * @description Day of the week, as a key of the weekly opening hours.
+         * @enum {string}
+         */
+        Weekday: "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+        /**
+         * WeightItem
+         * @description One person's weight.
+         */
+        WeightItem: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Weight */
+            weight: number;
+        };
+        /**
+         * WeightPreset
+         * @description Weight preset of the fairness solver.
+         * @enum {string}
+         */
+        WeightPreset: "default" | "equal" | "weighted";
+        /**
+         * WeightsUpdate
+         * @description Set weights by a preset or by hand (exactly one of the two).
+         */
+        WeightsUpdate: {
+            preset?: components["schemas"]["ProfileWeightPreset"] | null;
+            /**
+             * Focus Profile Id
+             * @description The chosen person for preset dzien_babci.
+             */
+            focus_profile_id?: string | null;
+            /**
+             * Weights
+             * @description Weights of some people (each once); the rest keep theirs.
+             */
+            weights?: components["schemas"]["WeightItem"][] | null;
         };
     };
     responses: never;
@@ -801,6 +2632,541 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `accounts.profile:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_features_api_v1_admin_permissions_features_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureNode"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.permissions:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_roles_api_v1_admin_permissions_roles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleRead"][];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.permissions:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    create_role_api_v1_admin_permissions_roles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.permissions:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_role_api_v1_admin_permissions_roles__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.permissions:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_role_api_v1_admin_permissions_roles__name__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.permissions:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_users_api_v1_admin_permissions_users_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.permissions:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    read_user_api_v1_admin_permissions_users__sub__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserPermissionsRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.permissions:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_role_api_v1_admin_permissions_users__sub__roles__role__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub: string;
+                role: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserPermissionsRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.permissions:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_role_api_v1_admin_permissions_users__sub__roles__role__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub: string;
+                role: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserPermissionsRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.permissions:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_grant_api_v1_admin_permissions_users__sub__grants__feature__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub: string;
+                feature: components["schemas"]["Feature"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectGrantSet"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserPermissionsRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.permissions:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_grant_api_v1_admin_permissions_users__sub__grants__feature__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub: string;
+                feature: components["schemas"]["Feature"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserPermissionsRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.permissions:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_audit_api_v1_admin_permissions_audit_get: {
+        parameters: {
+            query?: {
+                /** @description Only changes for this user. */
+                sub?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEntryRead"][];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.permissions:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -876,6 +3242,20 @@ export interface operations {
                     "application/json": components["schemas"]["JobState"];
                 };
             };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `jobs:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -907,6 +3287,20 @@ export interface operations {
                     "application/json": components["schemas"]["JobState"];
                 };
             };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `jobs:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -936,6 +3330,20 @@ export interface operations {
                     "application/json": components["schemas"]["TripRead"][];
                 };
             };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.core:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     create_trip_api_v1_trips_post: {
@@ -959,6 +3367,157 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TripRead"];
                 };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_trip_api_v1_trips__trip_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.core:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_trip_api_v1_trips__trip_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_trip_api_v1_trips__trip_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TripUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -990,6 +3549,212 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ProfileRead"][];
                 };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.core:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_profile_api_v1_trips__trip_id__profiles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_weights_api_v1_trips__trip_id__profiles_weights_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeightsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileRead"][];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_profile_api_v1_trips__trip_id__profiles__profile_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_profile_api_v1_trips__trip_id__profiles__profile_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1024,6 +3789,20 @@ export interface operations {
                     "application/json": components["schemas"]["JobAccepted"];
                 };
             };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.proposals:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -1056,6 +3835,137 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["FairnessScore"];
                 };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.fairness:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_plan_api_v1_trips__trip_id__plans_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PlanCreate"] | null;
+            };
+        };
+        responses: {
+            /** @description Existing version for the same input. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanRead"];
+                };
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_latest_plan_api_v1_trips__trip_id__plans_latest_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No plan yet, trip not found or caller not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1090,6 +4000,20 @@ export interface operations {
                     "application/json": components["schemas"]["LintReport"];
                 };
             };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.linter:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -1120,6 +4044,20 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ExpenseRead"][];
                 };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `expenses.core:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1153,6 +4091,148 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["BalancesResponse"];
                 };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `expenses.settlement:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_cities_api_v1_places_cities_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CityRead"][];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `places.catalog:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_places_api_v1_places_get: {
+        parameters: {
+            query: {
+                /** @description City slug, e.g. krakow. */
+                city: string;
+                category?: components["schemas"]["PlaceCategory"] | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaceRead"][];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `places.catalog:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_place_api_v1_places__place_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                place_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaceRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `places.catalog:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
