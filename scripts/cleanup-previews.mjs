@@ -25,11 +25,14 @@ async function cloudflare(method, url) {
   return json.result
 }
 
+// main and develop have their own Workers and never get a preview.
 const live = new Set(
   execFileSync('git', ['ls-remote', '--heads', 'origin'], { encoding: 'utf8' })
     .split('\n')
     .filter(Boolean)
-    .map((line) => `tuttitrip-preview-${slugify(line.replace(/^.*refs\/heads\//, ''))}`),
+    .map((line) => line.replace(/^.*refs\/heads\//, ''))
+    .filter((branch) => branch !== 'main' && branch !== 'develop')
+    .map((branch) => `tuttitrip-preview-${slugify(branch)}`),
 )
 
 const workers = (await cloudflare('GET', `${workersApi}/scripts`))
