@@ -405,6 +405,7 @@ export const invitation = (overrides: Partial<Invitation> = {}): Invitation => (
   max_uses: 10,
   uses: 3,
   revoked_at: null,
+  profile_id: null,
   ...overrides,
 })
 
