@@ -3,12 +3,13 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
+import { msw } from 'msw/vite'
 import { defineConfig, loadEnv } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { paraglideOptions } from './i18n.config.mjs'
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   // The app calls /api/v1/... on its own origin. Locally Vite forwards /api to
   // the backend, like the Worker proxy does when deployed (worker/index.ts).
   const apiTarget = loadEnv(mode, process.cwd(), 'VITE_').VITE_API_URL || 'http://localhost:8000'
@@ -24,6 +25,8 @@ export default defineConfig(({ mode }) => {
       // Same options as `pnpm i18n` (scripts/i18n.mjs, used outside Vite, e.g. by tsc).
       paraglideVitePlugin(paraglideOptions),
       tailwindcss(),
+      // Serves /mockServiceWorker.js for `pnpm dev:mock`. Never in a build: dist/ has no MSW.
+      ...(command === 'serve' ? [msw({ mode: 'worker-only' })] : []),
       VitePWA({
         registerType: 'autoUpdate',
         injectRegister: false, // registered in src/lib/pwa.ts

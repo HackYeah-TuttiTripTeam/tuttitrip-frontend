@@ -8,10 +8,19 @@ import { getLocale, syncDocumentLanguage } from '@/lib/i18n'
 import { registerServiceWorker } from '@/lib/pwa'
 import { queryClient } from '@/lib/query-client'
 import { returnToPath } from '@/lib/return-to'
+import type * as MockEntry from '@/mocks/entry'
 import { router } from './router'
 import '@/styles/index.css'
 
 syncDocumentLanguage()
+
+// `pnpm dev:mock`: MSW answers the API and a fake user is signed in. The condition is written
+// out in the `if`, so the bundler drops the import (and MSW with it) from production builds.
+let mock: typeof MockEntry | null = null
+if (import.meta.env.DEV && import.meta.env.VITE_API_MOCK === '1') {
+  mock = await import('@/mocks/entry')
+  await mock.startMockApi()
+}
 
 const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Missing #root element')
@@ -39,7 +48,9 @@ const onRedirectCallback = (appState?: AppState) => {
 
 createRoot(rootElement).render(
   <StrictMode>
-    {authConfig ? (
+    {mock ? (
+      <mock.MockAuthProvider>{app}</mock.MockAuthProvider>
+    ) : authConfig ? (
       <Auth0Provider
         domain={authConfig.domain}
         clientId={authConfig.clientId}
@@ -63,4 +74,5 @@ createRoot(rootElement).render(
   </StrictMode>,
 )
 
-registerServiceWorker()
+// A service worker of the PWA would fight MSW's one over the same scope.
+if (!mock) registerServiceWorker()
