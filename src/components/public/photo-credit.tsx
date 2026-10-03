@@ -14,7 +14,7 @@ export function PhotoCredit({ id, className }: { id: PhotoId; className?: string
   const credit = PHOTOS[id].credit
   if (!credit) return null
   return (
-    <p className={cn('text-muted-foreground text-xs leading-snug', className)}>
+    <p className={cn('text-[13px] text-muted-foreground leading-snug', className)}>
       {m.photo_credit_label()}{' '}
       <a
         href={`${credit.authorUrl}?utm_source=tuttitrip&utm_medium=referral`}
