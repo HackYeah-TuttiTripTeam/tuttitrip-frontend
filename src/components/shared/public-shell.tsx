@@ -18,7 +18,7 @@ export interface PublicShellProps {
 }
 
 const navLinkClass =
-  'hidden h-11 items-center rounded-md px-2 text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 md:flex [&.active]:text-foreground [&.active]:underline [&.active]:decoration-primary [&.active]:decoration-2 [&.active]:underline-offset-8'
+  'h-11 items-center rounded-md px-2 text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 flex [&.active]:text-foreground [&.active]:underline [&.active]:decoration-primary [&.active]:decoration-2 [&.active]:underline-offset-8'
 
 /** Layout of the pages a guest can open: a light header with the way in, content, footer. */
 export function PublicShell({
@@ -48,12 +48,12 @@ export function PublicShell({
             TuttiTrip
           </Link>
           {envLabel && (
-            <span className="rounded-full border px-2 py-0.5 font-mono text-muted-foreground text-xs">
+            <span className="hidden max-w-28 truncate rounded-full md:inline-block border px-2 py-0.5 font-mono text-muted-foreground text-xs">
               {envLabel}
             </span>
           )}
 
-          <nav aria-label={m.shell_nav_public()} className="ml-4 flex gap-1">
+          <nav aria-label={m.shell_nav_public()} className="ml-4 hidden gap-1 md:flex">
             <Link to="/about" className={navLinkClass}>
               {m.nav_about()}
             </Link>
