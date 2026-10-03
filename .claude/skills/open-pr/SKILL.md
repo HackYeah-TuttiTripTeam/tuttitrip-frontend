@@ -19,32 +19,53 @@ description: Open a pull request for tuttitrip-frontend with a structured Polish
 
 ```bash
 git push -u origin HEAD
-gh pr create --base develop --title "<what changes, imperative>" --body-file /tmp/pr.md
+gh pr create --base develop --title "feat(frontend): <opis>" --body-file /tmp/pr.md
 ```
+
+PR title: `feat:`, `docs:`, `chore:` or `bugfix:` (not `bug:`, that prefix is
+for issues), optionally with a scope, then a Polish description, e.g.
+`feat(frontend): Filtrowanie wyjazdów po dacie`. A release PR `develop` -> `main`
+is titled `release: <opis>`. The `PR format` check enforces this and the
+template sections below; a red check does not block the merge button, so
+fix it before merging.
 
 Body template (`/tmp/pr.md`):
 
 ```markdown
 ## Co i dlaczego
-<one paragraph: the problem and the approach>
+<1-3 zdania: co zmienia PR i po co>
 
-## Zmiany
-- <change 1>
-- <change 2>
+## Powiązane issue
+Closes #<numer>
+
+## Lista zmian
+- <zmiana>
 
 ## Jak przetestować
-1. <steps, including URL params to try, e.g. /trips?sort=name&dir=asc>
+1. <kroki, także parametry URL do sprawdzenia, np. /trips?sort=name&dir=asc>
+2. Podgląd z komentarza bota CI
 
 ## Zrzuty ekranu
-| Desktop | Mobile |
+| Desktop | Telefon |
 | --- | --- |
 | <img> | <img> |
 
-## Checklist
-- [ ] `pnpm verify` passes, CI green
-- [ ] impeccable-review done (UI changes)
-- [ ] API contract synced (if the backend changed)
+(bez zmian w UI: nie dotyczy)
+
+## Checklista
+- [ ] `pnpm verify` przechodzi, CI zielone
+- [ ] testy dla nowej logiki
+- [ ] impeccable-review zrobione (zmiany w UI)
+- [ ] kontrakt API zsynchronizowany (jeśli zmienił się backend)
+- [ ] docs / AGENTS.md zaktualizowane, jeśli trzeba
+- [ ] brak sekretów w kodzie, logach i opisie
 ```
 
 7. Wait for the CI bot's preview comment and check the preview on a phone.
    After merge the branch is deleted, which also deletes its preview Worker.
+8. Merge into `develop` with "Squash and merge" (the PR title becomes the
+   commit). Merge a release PR into `main` with "Create a merge commit".
+   Release notes need no extra work: the `Release notes` workflow labels the PR
+   `type:*` from its title, adds it to the draft release on merge into
+   `develop` and publishes the draft with a tag when the release PR lands on
+   `main`. Rules: https://github.com/HackYeah-TuttiTripTeam/.github/blob/main/CONTRIBUTING.md
