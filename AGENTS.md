@@ -329,8 +329,11 @@ One Worker per environment (wrangler environments):
 | PR from any other branch | `tuttitrip-preview-<slug>` (`--env preview --name ...`, slug max 45) | `https://tuttitrip-preview-<slug>.gburek.app` |
 
 `.github/workflows/frontend-ci.yml`, on `runs-on: [self-hosted, hackathon]`:
-`checks` = install, `biome ci`, resolve API + `api:sync`, `tsc -b`,
-`test:arch`, build. `deploy` = pushes to main/develop deploy their Worker;
+One run per commit: `pull_request` for branches, `push` only for main and
+develop; a newer commit on a PR cancels its unfinished run (main/develop runs
+are never cancelled). `verify` (install, `biome ci`, resolve API + `api:sync`,
+`tsc -b`, `test:arch`, unit tests) and `build` (install, resolve API +
+`api:sync`, build) run in parallel. `deploy` (needs both) = pushes to main/develop deploy their Worker;
 pull requests deploy their preview Worker and upsert one PR comment (marker
 `<!-- tuttitrip-preview -->`, edited in place, never duplicated). Each deploy
 ends with a smoke test of `/`, a deep link and `/api/v1/health/live` through
@@ -400,7 +403,7 @@ deletes the head branch and starts `frontend-cleanup.yml`, which deletes the
 preview. `main` and `develop` are never deleted, so release PRs go straight
 from `develop`.
 
-Branch protection for `main` and `develop` (PR required, `checks` must pass,
+Branch protection for `main` and `develop` (PR required, `verify` and `build` must pass,
 no force-push or deletion) is **not active**: GitHub refuses branch protection
 and rulesets on private repos of a free organization ("Upgrade to GitHub Pro or
 make this repository public"). Until the plan changes, treat these rules as a
