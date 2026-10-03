@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { m } from '@/paraglide/messages'
 
@@ -9,12 +10,12 @@ export interface ExamplePerson {
   tone: 1 | 2 | 3 | 4 | 5
 }
 
-const DOT_TONE: Record<ExamplePerson['tone'], string> = {
-  1: 'bg-member-1',
-  2: 'bg-member-2',
-  3: 'bg-member-3',
-  4: 'bg-member-4',
-  5: 'bg-member-5',
+const THUMB_TONE: Record<ExamplePerson['tone'], string> = {
+  1: '[--thumb:var(--member-1)]',
+  2: '[--thumb:var(--member-2)]',
+  3: '[--thumb:var(--member-3)]',
+  4: '[--thumb:var(--member-4)]',
+  5: '[--thumb:var(--member-5)]',
 }
 
 interface FairnessExampleProps {
@@ -25,19 +26,28 @@ interface FairnessExampleProps {
 }
 
 /**
- * Static illustration of the fairness chart with sample data: one row per person, a dot at
- * the share of their own maximum, the area under the floor shaded. The headline is the
- * lowest share in the group, computed from the rows below it.
+ * The fairness chart with sample data, and the one thing on the landing page that answers a
+ * finger or a mouse: each person's dot is a slider. One row per person, a dot at the share of
+ * their own maximum, the area under the floor shaded. The headline is the lowest share in the
+ * group, computed from the rows below it, so moving a dot changes it the way the real solver's
+ * result would read. Sliders are native range inputs: keyboard, touch and screen readers work.
  */
 export function FairnessExample({ people, floor, formatShare }: FairnessExampleProps) {
-  const lowest = people.reduce<ExamplePerson | undefined>(
+  const [shares, setShares] = useState(() => people.map((person) => person.share))
+  const rows = people.map((person, index) => ({ ...person, share: shares[index] ?? person.share }))
+  const moved = shares.some((share, index) => share !== people[index]?.share)
+
+  const lowest = rows.reduce<ExamplePerson | undefined>(
     (min, person) => (min && min.share <= person.share ? min : person),
     undefined,
   )
-  const nobodyBelowFloor = people.every((person) => person.share >= floor)
+  const nobodyBelowFloor = rows.every((person) => person.share >= floor)
 
   return (
-    <figure className="flex flex-col gap-5 rounded-lg border bg-card p-5 md:p-6">
+    <figure
+      id="fairness"
+      className="flex scroll-mt-24 flex-col gap-5 rounded-lg border bg-card p-5 md:p-6"
+    >
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <p className="font-medium text-muted-foreground text-sm">{m.example_label()}</p>
         <p className="rounded-full border border-dashed px-3 py-1 font-medium text-sm">
@@ -54,25 +64,36 @@ export function FairnessExample({ people, floor, formatShare }: FairnessExampleP
         </div>
       )}
 
-      <ul className="flex flex-col gap-3">
-        {people.map((person) => (
+      <ul className="flex flex-col">
+        {rows.map((person, index) => (
           <li
             key={person.name}
-            className="grid grid-cols-[5.5rem_1fr_2.5rem] items-center gap-3 sm:grid-cols-[6.5rem_1fr_2.5rem]"
+            className="grid grid-cols-[5.5rem_1fr_2.75rem] items-center gap-3 sm:grid-cols-[6.5rem_1fr_2.75rem]"
           >
             <span className="truncate text-sm">{person.name}</span>
-            <span aria-hidden="true" className="relative flex h-5 items-center">
-              <span className="absolute inset-x-0 top-1/2 h-px bg-border" />
+            <span className="relative flex h-11 items-center">
               <span
-                className="absolute inset-y-0 left-0 border-r-2 border-input border-dashed bg-muted"
-                style={{ width: `${floor * 100}%` }}
+                aria-hidden="true"
+                className="route-x absolute inset-x-0 top-1/2 h-1 -translate-y-1/2"
               />
               <span
-                className={cn(
-                  'absolute size-4 -translate-x-1/2 rounded-full ring-2 ring-card',
-                  DOT_TONE[person.tone],
-                )}
-                style={{ left: `${person.share * 100}%` }}
+                aria-hidden="true"
+                className="absolute inset-y-2 left-0 border-r-2 border-input border-dashed bg-muted"
+                style={{ width: `${floor * 100}%` }}
+              />
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={Math.round(person.share * 100)}
+                aria-label={m.example_slider({ name: person.name })}
+                aria-valuetext={formatShare(person.share)}
+                onChange={(event) => {
+                  const next = Number(event.target.value) / 100
+                  setShares((current) => current.map((share, at) => (at === index ? next : share)))
+                }}
+                className={cn('tt-range relative', THUMB_TONE[person.tone])}
               />
             </span>
             <span className="text-right font-medium text-sm tabular-nums">
@@ -82,7 +103,7 @@ export function FairnessExample({ people, floor, formatShare }: FairnessExampleP
         ))}
       </ul>
 
-      <figcaption className="flex flex-col gap-1 text-sm">
+      <figcaption className="flex flex-col gap-1 text-sm" aria-live="polite">
         {nobodyBelowFloor && (
           <span className="w-fit rounded-full bg-want-soft px-3 py-1 font-medium text-want-ink">
             {m.example_badge()}
@@ -99,6 +120,19 @@ export function FairnessExample({ people, floor, formatShare }: FairnessExampleP
         )}
         <span className="text-muted-foreground">{m.example_explainer()}</span>
       </figcaption>
+
+      <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t pt-3">
+        <p className="text-muted-foreground text-sm">{m.example_hint()}</p>
+        {moved && (
+          <button
+            type="button"
+            onClick={() => setShares(people.map((person) => person.share))}
+            className="min-h-11 rounded-md px-1 font-medium text-sm underline-offset-4 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          >
+            {m.example_reset()}
+          </button>
+        )}
+      </div>
     </figure>
   )
 }

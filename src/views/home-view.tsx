@@ -1,5 +1,11 @@
 import type { ExamplePerson } from '@/components/public/fairness-example'
-import { ClosingCta, HowItWorks, LandingHero, Proof } from '@/components/public/landing-sections'
+import {
+  Cities,
+  ClosingCta,
+  HowItWorks,
+  LandingHero,
+  Proof,
+} from '@/components/public/landing-sections'
 import { useSession } from '@/hooks/use-session'
 import { formatPercent } from '@/lib/format'
 import { m } from '@/paraglide/messages'
@@ -37,6 +43,7 @@ export function HomeView() {
       <LandingHero onSignup={onSignup} example={exampleData()} formatShare={formatPercent} />
       <HowItWorks />
       <Proof />
+      <Cities />
       <ClosingCta onSignup={onSignup} />
     </>
   )

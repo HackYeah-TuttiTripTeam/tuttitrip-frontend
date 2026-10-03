@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { type Locale, locales } from '@/lib/i18n'
+import { cn } from '@/lib/utils'
 import { m } from '@/paraglide/messages'
 import { barItemClass } from './nav-classes'
 
@@ -25,11 +26,20 @@ const NAMES: Record<Locale, () => string> = {
 const isLocale = (value: string): value is Locale => locales.some((locale) => locale === value)
 
 /** Always-visible language switch in the top bar, so guests and signed-in users find it in one place. */
-export function LanguageMenu({ language }: { language: LanguageState }) {
+export function LanguageMenu({
+  language,
+  side = 'bottom',
+  className,
+}: {
+  language: LanguageState
+  /** Where the list opens; the footer opens it upwards. */
+  side?: 'top' | 'bottom'
+  className?: string
+}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className={`${barItemClass} h-11 md:h-9`}
+        className={cn(barItemClass, 'h-11 md:h-9', className)}
         // The visible code ("PL") leads the accessible name (WCAG 2.5.3 label in name).
         aria-label={`${language.locale.toUpperCase()}, ${m.language_change()}: ${NAMES[language.locale]()}`}
       >
@@ -38,7 +48,7 @@ export function LanguageMenu({ language }: { language: LanguageState }) {
           {language.locale}
         </span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
+      <DropdownMenuContent side={side} align="end" className="w-44">
         <DropdownMenuLabel className="font-normal text-muted-foreground text-xs">
           {m.language_label()}
         </DropdownMenuLabel>

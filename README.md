@@ -117,6 +117,23 @@ Sortowanie i filtrowanie zawsze trzymamy w adresie URL, np. `/trips?q=kraków&so
 
 Przykładowa funkcja, na której można się wzorować, to lista wyjazdów: `api/queries/trips.ts` → `hooks/use-trips.ts` → `components/trips/` → `views/trips-view.tsx` → `routes/trips.ts`.
 
+## Strony publiczne: SEO, zdjęcia i ruch
+
+- **Meta tagi** (`title`, opis, `canonical`, `hreflang`, Open Graph, Twitter, JSON-LD) dla `/`, `/about` i `/contact`
+  buduje `src/lib/seo.ts` z tekstów Paraglide (`seo_*`). Wstrzykuje je Worker (`worker/index.ts`, `HTMLRewriter`),
+  więc boty bez JavaScriptu widzą je w pierwszej odpowiedzi, a po stronie klienta utrzymuje je `head` trasy
+  (`src/loaders/seo.ts`). Język strony: `?lang=pl|en`, potem `Accept-Language`, potem polski. `robots.txt` i
+  `sitemap.xml` też generuje Worker. Grafiki 1200x630 (`public/og/og-pl.png`, `og-en.png`) odtwarza
+  `CHROME=/ścieżka/do/chrome node scripts/og-images.mjs`.
+- **Zdjęcia** są w `src/assets/photos` (AVIF i WebP w kilku szerokościach). Zdjęcia miast i rodziny pochodzą z
+  Unsplash ([licencja](https://unsplash.com/license)) i mają podpis „Zdjęcie: autor / Unsplash” z linkami;
+  lista autorów, linki i daty pobrania są w `src/assets/photos/CREDITS.md`. Zdjęcie zespołu na `/contact` jest
+  własne. Nowe zdjęcie: pobierz przyciskiem „Download” na Unsplash (wolne zdjęcie, nie Unsplash+), dopisz wpis do
+  `CREDITS.md` i do `src/lib/photos.ts`.
+- **Ruch** (`src/lib/motion.ts`, bez biblioteki animacji): pojawianie się sekcji, rysowanie trasy przy
+  przewijaniu, suwaki w przykładzie sprawiedliwości, rozsuwanie miast. Przy `prefers-reduced-motion` zostaje
+  zwykłe pojawienie się.
+
 ## Środowiska i wdrożenia
 
 Frontend stoi na Cloudflare Workers (statyczne pliki z fallbackiem SPA, więc działają też bezpośrednie linki do podstron).
