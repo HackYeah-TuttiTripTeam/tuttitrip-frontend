@@ -526,6 +526,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/demo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Demo Login
+         * @description Sign in as the shared demo account with the token from the jury link.
+         *
+         *     The link is ``/demo#t=<token>``; the web app reads the fragment and sends
+         *     ``{"token": "..."}`` here. Any bad request, a wrong token and a disabled
+         *     demo are the same 404 (no 422). The token and the account's credentials
+         *     are never logged.
+         *
+         *     Args:
+         *         request: The raw request (the body is parsed here, after the limiter).
+         *         response: Used to forbid caching.
+         *         new_client: Opens the HTTP client for Auth0.
+         *         limiter: Per-IP rate limiter.
+         *
+         *     Returns:
+         *         Auth0 tokens of the demo account (a regular ``user``).
+         *
+         *     Raises:
+         *         HTTPException: 429 over the limit, 404 for a bad request or token or a
+         *             disabled demo, 502 when Auth0 fails.
+         *
+         *     Publiczny: nie wymaga logowania.
+         */
+        post: operations["demo_login_api_v1_auth_demo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips": {
         parameters: {
             query?: never;
@@ -1867,6 +1907,29 @@ export interface components {
          * @enum {string}
          */
         Currency: "PLN" | "EUR" | "GBP";
+        /**
+         * DemoSession
+         * @description Auth0 tokens of the demo account.
+         */
+        DemoSession: {
+            /** Access Token */
+            access_token: string;
+            /**
+             * Expires In
+             * @description Seconds until the access token expires.
+             */
+            expires_in: number;
+            /**
+             * Token Type
+             * @default Bearer
+             */
+            token_type: string;
+            /**
+             * Refresh Token
+             * @description Only when the deployment allows `offline_access`.
+             */
+            refresh_token?: string | null;
+        };
         /**
          * Diet
          * @description Diets (codes shared with the catalog's ``diet_tags``) and free-text allergies.
@@ -4711,6 +4774,53 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    demo_login_api_v1_auth_demo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoSession"];
+                };
+            };
+            /** @description Demo login is off, or the request/token is wrong. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Too many requests from this address. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Auth0 did not give a token. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

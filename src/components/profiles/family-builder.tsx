@@ -20,6 +20,8 @@ interface FamilyBuilderProps {
   onAdd: (values: AddPersonValues) => Promise<SaveResult>
   onEdit: (profile: Profile, values: EditValues) => Promise<SaveResult>
   onRemove: (profile: Profile) => Promise<SaveResult>
+  /** Opens the person's preferences. */
+  onOpenPerson: (profile: Profile) => void
 }
 
 type Dialog = { kind: 'add' } | { kind: 'edit'; id: string } | null
@@ -33,6 +35,7 @@ export function FamilyBuilder({
   onAdd,
   onEdit,
   onRemove,
+  onOpenPerson,
 }: FamilyBuilderProps) {
   const [dialog, setDialog] = useState<Dialog>(null)
   const close = () => setDialog(null)
@@ -80,6 +83,7 @@ export function FamilyBuilder({
             <li key={person.profile.id}>
               <PersonRow
                 person={person}
+                onOpen={() => onOpenPerson(person.profile)}
                 onEdit={
                   canManage && !hasAccount(person)
                     ? () => setDialog({ kind: 'edit', id: person.profile.id })

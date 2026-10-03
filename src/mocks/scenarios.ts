@@ -3,6 +3,7 @@ import {
   type City,
   cities,
   familyMembers,
+  familyPreferences,
   familyProfiles,
   type Invitation,
   invitation,
@@ -10,6 +11,7 @@ import {
   needsApprovalBudget,
   outing,
   type Plan,
+  type Preferences,
   type Profile,
   plan,
   type Trip,
@@ -21,6 +23,7 @@ export const scenarioNames = [
   'needs-approval',
   'no-plan',
   'member-readonly',
+  'preferences-save-error',
   'server-error',
   'offline',
   'join-valid',
@@ -58,6 +61,10 @@ export interface World {
   profiles: Profile[]
   /** People with an account and their trip role (the Osoby view joins them with profiles on profile_id). */
   members: Member[]
+  /** Preferences of everyone on the main trip (constraints, diet, interests). */
+  preferences: Preferences[]
+  /** Every PUT of preferences answers 500, to see the rollback. */
+  preferencesSaveFails: boolean
   /** The latest plan of the main trip; null until "Policz plan" creates one. */
   plan: Plan | null
   /** Invitations of the main trip, newest first (the host's list). */
@@ -81,6 +88,8 @@ export function createWorld(name: ScenarioName): World {
     failures: {},
     profiles: familyProfiles(),
     members: familyMembers(),
+    preferences: familyPreferences(),
+    preferencesSaveFails: false,
     plan: plan(main.id),
     invitations: [invitation()],
     join: { preview: 'ok', alreadyMember: false, accept: 'ok' },
@@ -98,6 +107,8 @@ export function createWorld(name: ScenarioName): World {
         trips: [trip({ my_role: 'member' }), outing({ my_role: 'member' })],
         members: familyMembers('member'),
       }
+    case 'preferences-save-error':
+      return { ...base, preferencesSaveFails: true }
     case 'server-error':
       return { ...base, behaviour: 'server-error' }
     case 'offline':

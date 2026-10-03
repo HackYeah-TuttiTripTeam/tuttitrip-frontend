@@ -144,7 +144,9 @@ describe('Osoby, family-warsaw (host)', () => {
   it('offers no edit button for people with an account', async () => {
     openPeople()
     const mother = await personItem('Ola')
-    expect(within(mother).queryAllByRole('button')).toHaveLength(0)
+    expect(
+      within(mother).queryByRole('button', { name: m.people_edit_label({ name: 'Ola' }) }),
+    ).toBeNull()
   })
 })
 
@@ -155,7 +157,9 @@ describe('Osoby, member-readonly', () => {
     const list = await screen.findByRole('list', { name: m.people_list_label() })
     expect(within(list).getAllByRole('listitem')).toHaveLength(5)
     expect(screen.queryByRole('button', { name: m.people_add() })).toBeNull()
-    expect(within(list).queryAllByRole('button')).toHaveLength(0)
+    expect(
+      within(list).queryByRole('button', { name: m.people_edit_label({ name: 'Zosia' }) }),
+    ).toBeNull()
   })
 
   it('shows the no-permission message when a write is refused (403)', async () => {

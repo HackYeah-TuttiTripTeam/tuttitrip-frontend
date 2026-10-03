@@ -15,6 +15,7 @@ export type Me = Schemas['MeResponse']
 export type Member = Schemas['MemberRead']
 export type Invitation = Schemas['InvitationRead']
 export type City = Schemas['CityRead']
+export type Preferences = Schemas['PreferencesRead']
 
 /** The signed-in test user, the host of most scenarios. */
 export const MOCK_USER_SUB = 'auth0|mock-user'
@@ -170,6 +171,66 @@ export const familyMembers = (myRole: Trip['my_role'] = 'host'): Member[] => [
     is_me: false,
   },
   { profile_id: PROFILE_IDS.babcia, display_name: 'Babcia Halina', role: 'member', is_me: false },
+]
+
+/** What the API answers for a person nobody has filled in yet: the age defaults, nothing ticked. */
+export const preferences = (
+  profileId: string,
+  overrides: Partial<Preferences> = {},
+): Preferences => ({
+  profile_id: profileId,
+  interests: {},
+  diet: { tags: [], allergies: [] },
+  example_places: [],
+  min_tags: [],
+  importance_pool: { lodging: 2, food: 2, attractions: 2, pace: 2, cost: 2 },
+  constraints: {
+    wheelchair: false,
+    stairs: false,
+    heat: false,
+    cold: false,
+    audio_description: false,
+    disability_note: null,
+  },
+  effective_stairs_sensitivity: null,
+  filled: false,
+  updated_by_sub: null,
+  updated_at: null,
+  ...overrides,
+})
+
+/**
+ * Who filled in what: Ola and the grandmother did, Marek is vegetarian, the children are still
+ * on the age defaults. The grandmother avoids stairs.
+ */
+export const familyPreferences = (): Preferences[] => [
+  preferences(PROFILE_IDS.mama, {
+    filled: true,
+    interests: { history: 1, museums: 1, local_food: 1 },
+    updated_at: '2026-10-02T09:00:00Z',
+  }),
+  preferences(PROFILE_IDS.tata, {
+    filled: true,
+    interests: { sport: 1, cycling: 1 },
+    diet: { tags: ['vegetarian'], allergies: [] },
+    updated_at: '2026-10-02T09:30:00Z',
+  }),
+  preferences(PROFILE_IDS.babcia, {
+    filled: true,
+    interests: { parks: 1, music: 1 },
+    diet: { tags: ['lactose_free'], allergies: ['orzechy'] },
+    constraints: {
+      wheelchair: false,
+      stairs: true,
+      heat: true,
+      cold: false,
+      audio_description: false,
+      disability_note: 'Słabszy słuch, lepiej w spokojnych miejscach.',
+    },
+    updated_at: '2026-10-02T10:00:00Z',
+  }),
+  preferences(PROFILE_IDS.zosia),
+  preferences(PROFILE_IDS.antek),
 ]
 
 const DOMAINS: PlanDomainCode[] = ['attractions', 'food', 'pace', 'cost', 'lodging']

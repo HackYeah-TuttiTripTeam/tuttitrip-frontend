@@ -18,14 +18,18 @@ const route = getRouteApi('/trips_/$tripId')
 
 export function TripView() {
   const { tripId } = route.useParams()
-  const { tab } = route.useSearch()
+  const { tab, person } = route.useSearch()
   const navigate = route.useNavigate()
   const session = useSession()
   const { trip, isPending, problem, refetch } = useTrip(tripId, session.status)
 
   // replace: switching tabs should not fill the back button.
   const setTab = (next: TripTab) =>
-    void navigate({ search: (prev) => ({ ...prev, tab: next }), replace: true })
+    void navigate({ search: (prev) => ({ ...prev, tab: next, person: undefined }), replace: true })
+
+  // Opening a person is a step forward (the back button closes it); the tab switch above is not.
+  const setPerson = (id: string | undefined) =>
+    void navigate({ search: (prev) => ({ ...prev, person: id }) })
 
   const retry = (
     <Button variant="outline" onClick={refetch}>
@@ -122,6 +126,8 @@ export function TripView() {
             tripId={trip.id}
             tripName={trip.name}
             canManage={trip.my_role !== 'member'}
+            personId={person}
+            onPersonChange={setPerson}
           />
         }
         plan={<TripPlanView key={trip.id} tripId={trip.id} role={trip.my_role} />}

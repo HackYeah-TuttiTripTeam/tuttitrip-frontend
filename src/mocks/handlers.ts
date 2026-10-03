@@ -3,11 +3,14 @@ import type { Schemas } from '@/api/client'
 import {
   INVITATION_TOKEN,
   invitation,
+  MOCK_USER_SUB,
   me,
   type Plan,
   PROFILE_IDS,
+  type Preferences,
   type Profile,
   plan,
+  preferences,
   TRIP_ID,
   type Trip,
   trip,
@@ -184,7 +187,8 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
 
     http.patch(`${API}/trips/:tripId/profiles/:profileId`, async ({ params, request }) => {
       await latency()
-      if (!canWrite(params.tripId)) return forbidden()
+      // Your own profile, or any as a co-host or higher.
+      if (!canWrite(params.tripId) && !isMe(world, String(params.profileId))) return forbidden()
       const current = world.profiles.find((p) => p.id === params.profileId)
       if (!current) return notFound('Profile not found')
       const body = (await request.json()) as Schemas['ProfileUpdate']
@@ -241,6 +245,48 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       if (profile) profile.user_sub = null
       return new HttpResponse(null, { status: 204 })
     }),
+
+    // Preferences. Constraints are hidden from a plain member looking at someone else, like in the API.
+    http.get(`${API}/trips/:tripId/preferences`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      return HttpResponse.json(
+        world.profiles
+          .filter((p) => p.trip_id === params.tripId)
+          .map((p) => viewPreferences(world, p.id, canWrite(params.tripId))),
+      )
+    }),
+
+    http.get(`${API}/trips/:tripId/profiles/:profileId/preferences`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!world.profiles.some((p) => p.id === params.profileId))
+        return notFound('Profile not found')
+      return HttpResponse.json(
+        viewPreferences(world, String(params.profileId), canWrite(params.tripId)),
+      )
+    }),
+
+    http.put(
+      `${API}/trips/:tripId/profiles/:profileId/preferences`,
+      async ({ params, request }) => {
+        await latency()
+        if (!findTrip(params.tripId)) return notFound('Trip not found')
+        const profile = world.profiles.find((p) => p.id === params.profileId)
+        if (!profile) return notFound('Profile not found')
+        if (!canWrite(params.tripId) && !isMe(world, profile.id)) return forbidden()
+        if (world.preferencesSaveFails)
+          return HttpResponse.json({ detail: 'Internal Server Error' }, { status: 500 })
+        const body = (await request.json()) as Schemas['PreferencesWrite']
+        const current = storedPreferences(world, profile.id)
+        Object.assign(current, withoutUndefined(body), {
+          filled: true,
+          updated_by_sub: MOCK_USER_SUB,
+          updated_at: new Date().toISOString(),
+        })
+        return HttpResponse.json(viewPreferences(world, profile.id, true))
+      },
+    ),
 
     // Invitations. The token is shown once, in the 201 answer; every answer that touches it is
     // no-store, like the real API.
@@ -422,3 +468,34 @@ function checkTrip(merged: Trip, sent: object): Schemas['TripValidationError'][]
   }
   return errors
 }
+const isMe = (world: World, profileId: string) =>
+  world.members.some((member) => member.profile_id === profileId && member.is_me)
+
+/** The stored preferences of a person; a person nobody filled in gets the age defaults. */
+function storedPreferences(world: World, profileId: string): Preferences {
+  let found = world.preferences.find((p) => p.profile_id === profileId)
+  if (!found) {
+    found = preferences(profileId)
+    world.preferences.push(found)
+  }
+  return found
+}
+
+/**
+ * What the caller sees: the whole thing for the person and for co-hosts and above, without the
+ * constraints for a plain member looking at someone else. The stairs value follows the constraints.
+ */
+function viewPreferences(world: World, profileId: string, isManager: boolean): Preferences {
+  const stored = storedPreferences(world, profileId)
+  const sensitivity = world.profiles.find((p) => p.id === profileId)?.stairs_sensitivity ?? 0.2
+  const sees = isManager || isMe(world, profileId)
+  const strict = stored.constraints?.stairs || stored.constraints?.wheelchair
+  return structuredClone({
+    ...stored,
+    constraints: sees ? stored.constraints : null,
+    effective_stairs_sensitivity: sees ? (strict ? 1 : sensitivity) : null,
+  })
+}
+
+const withoutUndefined = <T extends object>(body: T): Partial<T> =>
+  Object.fromEntries(Object.entries(body).filter(([, value]) => value !== undefined)) as Partial<T>
