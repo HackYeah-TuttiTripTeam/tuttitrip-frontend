@@ -20,6 +20,20 @@ export function canCallProtectedApi(): boolean {
   return getAccessToken !== null
 }
 
+/**
+ * Fresh access token for non-fetch clients (the AG-UI agent). Auth0 refreshes it
+ * silently when it is about to expire; throws when the session is gone.
+ * Spike fallback: a token pasted into sessionStorage ("spike-token") for smoke tests.
+ */
+export async function currentAccessToken(): Promise<string | undefined> {
+  if (getAccessToken) return getAccessToken()
+  try {
+    return sessionStorage.getItem('spike-token') ?? undefined
+  } catch {
+    return undefined
+  }
+}
+
 const authMiddleware: Middleware = {
   async onRequest({ request }) {
     if (!getAccessToken) return request

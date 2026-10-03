@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as InterviewSpikeRouteImport } from './routes/interview-spike'
 import { Route as TripsRouteImport } from './routes/trips'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InterviewSpikeRoute = InterviewSpikeRouteImport.update({
+  id: '/interview-spike',
+  path: '/interview-spike',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TripsRoute = TripsRouteImport.update({
@@ -25,27 +31,31 @@ const TripsRoute = TripsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/interview-spike': typeof InterviewSpikeRoute
   '/trips': typeof TripsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/interview-spike': typeof InterviewSpikeRoute
   '/trips': typeof TripsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/interview-spike': typeof InterviewSpikeRoute
   '/trips': typeof TripsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/trips'
+  fullPaths: '/' | '/interview-spike' | '/trips'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/trips'
-  id: '__root__' | '/' | '/trips'
+  to: '/' | '/interview-spike' | '/trips'
+  id: '__root__' | '/' | '/interview-spike' | '/trips'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  InterviewSpikeRoute: typeof InterviewSpikeRoute
   TripsRoute: typeof TripsRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/interview-spike': {
+      id: '/interview-spike'
+      path: '/interview-spike'
+      fullPath: '/interview-spike'
+      preLoaderRoute: typeof InterviewSpikeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/trips': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  InterviewSpikeRoute: InterviewSpikeRoute,
   TripsRoute: TripsRoute,
 }
 export const routeTree = rootRouteImport
