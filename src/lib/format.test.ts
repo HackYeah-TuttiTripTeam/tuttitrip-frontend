@@ -7,6 +7,7 @@ import {
   formatDateRange,
   formatDayMonth,
   formatDecimal,
+  formatDuration,
   formatMoney,
   formatNumber,
   formatTime,
@@ -97,5 +98,18 @@ describe('plan formats', () => {
   it('writes a short day and month', () => {
     useLocale('pl')
     expect(formatDayMonth(`${new Date().getFullYear()}-09-20T09:00:00Z`)).toBe('20 wrz')
+  })
+  it('formats zero, negative and durations', () => {
+    useLocale('pl')
+    expect(formatDecimal('0.00')).toBe('0\u00a0zł')
+    expect(formatDecimal('-12.50')).toBe('-12,50\u00a0zł')
+    expect(formatDuration(120)).toBe('2 h')
+    expect(formatDuration(90)).toBe('1 h 30 min')
+    expect(formatDuration(45)).toBe('45 min')
+  })
+
+  it('writes a verification date in UTC, whatever the time zone', () => {
+    useLocale('pl')
+    expect(formatDayMonth(`${new Date().getFullYear()}-09-20T00:30:00Z`)).toBe('20 wrz')
   })
 })

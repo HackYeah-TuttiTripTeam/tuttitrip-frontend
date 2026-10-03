@@ -34,15 +34,13 @@ export function TransferRow({ transfer, currency }: TransferRowProps) {
         {MODE_ICONS[transfer.mode]}
       </span>
       <span>
-        {MODE_LABELS[transfer.mode]()} · {m.plan_transfer_minutes({ minutes: transfer.minutes })}
-        {transfer.cost != null && (
-          <>
-            {' · '}
-            <span className="font-heading font-semibold tabular-nums">
-              {formatDecimal(transfer.cost, currency)}
-            </span>
-          </>
-        )}
+        {transfer.cost != null
+          ? m.plan_transfer_line_cost({
+              mode: MODE_LABELS[transfer.mode](),
+              minutes: transfer.minutes,
+              cost: formatDecimal(transfer.cost, currency),
+            })
+          : m.plan_transfer_line({ mode: MODE_LABELS[transfer.mode](), minutes: transfer.minutes })}
       </span>
     </p>
   )

@@ -148,9 +148,6 @@
   "plan_recomputing_status": "Przeliczam plan. Widzisz poprzednią wersję.",
   "plan_load_failed_title": "Nie udało się wczytać planu",
   "plan_load_failed_body": "Spróbuj ponownie za chwilę.",
-  "plan_compute_failed_title": "Nie udało się policzyć planu",
-  "plan_compute_failed_body": "Spróbuj ponownie za chwilę.",
-  "plan_compute_forbidden_body": "Plan liczy host albo co-host.",
   "plan_version": "Wersja {n}",
   "plan_hash_label": "Skrót planu",
   "plan_hash_hint": "Te same dane dają ten sam skrót.",
@@ -162,18 +159,42 @@
   "plan_duration_h_min": "{h} h {min} min",
   "plan_price_free": "Bezpłatnie",
   "plan_price_per_person": "{amount} na osobę",
-  "plan_price_budgeted": "w budżecie {amount}",
   "plan_price_none": "Cena: brak danych",
   "plan_price_verified": "Cena zweryfikowana",
   "plan_price_unverified": "Cena niezweryfikowana",
   "plan_hours_verified": "Godziny zweryfikowane",
   "plan_hours_unverified": "Godziny niezweryfikowane",
   "plan_verified_on": "{label}, {date}",
-  "plan_source": "Źródło: {host}",
   "plan_source_opens": "Źródło: {host} (otwiera się w nowej karcie)",
   "plan_transfer_walk": "Pieszo",
   "plan_transfer_transit": "Komunikacją",
   "plan_transfer_car": "Samochodem",
   "plan_transfer_bike": "Rowerem",
-  "plan_transfer_minutes": "{minutes} min"
+  "plan_day_dated": "Dzień {n} · {date}",
+  "plan_kind_duration": "{kind} · {duration}",
+  "plan_price_per_person_budgeted": "{amount} na osobę, w budżecie {budgeted}",
+  "plan_hours_none": "Godziny: brak danych",
+  "plan_forbidden_title": "Nie masz dostępu do planu",
+  "plan_forbidden_body": "Plan widzą osoby z tego wyjazdu. Zapytaj hosta.",
+  "plan_compute_failed": "Nie udało się policzyć planu. Spróbuj ponownie za chwilę.",
+  "plan_compute_forbidden": "Nie udało się policzyć planu. Plan liczy host albo co-host.",
+  "plan_hash_with_hint": "{label} {hash}. {hint}",
+  "plan_source": "Źródło: {host}",
+  "plan_transfer_line": "{mode} · {minutes} min",
+  "plan_transfer_line_cost": "{mode} · {minutes} min · {cost}",
+  "plan_total": "Koszt planu dla całej grupy: {amount}",
+  "plan_lodging": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Nocleg: {name}, {count} noc. {cost}",
+        "countPlural=few": "Nocleg: {name}, {count} noce. {cost}",
+        "countPlural=many": "Nocleg: {name}, {count} nocy. {cost}",
+        "countPlural=*": "Nocleg: {name}, {count} nocy. {cost}"
+      }
+    }
+  ],
+  "plan_lodging_cost": "{amount} za wszystkie noce",
+  "plan_lodging_cost_none": "Cena noclegu: brak danych"
 }

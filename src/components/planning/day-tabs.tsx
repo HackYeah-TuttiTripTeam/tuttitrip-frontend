@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { PlanDay } from '@/api/queries/plans'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { formatDate } from '@/lib/format'
+import { formatDateRange } from '@/lib/format'
 import { m } from '@/paraglide/messages'
 
 interface DayTabsProps {
@@ -35,13 +35,9 @@ export function DayTabs({ days, value, onValueChange, renderDay }: DayTabsProps)
       {days.map((day) => (
         <TabsContent key={day.index} value={String(day.index)} className="flex flex-col gap-4">
           <h2 className="font-heading font-semibold text-[22px] leading-7">
-            {m.plan_day_n({ n: day.index })}
-            {day.date && (
-              <span className="font-normal text-muted-foreground">
-                {' · '}
-                {formatDate(`${day.date}T12:00:00`)}
-              </span>
-            )}
+            {day.date
+              ? m.plan_day_dated({ n: day.index, date: formatDateRange(day.date, null) ?? '' })
+              : m.plan_day_n({ n: day.index })}
           </h2>
           {renderDay(day)}
         </TabsContent>

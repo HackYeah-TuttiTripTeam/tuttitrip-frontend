@@ -14,15 +14,24 @@ import { routeTree } from '@/routeTree.gen'
 // before the app modules load. The real client, ApiError and the classifier still run.
 const api = vi.hoisted(() => {
   const state: {
+    /** Answer to GET /trips/{id}; the body's id is rewritten to the id in the URL. */
     answer: Response | null
-    plan: Response | null
+    /** Answer to GET /plans/latest, per trip id or the same for all. */
+    plan: Response | ((tripId: string) => Response) | null
+    /** Answer to POST /plans; falls back to `plan`. */
+    created: Response | null
     posts: number
+    /** Holds POST /plans until released. */
     gate: Promise<void> | null
+    /** Holds GET /plans/latest until released. */
+    getGate: Promise<void> | null
   } = {
     answer: null,
     plan: null,
+    created: null,
     posts: 0,
     gate: null,
+    getGate: null,
   }
   // The client calls relative URLs (same-origin proxy); Node's Request needs an absolute one.
   const BaseRequest = globalThis.Request
@@ -36,15 +45,25 @@ const api = vi.hoisted(() => {
   }
   globalThis.fetch = async (input) => {
     const request = input instanceof Request ? input : new Request(String(input))
-    if (new URL(request.url).pathname.includes('/plans')) {
+    const { pathname } = new URL(request.url)
+    const tripId = pathname.split('/')[4] ?? ''
+    if (pathname.includes('/plans')) {
+      const plan = typeof state.plan === 'function' ? state.plan(tripId) : state.plan
       if (request.method === 'POST') {
         state.posts += 1
         await state.gate
+        return (state.created ?? plan ?? new Response('{}', { status: 404 })).clone()
       }
-      return (state.plan ?? new Response('{}', { status: 404 })).clone()
+      const answer = (plan ?? new Response('{}', { status: 404 })).clone()
+      await state.getGate
+      return answer
     }
     if (!state.answer) throw new TypeError('no answer stubbed')
-    return state.answer.clone()
+    if (state.answer.status !== 200) return state.answer.clone()
+    return new Response(JSON.stringify({ ...(await state.answer.clone().json()), id: tripId }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })
   }
   return state
 })
@@ -76,8 +95,6 @@ const stop = (over: Partial<Plan['days'][number]['items'][number]> = {}) => ({
   place_id: '7d1f7a52-1f0b-4a39-8f0e-7a7c9a1c0b01',
   name: 'Muzeum Gdańska',
   kind: 'attraction' as const,
-  lat: 54.35,
-  lon: 18.66,
   start: '10:00:00',
   end: '12:00:00',
   transfer: null,
@@ -90,7 +107,6 @@ const stop = (over: Partial<Plan['days'][number]['items'][number]> = {}) => ({
   hours_verified: true,
   hours_source_url: 'https://hours.example.com/muzeum',
   hours_verified_at: '2026-09-20T09:00:00Z',
-  google_place_id: null,
   ...over,
 })
 
@@ -156,11 +172,12 @@ function renderAt(url: string) {
     history: createMemoryHistory({ initialEntries: [url] }),
     context: { queryClient },
   })
-  return render(
+  render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
     </QueryClientProvider>,
   )
+  return router
 }
 
 afterEach(() => {
@@ -168,6 +185,8 @@ afterEach(() => {
   queryClient.clear()
   api.answer = null
   api.plan = null
+  api.created = null
+  api.getGate = null
   api.posts = 0
   api.gate = null
   overwriteGetLocale(() => 'pl')
@@ -227,7 +246,7 @@ describe('TripView', () => {
       expect(screen.getByText('10:00')).toBeTruthy()
       expect(screen.getByText(m.plan_price_per_person({ amount: '25 zł' }))).toBeTruthy()
       expect(screen.getByText(/Wersja 2/)).toBeTruthy()
-      expect(screen.getByText('0ba4b2876b9d')).toBeTruthy()
+      expect(screen.getByText(/0ba4b2876b9d/)).toBeTruthy()
       expect(screen.getByText(/4,60/)).toBeTruthy()
       fireEvent.mouseDown(within(days).getByRole('tab', { name: m.plan_day_n({ n: 2 }) }), {
         button: 0,
@@ -241,9 +260,8 @@ describe('TripView', () => {
       openPlan()
       expect(await screen.findByText(/Cena zweryfikowana, 20 wrz/)).toBeTruthy()
       expect(screen.getByText(m.plan_price_unverified())).toBeTruthy()
-      expect(screen.getByText(m.plan_hours_unverified())).toBeTruthy()
-      expect(screen.getByText(/w budżecie 575\szł/)).toBeTruthy()
-      expect(screen.getByText(m.plan_price_per_person({ amount: '500 zł' }))).toBeTruthy()
+      expect(screen.getByText(m.plan_hours_none())).toBeTruthy()
+      expect(screen.getByText('500 zł na osobę, w budżecie 575 zł')).toBeTruthy()
       const source = screen.getByRole('link', { name: /tickets.example.com/ })
       expect(source.getAttribute('href')).toBe('https://tickets.example.com/muzeum')
     })
@@ -261,7 +279,7 @@ describe('TripView', () => {
     it('shows the empty state and builds the plan on click', async () => {
       openPlan()
       const button = await screen.findByRole('button', { name: m.plan_compute() })
-      api.plan = json(201, plan())
+      api.created = json(201, plan())
       fireEvent.click(button)
       expect(await screen.findByText('Muzeum Gdańska')).toBeTruthy()
       expect(api.posts).toBe(1)
@@ -289,11 +307,107 @@ describe('TripView', () => {
     })
 
     it('offers a retry when the plan cannot be loaded', async () => {
+      queryClient.setDefaultOptions({ queries: { retry: false } })
       api.plan = json(500, { detail: 'boom' })
       openPlan()
-      expect(
-        await screen.findByText(m.plan_load_failed_title(), {}, { timeout: 5000 }),
-      ).toBeTruthy()
+      expect(await screen.findByText(m.plan_load_failed_title())).toBeTruthy()
+    })
+
+    it('says so when the plan is not for this account (403)', async () => {
+      api.plan = json(403, { detail: 'no' })
+      openPlan()
+      expect(await screen.findByText(m.plan_forbidden_title())).toBeTruthy()
+    })
+
+    it('tells a co-host without the right that the plan cannot be built (403 on POST)', async () => {
+      api.plan = json(404, {})
+      api.created = json(403, { detail: 'no' })
+      openPlan('co_host')
+      fireEvent.click(await screen.findByRole('button', { name: m.plan_compute() }))
+      expect(await screen.findByText(m.plan_compute_forbidden())).toBeTruthy()
+    })
+
+    it('never shows the plan of trip A under trip B', async () => {
+      const TRIP_B = '9a0c2a52-6d0b-4a39-8f0e-7a7c9a1c0b22'
+      api.plan = (id) => (id === TRIP_ID ? json(200, plan()) : json(404, {}))
+      stubApi(json(200, trip('host')))
+      const router = renderAt(`/trips/${TRIP_ID}?tab=plan`)
+      expect(await screen.findByText('Muzeum Gdańska')).toBeTruthy()
+      await router.navigate({
+        to: '/trips/$tripId',
+        params: { tripId: TRIP_B },
+        search: { tab: 'plan' },
+      })
+      expect(await screen.findByText(m.plan_empty_title())).toBeTruthy()
+      expect(screen.queryByText('Muzeum Gdańska')).toBeNull()
+    })
+
+    it('keeps the new plan when an older fetch is still in flight as the build finishes', async () => {
+      api.plan = json(200, plan())
+      openPlan()
+      await screen.findByText('Muzeum Gdańska')
+      const newer = plan()
+      newer.version = 3
+      api.created = json(201, newer)
+      let release = () => {}
+      api.getGate = new Promise((resolve) => {
+        release = resolve
+      })
+      void queryClient.refetchQueries({ type: 'active' })
+      fireEvent.click(screen.getByRole('button', { name: m.plan_recompute() }))
+      await waitFor(() => expect(api.posts).toBe(1))
+      await screen.findByText(m.plan_version({ n: 3 }))
+      release()
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(screen.getByText(m.plan_version({ n: 3 }))).toBeTruthy()
+    })
+
+    it('falls back to the first day when the chosen day disappears after a rebuild', async () => {
+      api.plan = json(200, plan())
+      openPlan()
+      const days = await screen.findByRole('tablist', { name: m.plan_days_label() })
+      fireEvent.mouseDown(within(days).getByRole('tab', { name: m.plan_day_n({ n: 3 }) }), {
+        button: 0,
+      })
+      expect(await screen.findByText('Park Oliwski')).toBeTruthy()
+      const shorter = plan()
+      shorter.days = shorter.days.slice(0, 2)
+      api.created = json(201, shorter)
+      fireEvent.click(screen.getByRole('button', { name: m.plan_recompute() }))
+      expect(await screen.findByText('Muzeum Gdańska')).toBeTruthy()
+      const tabs = within(screen.getByRole('tablist', { name: m.plan_days_label() }))
+      expect(tabs.getAllByRole('tab')).toHaveLength(2)
+    })
+
+    it('shows the cost of the plan and the lodging', async () => {
+      const withLodging = plan()
+      withLodging.budget = { currency: 'PLN', cost: '1475.00' } as Plan['budget']
+      withLodging.lodging = {
+        name: 'Apartament z basenem',
+        nights: 2,
+        cost_total: '385.00',
+      } as Plan['lodging']
+      api.plan = json(200, withLodging)
+      openPlan()
+      expect(await screen.findByText(/1\s475\szł/)).toBeTruthy()
+      expect(screen.getByText(/Apartament z basenem, 2 noce/)).toBeTruthy()
+    })
+
+    it('says "no data" for hours with neither a source nor a check', async () => {
+      api.plan = json(200, plan())
+      openPlan()
+      await screen.findByText('Muzeum Gdańska')
+      expect(screen.getByText(m.plan_hours_none())).toBeTruthy()
+    })
+
+    it('reads in English too', async () => {
+      overwriteGetLocale(() => 'en')
+      api.plan = json(200, plan())
+      openPlan()
+      expect(await screen.findByText('10:00 AM')).toBeTruthy()
+      expect(screen.getByText('PLN 25 per person')).toBeTruthy()
+      expect(screen.getByText(/Price verified, Sep 20/)).toBeTruthy()
+      expect(screen.getByText('PLN 500 per person, PLN 575 in the budget')).toBeTruthy()
     })
   })
 })

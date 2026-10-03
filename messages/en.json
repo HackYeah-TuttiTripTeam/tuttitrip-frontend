@@ -144,9 +144,6 @@
   "plan_recomputing_status": "Recalculating the plan. You are seeing the previous version.",
   "plan_load_failed_title": "Could not load the plan",
   "plan_load_failed_body": "Try again in a moment.",
-  "plan_compute_failed_title": "Could not build the plan",
-  "plan_compute_failed_body": "Try again in a moment.",
-  "plan_compute_forbidden_body": "The host or a co-host builds the plan.",
   "plan_version": "Version {n}",
   "plan_hash_label": "Plan hash",
   "plan_hash_hint": "The same input gives the same hash.",
@@ -158,18 +155,40 @@
   "plan_duration_h_min": "{h} h {min} min",
   "plan_price_free": "Free",
   "plan_price_per_person": "{amount} per person",
-  "plan_price_budgeted": "{amount} in the budget",
   "plan_price_none": "Price: no data",
   "plan_price_verified": "Price verified",
   "plan_price_unverified": "Price unverified",
   "plan_hours_verified": "Hours verified",
   "plan_hours_unverified": "Hours unverified",
   "plan_verified_on": "{label}, {date}",
-  "plan_source": "Source: {host}",
   "plan_source_opens": "Source: {host} (opens in a new tab)",
   "plan_transfer_walk": "On foot",
   "plan_transfer_transit": "By transit",
   "plan_transfer_car": "By car",
   "plan_transfer_bike": "By bike",
-  "plan_transfer_minutes": "{minutes} min"
+  "plan_day_dated": "Day {n} · {date}",
+  "plan_kind_duration": "{kind} · {duration}",
+  "plan_price_per_person_budgeted": "{amount} per person, {budgeted} in the budget",
+  "plan_hours_none": "Hours: no data",
+  "plan_forbidden_title": "You cannot see this plan",
+  "plan_forbidden_body": "The plan is visible to people on this trip. Ask the host.",
+  "plan_compute_failed": "Could not build the plan. Try again in a moment.",
+  "plan_compute_forbidden": "Could not build the plan. The host or a co-host builds it.",
+  "plan_hash_with_hint": "{label} {hash}. {hint}",
+  "plan_source": "Source: {host}",
+  "plan_transfer_line": "{mode} · {minutes} min",
+  "plan_transfer_line_cost": "{mode} · {minutes} min · {cost}",
+  "plan_total": "Plan cost for the whole group: {amount}",
+  "plan_lodging": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Lodging: {name}, {count} night. {cost}",
+        "countPlural=*": "Lodging: {name}, {count} nights. {cost}"
+      }
+    }
+  ],
+  "plan_lodging_cost": "{amount} for all nights",
+  "plan_lodging_cost_none": "Lodging price: no data"
 }

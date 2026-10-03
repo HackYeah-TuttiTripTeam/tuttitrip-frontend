@@ -1,9 +1,10 @@
-import { Calendar, CloudOff, RefreshCcw, TriangleAlert } from '@keyline-icons/react'
+import { Calendar, CloudOff, KeyRound, RefreshCcw, TriangleAlert } from '@keyline-icons/react'
 import { useState } from 'react'
 import { ApiError } from '@/api/errors'
 import type { Trip } from '@/api/queries/trips'
 import { DayTabs } from '@/components/planning/day-tabs'
 import { PlanHashLabel } from '@/components/planning/plan-hash-label'
+import { PlanSummary } from '@/components/planning/plan-summary'
 import { PlanTimeline } from '@/components/planning/plan-timeline'
 import { StatusMessage } from '@/components/shared/status-message'
 import { Button } from '@/components/ui/button'
@@ -19,23 +20,20 @@ interface TripPlanViewProps {
 
 /** The Plan tab: the latest plan day by day, or the empty state with "Build plan". */
 export function TripPlanView({ tripId, role }: TripPlanViewProps) {
-  const { plan, isPending, hasNoPlan, problem, refetch } = usePlan(tripId)
+  const { plan, isPending, hasNoPlan, forbidden, problem, refetch } = usePlan(tripId)
   const creation = useCreatePlan(tripId)
   const [day, setDay] = useState(1)
   const canBuild = role !== 'member'
 
-  const compute = canBuild ? (
-    <Button
-      size="lg"
-      className="h-11 rounded-full px-6"
-      onClick={creation.create}
-      disabled={creation.isPending}
-    >
-      {creation.isPending ? m.plan_computing() : m.plan_compute()}
-    </Button>
-  ) : undefined
-
   if (isPending) return <PlanSkeleton />
+
+  if (forbidden) {
+    return (
+      <StatusMessage role="alert" icon={<KeyRound />} title={m.plan_forbidden_title()}>
+        {m.plan_forbidden_body()}
+      </StatusMessage>
+    )
+  }
 
   if (problem === 'offline') {
     return (
@@ -65,10 +63,9 @@ export function TripPlanView({ tripId, role }: TripPlanViewProps) {
 
   const failure = creation.error && (
     <p role="alert" className="text-destructive text-sm">
-      <strong className="font-medium">{m.plan_compute_failed_title()}.</strong>{' '}
       {creation.error instanceof ApiError && creation.error.status === 403
-        ? m.plan_compute_forbidden_body()
-        : m.plan_compute_failed_body()}
+        ? m.plan_compute_forbidden()
+        : m.plan_compute_failed()}
     </p>
   )
 
@@ -79,7 +76,16 @@ export function TripPlanView({ tripId, role }: TripPlanViewProps) {
         title={m.plan_empty_title()}
         action={
           <div className="flex flex-col items-start gap-3 md:items-center">
-            {compute}
+            {canBuild && (
+              <Button
+                size="lg"
+                className="h-11 rounded-full px-6"
+                onClick={creation.create}
+                disabled={creation.isPending}
+              >
+                {creation.isPending ? m.plan_computing() : m.plan_compute()}
+              </Button>
+            )}
             {failure}
           </div>
         }
@@ -117,6 +123,7 @@ export function TripPlanView({ tripId, role }: TripPlanViewProps) {
       <div role="status" className={recalculating ? 'text-muted-foreground text-sm' : 'sr-only'}>
         {recalculating && m.plan_recomputing_status()}
       </div>
+      <PlanSummary plan={plan} />
       {failure}
       <div className={recalculating ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
         <DayTabs

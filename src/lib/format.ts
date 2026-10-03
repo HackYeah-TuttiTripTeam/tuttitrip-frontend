@@ -1,3 +1,4 @@
+import { m } from '@/paraglide/messages'
 import { getLocale } from '@/paraglide/runtime'
 
 type Locale = ReturnType<typeof getLocale>
@@ -95,15 +96,27 @@ export function formatDateRange(start: string | null, end: string | null): strin
   return `${from} – ${formatDate(dateOnly(end))}`
 }
 
-/** "20 wrz" / "Sep 20"; the year is added only when it is not the current one. */
+/**
+ * "20 wrz" / "Sep 20" for a timestamp; the year only when it is not the current one. The UTC date
+ * is used, so a check done at 00:30 does not show up as the day before in another time zone.
+ */
 export function formatDayMonth(iso: string): string {
   const date = new Date(iso)
-  const sameYear = date.getFullYear() === new Date().getFullYear()
+  const sameYear = date.getUTCFullYear() === new Date().getUTCFullYear()
   return new Intl.DateTimeFormat(INTL_TAG[getLocale()], {
     day: 'numeric',
     month: 'short',
     year: sameYear ? undefined : 'numeric',
+    timeZone: 'UTC',
   }).format(date)
+}
+
+/** "2 h", "1 h 30 min", "45 min". */
+export function formatDuration(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60)
+  const min = totalMinutes % 60
+  if (h > 0 && min > 0) return m.plan_duration_h_min({ h, min })
+  return h > 0 ? m.plan_duration_h({ h }) : m.plan_duration_min({ min })
 }
 
 /** "10:00:00" (an API time of day without a date) -> "10:00" / "10:00 AM". */

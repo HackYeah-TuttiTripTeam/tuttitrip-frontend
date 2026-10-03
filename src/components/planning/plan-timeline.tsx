@@ -1,7 +1,6 @@
-import { cn } from 'cn'
 import type { ReactNode } from 'react'
 import type { PlanStop } from '@/api/queries/plans'
-import { formatClock, formatDecimal } from '@/lib/format'
+import { formatClock, formatDecimal, formatDuration } from '@/lib/format'
 import { m } from '@/paraglide/messages'
 import { TransferRow } from './transfer-row'
 import { VerificationChip } from './verification-chip'
@@ -16,14 +15,6 @@ function minutesOfDay(time: string): number {
   return hours * 60 + minutes
 }
 
-/** "2 h", "1 h 30 min", "45 min". */
-function formatDuration(totalMinutes: number): string {
-  const h = Math.floor(totalMinutes / 60)
-  const min = totalMinutes % 60
-  if (h > 0 && min > 0) return m.plan_duration_h_min({ h, min })
-  return h > 0 ? m.plan_duration_h({ h }) : m.plan_duration_min({ min })
-}
-
 interface PlanTimelineProps {
   stops: PlanStop[]
   currency: string
@@ -35,8 +26,13 @@ interface PlanTimelineProps {
 export function PlanTimeline({ stops, currency, renderActions }: PlanTimelineProps) {
   return (
     <ol className="flex flex-col">
-      {stops.map((stop) => (
-        <PlanStopItem key={stop.place_id} stop={stop} currency={currency}>
+      {stops.map((stop, index) => (
+        <PlanStopItem
+          key={stop.place_id}
+          stop={stop}
+          currency={currency}
+          isLast={index === stops.length - 1}
+        >
           {renderActions?.(stop)}
         </PlanStopItem>
       ))}
@@ -47,10 +43,11 @@ export function PlanTimeline({ stops, currency, renderActions }: PlanTimelinePro
 interface PlanStopItemProps {
   stop: PlanStop
   currency: string
+  isLast?: boolean
   children?: ReactNode
 }
 
-function PlanStopItem({ stop, currency, children }: PlanStopItemProps) {
+function PlanStopItem({ stop, currency, isLast = false, children }: PlanStopItemProps) {
   const minutes = minutesOfDay(stop.end) - minutesOfDay(stop.start)
   return (
     <>
@@ -63,26 +60,34 @@ function PlanStopItem({ stop, currency, children }: PlanStopItemProps) {
           </div>
         </li>
       )}
-      <li className="grid grid-cols-[3.25rem_1.125rem_1fr] gap-x-3 last:[&_.rail-line]:hidden">
+      <li className="grid grid-cols-[3.25rem_1.125rem_1fr] gap-x-3">
         <time className="pt-0.5 font-heading font-semibold text-[15px] tabular-nums leading-6">
           {formatClock(stop.start)}
         </time>
-        <Rail dot />
+        <Rail stop={isLast ? 'goal' : 'dot'} />
         <div className="flex flex-col gap-2 pb-5">
           <div className="flex flex-col">
             <h3 className="font-heading font-semibold text-lg leading-6">{stop.name}</h3>
             <p className="text-muted-foreground text-sm leading-[22px]">
-              {KIND_LABELS[stop.kind]()}
-              {minutes > 0 && ` · ${formatDuration(minutes)}`}
+              {minutes > 0
+                ? m.plan_kind_duration({
+                    kind: KIND_LABELS[stop.kind](),
+                    duration: formatDuration(minutes),
+                  })
+                : KIND_LABELS[stop.kind]()}
             </p>
           </div>
           <PriceLine stop={stop} currency={currency} />
-          <VerificationChip
-            kind="hours"
-            verified={stop.hours_verified}
-            verifiedAt={stop.hours_verified_at}
-            sourceUrl={stop.hours_source_url}
-          />
+          {stop.hours_verified || stop.hours_source_url ? (
+            <VerificationChip
+              kind="hours"
+              verified={stop.hours_verified}
+              verifiedAt={stop.hours_verified_at}
+              sourceUrl={stop.hours_source_url}
+            />
+          ) : (
+            <p className="text-muted-foreground text-sm leading-[22px]">{m.plan_hours_none()}</p>
+          )}
           {children}
         </div>
       </li>
@@ -90,17 +95,25 @@ function PlanStopItem({ stop, currency, children }: PlanStopItemProps) {
   )
 }
 
-/** The dotted line of the route, with a stop dot on top of it when `dot` is set. */
-function Rail({ dot = false }: { dot?: boolean }) {
+/**
+ * The route: a dotted line (`route-y`) with a dot per stop and a primary ring for the last stop of
+ * the day. The line runs from the dot to the bottom, so no line sticks out above the first stop or
+ * below the goal; the leg between stops (no `stop`) is line only.
+ */
+function Rail({ stop }: { stop?: 'dot' | 'goal' }) {
   return (
     <span aria-hidden="true" className="relative flex justify-center">
-      <span
-        className={cn(
-          'rail-line absolute -bottom-1 left-[7px] w-1 border-route border-l-4 border-dotted',
-          dot ? 'top-[22px]' : 'top-0',
-        )}
-      />
-      {dot && <span className="relative z-10 mt-1.5 size-2.5 rounded-full bg-foreground" />}
+      {stop !== 'goal' && (
+        <span
+          className={`route-y absolute bottom-0 left-1/2 w-1 -translate-x-1/2 ${stop ? 'top-4' : 'top-0'}`}
+        />
+      )}
+      {stop === 'dot' && (
+        <span className="relative z-10 mt-1.5 size-2.5 rounded-full bg-foreground" />
+      )}
+      {stop === 'goal' && (
+        <span className="mt-[3px] size-[18px] rounded-full border-[3.5px] border-primary bg-card" />
+      )}
     </span>
   )
 }
@@ -117,7 +130,7 @@ function PriceLine({ stop, currency }: PlanStopItemProps) {
   }
   const amount = formatDecimal(price, currency)
   const budgeted =
-    !stop.price_verified && stop.price_inflated != null
+    !stop.price_verified && stop.price_inflated != null && stop.price_inflated !== price
       ? formatDecimal(stop.price_inflated, currency)
       : null
   const isFree = /^0(\.0+)?$/.test(price)
@@ -125,13 +138,11 @@ function PriceLine({ stop, currency }: PlanStopItemProps) {
   return (
     <div className="flex flex-col gap-1">
       <p className="font-heading font-semibold tabular-nums leading-6">
-        {isFree ? m.plan_price_free() : m.plan_price_per_person({ amount })}
-        {budgeted && budgeted !== amount && (
-          <span className="font-normal font-sans text-muted-foreground text-sm">
-            {', '}
-            {m.plan_price_budgeted({ amount: budgeted })}
-          </span>
-        )}
+        {isFree
+          ? m.plan_price_free()
+          : budgeted
+            ? m.plan_price_per_person_budgeted({ amount, budgeted })
+            : m.plan_price_per_person({ amount })}
       </p>
       <VerificationChip
         kind="price"
