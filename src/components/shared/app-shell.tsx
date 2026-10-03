@@ -7,6 +7,7 @@ import { AccountMenu, type AccountState } from './account-menu'
 import { BrandMark } from './brand-mark'
 import { LanguageMenu, type LanguageState } from './language-menu'
 import { tabClass } from './nav-classes'
+import { SiteFooter } from './site-footer'
 
 interface AppShellProps {
   account: AccountState
@@ -34,7 +35,7 @@ export function AppShell({ account, language, envLabel, onCreateTrip, children }
       <header className="sticky top-0 z-40 border-b bg-background pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-6 px-4 md:px-6">
           <Link
-            to="/trips"
+            to={account.status === 'authenticated' ? '/trips' : '/'}
             className="flex items-center gap-2 rounded-md font-semibold tracking-tight outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
             <BrandMark />
@@ -70,10 +71,13 @@ export function AppShell({ account, language, envLabel, onCreateTrip, children }
 
       <main
         id="main"
-        className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-28 md:px-6 md:pt-10 md:pb-12"
+        className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-10 md:px-6 md:pt-10 md:pb-12"
       >
         {children}
       </main>
+
+      {/* The bottom action bar is fixed on phones; keep the footer clear of it. */}
+      <SiteFooter className="pb-20 md:pb-0" />
 
       <nav
         aria-label={m.shell_nav_actions()}

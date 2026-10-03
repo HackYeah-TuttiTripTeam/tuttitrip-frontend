@@ -11,10 +11,17 @@ export interface Session {
   userName: string | undefined
   userPicture: string | undefined
   login: () => void
+  /** Same redirect as login, opened on the sign-up screen of Auth0. */
+  signup: () => void
   logout: () => void
 }
 
 const noop = () => undefined
+
+/** Auth0 brings the user back to the page the login started from (see onRedirectCallback). */
+const returnToHere = () => ({
+  returnTo: `${window.location.pathname}${window.location.search}`,
+})
 
 function describeAuthError(error: Error | undefined): string | undefined {
   if (!error) return undefined
@@ -37,6 +44,7 @@ export function useSession(): Session {
       userName: undefined,
       userPicture: undefined,
       login: noop,
+      signup: noop,
       logout: noop,
     }
   }
@@ -53,8 +61,12 @@ export function useSession(): Session {
     userName: auth0.user?.name ?? auth0.user?.email,
     userPicture: auth0.user?.picture,
     login: () => {
+      void auth0.loginWithRedirect({ appState: returnToHere() })
+    },
+    signup: () => {
       void auth0.loginWithRedirect({
-        appState: { returnTo: `${window.location.pathname}${window.location.search}` },
+        appState: returnToHere(),
+        authorizationParams: { screen_hint: 'signup' },
       })
     },
     logout: () => {

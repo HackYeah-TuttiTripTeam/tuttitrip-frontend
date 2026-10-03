@@ -1,10 +1,14 @@
-import { Outlet, useNavigate } from '@tanstack/react-router'
+import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { lazy, Suspense } from 'react'
 import { AppShell } from '@/components/shared/app-shell'
+import { BootScreen } from '@/components/shared/boot-screen'
+import { PublicShell } from '@/components/shared/public-shell'
 import { useApiAuthBridge } from '@/hooks/use-api-auth-bridge'
+import { useHomeRedirect } from '@/hooks/use-home-redirect'
 import { useLocale } from '@/hooks/use-locale'
 import { useSession } from '@/hooks/use-session'
 import { appEnv } from '@/lib/env'
+import { shellFor } from '@/lib/shell'
 import { useUiStore } from '@/stores/ui-store'
 
 // Dev-only: the import() calls are dropped from production bundles.
@@ -31,28 +35,47 @@ export function RootLayoutView() {
   const { locale, setLocale } = useLocale()
   const setCreateTripOpen = useUiStore((state) => state.setCreateTripOpen)
   const navigate = useNavigate()
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const shell = shellFor(pathname, session.status)
+  useHomeRedirect(pathname, session.status)
+  const language = { locale, onChange: setLocale }
+  const envLabel = appEnv === 'main' ? null : appEnv
 
   return (
     <>
-      <AppShell
-        account={{
-          status: session.status,
-          userName: session.userName,
-          userPicture: session.userPicture,
-          onLogin: session.login,
-          onLogout: session.logout,
-        }}
-        language={{ locale, onChange: setLocale }}
-        envLabel={appEnv === 'main' ? null : appEnv}
-        onCreateTrip={() => {
-          // Creating a trip needs an account; ask guests to sign in first.
-          if (session.status === 'anonymous') return session.login()
-          void navigate({ to: '/trips', search: (prev) => prev })
-          setCreateTripOpen(true)
-        }}
-      >
-        <Outlet />
-      </AppShell>
+      {shell === 'bare' && <BootScreen />}
+      {shell === 'public' && (
+        <PublicShell
+          status={session.status}
+          language={language}
+          envLabel={envLabel}
+          onLogin={session.login}
+          onSignup={session.signup}
+        >
+          <Outlet />
+        </PublicShell>
+      )}
+      {shell === 'app' && (
+        <AppShell
+          account={{
+            status: session.status,
+            userName: session.userName,
+            userPicture: session.userPicture,
+            onLogin: session.login,
+            onLogout: session.logout,
+          }}
+          language={language}
+          envLabel={envLabel}
+          onCreateTrip={() => {
+            // Creating a trip needs an account; ask guests to sign in first.
+            if (session.status === 'anonymous') return session.login()
+            void navigate({ to: '/trips', search: (prev) => prev })
+            setCreateTripOpen(true)
+          }}
+        >
+          <Outlet />
+        </AppShell>
+      )}
       <Suspense>
         <Devtools />
       </Suspense>
