@@ -1172,6 +1172,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Preferences
+         * @description Preferences of everyone on the trip ("what we already know").
+         *
+         *     Args:
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         One entry per person; unfilled ones carry the age defaults.
+         *
+         *     Wymagane uprawnienie: `profiles.preferences:READ`.
+         */
+        get: operations["list_preferences_api_v1_trips__trip_id__preferences_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/profiles/{profile_id}/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Preferences
+         * @description Preferences of one person.
+         *
+         *     Args:
+         *         profile_id: Whose preferences.
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The saved preferences, or the age defaults.
+         *
+         *     Wymagane uprawnienie: `profiles.preferences:READ`.
+         */
+        get: operations["get_preferences_api_v1_trips__trip_id__profiles__profile_id__preferences_get"];
+        /**
+         * Put Preferences
+         * @description Replace your own preferences, or anyone's as a co-host or higher.
+         *
+         *     Args:
+         *         profile_id: Whose preferences.
+         *         data: The whole preferences; the pool must add up to 10.
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The saved preferences.
+         *
+         *     Wymagane uprawnienie: `profiles.preferences:WRITE`.
+         */
+        put: operations["put_preferences_api_v1_trips__trip_id__profiles__profile_id__preferences_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/planning/jobs": {
         parameters: {
             query?: never;
@@ -1738,6 +1812,42 @@ export interface components {
          */
         ConflictCode: "lodging_hard_requirement" | "veto_blocks_place" | "budget_limit" | "floor_unreachable" | "other";
         /**
+         * Constraints
+         * @description Health and access limits.
+         *
+         *     Heat, cold and audio description are stored only: without weather data they
+         *     reach the plan through the places' ``indoor`` flag, not on their own.
+         */
+        Constraints: {
+            /**
+             * Wheelchair
+             * @default false
+             */
+            wheelchair: boolean;
+            /**
+             * Stairs
+             * @default false
+             */
+            stairs: boolean;
+            /**
+             * Heat
+             * @default false
+             */
+            heat: boolean;
+            /**
+             * Cold
+             * @default false
+             */
+            cold: boolean;
+            /**
+             * Audio Description
+             * @default false
+             */
+            audio_description: boolean;
+            /** Disability Note */
+            disability_note?: string | null;
+        };
+        /**
          * Cuisine
          * @description Cuisine of a restaurant; shared with the cuisine minima (e.g. Indian).
          * @enum {string}
@@ -1749,6 +1859,16 @@ export interface components {
          * @enum {string}
          */
         Currency: "PLN" | "EUR" | "GBP";
+        /**
+         * Diet
+         * @description Diets (codes shared with the catalog's ``diet_tags``) and free-text allergies.
+         */
+        Diet: {
+            /** Tags */
+            tags?: components["schemas"]["DietTag"][];
+            /** Allergies */
+            allergies?: string[];
+        };
         /**
          * DietTag
          * @description Diet a place can serve; shared with the diets in people's preferences.
@@ -1801,6 +1921,23 @@ export interface components {
              */
             created_at: string;
         };
+        /**
+         * ExamplePlace
+         * @description A place the person likes or dislikes; ``place_id`` is set for catalog places.
+         */
+        ExamplePlace: {
+            /** Name */
+            name: string;
+            /** Place Id */
+            place_id?: string | null;
+            verdict: components["schemas"]["ExampleVerdict"];
+        };
+        /**
+         * ExampleVerdict
+         * @description What the person thinks of an example place.
+         * @enum {string}
+         */
+        ExampleVerdict: "like" | "dislike";
         /**
          * ExpenseRead
          * @description An expense as returned by the API.
@@ -1977,6 +2114,22 @@ export interface components {
             contract_version: number;
             /** Worker Contract Version */
             worker_contract_version?: number | null;
+        };
+        /**
+         * ImportancePool
+         * @description Ten points over the five domains (``a_ij`` of the spec, before ``/10``).
+         */
+        ImportancePool: {
+            /** Lodging */
+            lodging: number;
+            /** Food */
+            food: number;
+            /** Attractions */
+            attractions: number;
+            /** Pace */
+            pace: number;
+            /** Cost */
+            cost: number;
         };
         /**
          * InvitationAccept
@@ -2274,6 +2427,27 @@ export interface components {
              */
             role: "member" | "co_host";
         };
+        /**
+         * MinTag
+         * @description A tag the person wants at least once, e.g. food ``indian``.
+         *
+         *     ``tag`` is a ``Cuisine`` for ``food`` and a ``PlaceTag`` for ``attractions``.
+         *     The solver turns the domain's points into the number of places (E5).
+         */
+        MinTag: {
+            domain: components["schemas"]["MinTagDomain"];
+            /**
+             * Tag
+             * @description Two taxonomies: a Cuisine code (e.g. indian) for domain food, a PlaceTag code (e.g. museums) for domain attractions.
+             */
+            tag: string;
+        };
+        /**
+         * MinTagDomain
+         * @description Domain a minimum tag belongs to (the pool domain whose points trigger it).
+         * @enum {string}
+         */
+        MinTagDomain: "food" | "attractions";
         /**
          * OpeningHours
          * @description Simple weekly opening hours in the city's local time zone.
@@ -2929,6 +3103,75 @@ export interface components {
              * @description Written later by a model.
              */
             explanation?: string | null;
+        };
+        /**
+         * PreferencesRead
+         * @description Preferences of one person.
+         *
+         *     Health data is private: ``constraints`` and ``effective_stairs_sensitivity``
+         *     are null for plain members looking at someone else's preferences.
+         */
+        PreferencesRead: {
+            /**
+             * Interests
+             * @description Interest profile I_i: tag to strength 0..1.
+             */
+            interests: {
+                [key: string]: number;
+            };
+            diet: components["schemas"]["Diet"];
+            /** Example Places */
+            example_places: components["schemas"]["ExamplePlace"][];
+            /** Min Tags */
+            min_tags: components["schemas"]["MinTag"][];
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            importance_pool: components["schemas"]["ImportancePool"];
+            /** @description Only for the person and co-hosts and above; else null. */
+            constraints: components["schemas"]["Constraints"] | null;
+            /**
+             * Effective Stairs Sensitivity
+             * @description Stairs sensitivity for the solver: 1.0 with stairs or wheelchair, else the profile's. Same visibility as constraints.
+             */
+            effective_stairs_sensitivity: number | null;
+            /**
+             * Filled
+             * @description False while nobody has saved them: the pool is the age default.
+             */
+            filled: boolean;
+            /** Updated By Sub */
+            updated_by_sub: string | null;
+            /** Updated At */
+            updated_at: string | null;
+        };
+        /**
+         * PreferencesWrite
+         * @description The whole preferences of one person (PUT replaces them).
+         *
+         *     ``example_places`` with a ``place_id`` are the person's thumb ratings
+         *     (``like`` is "want", ``dislike`` is "dont_want" with reason "other") and are
+         *     stored there, not here. Sending fewer never removes a rating; use the
+         *     ratings endpoint for that.
+         */
+        PreferencesWrite: {
+            /**
+             * Interests
+             * @description Interest profile I_i: tag to strength 0..1.
+             */
+            interests?: {
+                [key: string]: number;
+            };
+            diet?: components["schemas"]["Diet"];
+            /** Example Places */
+            example_places?: components["schemas"]["ExamplePlace"][];
+            /** Min Tags */
+            min_tags?: components["schemas"]["MinTag"][];
+            constraints?: components["schemas"]["Constraints"];
+            /** @description Omitted: the default for the person's age group. */
+            importance_pool?: components["schemas"]["ImportancePool"] | null;
         };
         /**
          * PriceUnit
@@ -5597,6 +5840,147 @@ export interface operations {
                 content?: never;
             };
             /** @description Brak uprawnienia `profiles.feedback:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_preferences_api_v1_trips__trip_id__preferences_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferencesRead"][];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.preferences:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_preferences_api_v1_trips__trip_id__profiles__profile_id__preferences_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferencesRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.preferences:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_preferences_api_v1_trips__trip_id__profiles__profile_id__preferences_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreferencesWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferencesRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.preferences:WRITE` */
             403: {
                 headers: {
                     [name: string]: unknown;

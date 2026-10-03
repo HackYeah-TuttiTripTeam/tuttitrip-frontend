@@ -63,6 +63,7 @@ const api = vi.hoisted(() => {
         kind: 'trip',
       })
     }
+    if (pathname.endsWith('/profiles') || pathname.endsWith('/members')) return reply(200, [])
     if (pathname.endsWith('/invitations/preview')) {
       return state.previewStatus === 200
         ? reply(200, {
@@ -111,6 +112,7 @@ const signedIn = (): Session => ({
   userName: 'Anna Nowak',
   userPicture: undefined,
   login: vi.fn(),
+  signup: vi.fn(),
   logout: vi.fn(),
 })
 
