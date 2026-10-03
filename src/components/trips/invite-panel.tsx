@@ -43,7 +43,6 @@ export function InvitePanel({ onInvite, isInviting, inviteError, children }: Inv
       <div className="flex flex-col gap-1">
         <h3 className="font-medium text-sm">{m.invite_list_title()}</h3>
         {children}
-        <p className="text-muted-foreground text-sm">{m.invite_list_hint()}</p>
       </div>
     </section>
   )

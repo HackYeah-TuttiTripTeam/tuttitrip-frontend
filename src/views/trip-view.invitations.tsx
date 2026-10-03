@@ -46,11 +46,14 @@ export function TripInvitationsView({ tripId, tripName }: TripInvitationsViewPro
         ) : list.invitations.length === 0 ? (
           <p className="py-3 text-muted-foreground text-sm">{m.invite_list_empty()}</p>
         ) : (
-          <InvitationList
-            invitations={list.invitations}
-            onRevoke={revocation.revoke}
-            revokingId={revocation.pendingId}
-          />
+          <>
+            <InvitationList
+              invitations={list.invitations}
+              onRevoke={revocation.revoke}
+              revokingId={revocation.pendingId}
+            />
+            <p className="text-muted-foreground text-sm">{m.invite_list_hint()}</p>
+          </>
         )}
         {revocation.isError && (
           <p role="alert" className="text-destructive text-sm">
