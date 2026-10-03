@@ -2,8 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { overwriteGetLocale } from '@/paraglide/runtime'
 import {
   compareText,
+  formatClock,
   formatDate,
   formatDateRange,
+  formatDayMonth,
+  formatDecimal,
+  formatDuration,
   formatMoney,
   formatNumber,
   formatTime,
@@ -68,5 +72,44 @@ describe('format', () => {
     expect(formatDateRange(null, null)).toBeNull()
     useLocale('en')
     expect(formatDateRange('2026-10-03', '2026-10-06')).toBe('Sat, Oct 3 – Tue, Oct 6')
+  })
+})
+
+describe('plan formats', () => {
+  it('formats decimal strings without a float in between', () => {
+    useLocale('pl')
+    expect(formatDecimal('575.00')).toBe('575 zł')
+    expect(formatDecimal('12.50')).toBe('12,50 zł')
+    expect(formatDecimal('0.30')).toBe('0,30 zł')
+    // 2^53 + 1 does not survive a Number.
+    expect(formatDecimal('9007199254740993.10')).toBe('9 007 199 254 740 993,10 zł')
+    useLocale('en')
+    expect(formatDecimal('1240.00', 'PLN')).toBe('PLN 1,240')
+    expect(formatDecimal('9.99', 'EUR')).toBe('€9.99')
+  })
+
+  it('writes API times of day per language', () => {
+    useLocale('pl')
+    expect(formatClock('09:30:00')).toBe('09:30')
+    useLocale('en')
+    expect(formatClock('15:00:00').replace(/\s/g, ' ')).toBe('3:00 PM')
+  })
+
+  it('writes a short day and month', () => {
+    useLocale('pl')
+    expect(formatDayMonth(`${new Date().getFullYear()}-09-20T09:00:00Z`)).toBe('20 wrz')
+  })
+  it('formats zero, negative and durations', () => {
+    useLocale('pl')
+    expect(formatDecimal('0.00')).toBe('0\u00a0zł')
+    expect(formatDecimal('-12.50')).toBe('-12,50\u00a0zł')
+    expect(formatDuration(120)).toBe('2 h')
+    expect(formatDuration(90)).toBe('1 h 30 min')
+    expect(formatDuration(45)).toBe('45 min')
+  })
+
+  it('writes a verification date in UTC, whatever the time zone', () => {
+    useLocale('pl')
+    expect(formatDayMonth(`${new Date().getFullYear()}-09-20T00:30:00Z`)).toBe('20 wrz')
   })
 })

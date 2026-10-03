@@ -26,6 +26,12 @@
   color-scheme: dark;
 }
 
+/* The dotted route line of the design system (.tt-route-y in the skill's bundle.css). */
+@utility route-y {
+  background:
+    radial-gradient(circle, var(--route) 1.6px, transparent 2.2px) 50% 0 / 4px 8px repeat-y;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

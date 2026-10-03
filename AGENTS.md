@@ -119,6 +119,7 @@ options from `src/api/queries/`, so a route never touches the API directly.
 
 1. **Views do not import other views.** Shared UI goes to `components/`,
    shared logic to `hooks/`. (dependency-cruiser `views-no-cross-import`)
+   A view that is a tab's content is named `<parent>.<tab>.tsx` (`trip-view.plan.tsx`).
 2. **`components/**` are presentational.** No imports from `views/`, `hooks/`,
    `stores/`, `loaders/`, `routes/`, and no runtime use of the API client,
    TanStack Query, Zustand or Auth0. Type-only imports of API/loader types are

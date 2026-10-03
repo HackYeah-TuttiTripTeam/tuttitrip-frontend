@@ -89,6 +89,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/vote/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Vote Access
+         * @description Say which trip and profile the voting token is bound to.
+         *
+         *     Voting routes use the same marker and ``TokenAccessDep``; this one lets
+         *     the voting page check its link before showing anything.
+         *
+         *     Args:
+         *         access: The checked token.
+         *
+         *     Returns:
+         *         Trip, profile and scope of the token.
+         *
+         *     Dostęp tokenem bez konta (`X-Access-Token`), zakres `vote`.
+         */
+        get: operations["read_vote_access_api_v1_vote_access_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/permissions/features": {
         parameters: {
             query?: never;
@@ -591,6 +622,80 @@ export interface paths {
         patch: operations["update_trip_api_v1_trips__trip_id__patch"];
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Members
+         * @description List the trip's members with their roles (name from their profile).
+         *
+         *     Args:
+         *         membership: The caller's membership (any role).
+         *         session: Database session.
+         *
+         *     Returns:
+         *         Members, highest role first.
+         *
+         *     Wymagane uprawnienie: `trips.members:READ`.
+         */
+        get: operations["list_members_api_v1_trips__trip_id__members_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/members/{profile_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Member
+         * @description Remove a member; their profile stays on the trip without an account.
+         *
+         *     A co-host removes members, the host removes members and co-hosts, nobody
+         *     removes the host.
+         *
+         *     Args:
+         *         profile_id: Profile of the member.
+         *         membership: The caller's membership (co-host or host).
+         *         session: Database session.
+         *
+         *     Wymagane uprawnienie: `trips.members:WRITE`.
+         */
+        delete: operations["remove_member_api_v1_trips__trip_id__members__profile_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Member
+         * @description Make a member a co-host or a plain member (host only).
+         *
+         *     Args:
+         *         profile_id: Profile of the member.
+         *         data: The new role.
+         *         membership: The caller's membership (host).
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The member after the change.
+         *
+         *     Wymagane uprawnienie: `trips.members:WRITE`.
+         */
+        patch: operations["update_member_api_v1_trips__trip_id__members__profile_id__patch"];
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/profiles": {
         parameters: {
             query?: never;
@@ -707,6 +812,85 @@ export interface paths {
          *     Wymagane uprawnienie: `profiles.core:WRITE`.
          */
         patch: operations["update_profile_api_v1_trips__trip_id__profiles__profile_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/profiles/{profile_id}/access-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Access Tokens
+         * @description List a person's link tokens (without the secret), newest first.
+         *
+         *     Args:
+         *         profile_id: The person's profile on this trip.
+         *         membership: The caller's (co-host) membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         Token data: id, scope, dates of creation, expiry, last use, revocation.
+         *
+         *     Wymagane uprawnienie: `profiles.core:READ`.
+         */
+        get: operations["list_access_tokens_api_v1_trips__trip_id__profiles__profile_id__access_tokens_get"];
+        put?: never;
+        /**
+         * Create Vote Token
+         * @description Create a voting link token for a person without an account.
+         *
+         *     The response is the only time the token is visible. The frontend puts it
+         *     in a URL fragment (`#t=...`) and sends it back as `X-Access-Token`.
+         *
+         *     Args:
+         *         profile_id: The person's profile on this trip.
+         *         data: Lifetime of the link.
+         *         membership: The caller's (co-host) membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The token and its data.
+         *
+         *     Wymagane uprawnienie: `profiles.core:WRITE`.
+         */
+        post: operations["create_vote_token_api_v1_trips__trip_id__profiles__profile_id__access_tokens_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/profiles/{profile_id}/access-tokens/{token_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Access Token
+         * @description Revoke a link token (idempotent); it answers 404 from then on.
+         *
+         *     Args:
+         *         profile_id: The person's profile on this trip.
+         *         token_id: Token id from creation.
+         *         membership: The caller's (co-host) membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The token's data with `revoked_at`.
+         *
+         *     Wymagane uprawnienie: `profiles.core:WRITE`.
+         */
+        delete: operations["revoke_access_token_api_v1_trips__trip_id__profiles__profile_id__access_tokens__token_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/planning/jobs": {
@@ -840,6 +1024,73 @@ export interface paths {
          *     Wymagane uprawnienie: `planning.linter:READ`.
          */
         post: operations["check_api_v1_planning_linter_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/planning/linter/trips/{trip_id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Document
+         * @description Save a plan or lodging offer pasted by the host.
+         *
+         *     The worker reads the text by the returned ``id``; it is deleted with the trip.
+         *
+         *     Args:
+         *         membership: The caller's membership of ``{trip_id}`` (co-host or host).
+         *         data: Kind and text.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The stored document.
+         *
+         *     Wymagane uprawnienie: `planning.linter:WRITE`.
+         */
+        post: operations["create_document_api_v1_planning_linter_trips__trip_id__documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/accommodation/requirements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lodging requirements of the trip
+         * @description Read the lodging requirements (any member).
+         *
+         *     Args:
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The requirements and their version.
+         *
+         *     Wymagane uprawnienie: `accommodation:READ`.
+         */
+        get: operations["get_requirements_api_v1_trips__trip_id__accommodation_requirements_get"];
+        /**
+         * Replace the lodging requirements of the trip
+         * @description Replaces the whole set. Each requirement is an amenity, a platform or a maximum distance, hard or soft; they apply to the one lodging base of the whole trip. `version` moves only when the set really changes. An outing (a single day) has no lodging and gets 422.
+         *
+         *     Wymagane uprawnienie: `accommodation:WRITE`.
+         */
+        put: operations["put_requirements_api_v1_trips__trip_id__accommodation_requirements_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1006,6 +1257,95 @@ export interface components {
          */
         Access: "READ" | "WRITE";
         /**
+         * AccessTokenCreate
+         * @description Payload for a token that lets the profile's person act without an account.
+         */
+        AccessTokenCreate: {
+            /**
+             * Expires In Days
+             * @description Days until the link stops working.
+             * @default 14
+             */
+            expires_in_days: number;
+        };
+        /**
+         * AccessTokenCreated
+         * @description Response of token creation: the only time the token is shown.
+         */
+        AccessTokenCreated: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            scope: components["schemas"]["TokenScope"];
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Last Used At */
+            last_used_at: string | null;
+            /**
+             * Token
+             * @description The secret. Shown once and not recoverable; put it in a URL fragment (`#t=...`) and send it back as `X-Access-Token`.
+             */
+            token: string;
+        };
+        /**
+         * AccessTokenRead
+         * @description A stored token's public data (the token itself is never stored).
+         */
+        AccessTokenRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            scope: components["schemas"]["TokenScope"];
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Last Used At */
+            last_used_at: string | null;
+        };
+        /**
          * AgeGroup
          * @description Age group that drives default constraints (distance, naps, pace).
          * @enum {string}
@@ -1142,6 +1482,45 @@ export interface components {
          */
         DirectGrantSet: {
             level: components["schemas"]["Access"];
+        };
+        /**
+         * DocumentCreate
+         * @description Text pasted by the host (stored as typed, deleted with the trip).
+         */
+        DocumentCreate: {
+            kind: components["schemas"]["DocumentKind"];
+            /** Text */
+            text: string;
+        };
+        /**
+         * DocumentKind
+         * @description What a pasted text is: a plan from another tool or a lodging offer.
+         * @enum {string}
+         */
+        DocumentKind: "plan" | "offer";
+        /**
+         * DocumentRead
+         * @description A stored pasted text (not echoed back; the worker reads it by ``id``).
+         */
+        DocumentRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            kind: components["schemas"]["DocumentKind"];
+            /** Created By */
+            created_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /**
          * ExpenseRead
@@ -1335,6 +1714,10 @@ export interface components {
          *     ``status`` is DBOS's: ENQUEUED, DELAYED, PENDING, SUCCESS, ERROR,
          *     CANCELLED or MAX_RECOVERY_ATTEMPTS_EXCEEDED. Contract-version rejections
          *     by the worker show up as ERROR with the worker's message in ``error``.
+         *     ``error_code`` is the worker's machine code (``invalid_payload``,
+         *     ``unsupported_contract_version`` or ``not_implemented``); a job that fails
+         *     with ``not_implemented`` is not retried and ``error`` says it is not
+         *     available yet.
          */
         JobState: {
             /** Workflow Id */
@@ -1351,6 +1734,11 @@ export interface components {
             } | null;
             /** Error */
             error?: string | null;
+            /**
+             * Error Code
+             * @description Machine code of a worker error: `unsupported_contract_version`, `invalid_payload` or `not_implemented` (not retried). Clients branch on this, never on the text of `error`.
+             */
+            error_code?: string | null;
             progress?: components["schemas"]["Progress"] | null;
         };
         /**
@@ -1419,6 +1807,37 @@ export interface components {
             access: {
                 [key: string]: components["schemas"]["Access"];
             };
+        };
+        /**
+         * MemberRead
+         * @description A person on the trip who has an account, with their trip role.
+         */
+        MemberRead: {
+            /**
+             * Profile Id
+             * Format: uuid
+             * @description Use it in the member routes.
+             */
+            profile_id: string;
+            /** Display Name */
+            display_name: string;
+            role: components["schemas"]["TripRole"];
+            /**
+             * Is Me
+             * @description Whether this member is the caller.
+             */
+            is_me: boolean;
+        };
+        /**
+         * MemberRoleUpdate
+         * @description Payload for changing a member's role (the host role cannot be given).
+         */
+        MemberRoleUpdate: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "member" | "co_host";
         };
         /**
          * OpeningHours
@@ -2225,6 +2644,32 @@ export interface components {
          */
         ReasonCode: "too_expensive" | "too_far" | "not_my_style" | "too_crowded" | "too_hard_for_child" | "other";
         /**
+         * RequirementItem
+         * @description One lodging requirement of a trip (a switch the host turned on).
+         *
+         *     ``hard`` requirements multiply into the lodging score and ``S_h`` of E2
+         *     (unmet means 0); soft ones are averaged. A requirement applies to the one
+         *     lodging base for the whole trip (docs/algorytm.md, section 9).
+         */
+        RequirementItem: {
+            kind: components["schemas"]["RequirementKind"];
+            /** Key */
+            key: string;
+            /** Hard */
+            hard: boolean;
+            /**
+             * Max Distance M
+             * @description Required for `distance`, forbidden otherwise.
+             */
+            max_distance_m?: number | null;
+        };
+        /**
+         * RequirementKind
+         * @description What a requirement is about.
+         * @enum {string}
+         */
+        RequirementKind: "amenity" | "platform" | "distance";
+        /**
          * RequirementState
          * @description State of one lodging requirement (E2 lodging).
          */
@@ -2244,6 +2689,27 @@ export interface components {
          * @enum {string}
          */
         RequirementStatus: "met" | "unmet" | "unconfirmed";
+        /**
+         * RequirementsRead
+         * @description The requirements of a trip with their version.
+         */
+        RequirementsRead: {
+            /** Requirements */
+            requirements?: components["schemas"]["RequirementItem"][];
+            /**
+             * Version
+             * @description Counter of changes. An offer check stores the version it used; a different current version makes that result stale.
+             */
+            version: number;
+        };
+        /**
+         * RequirementsWrite
+         * @description PUT payload: the whole set of requirements replaces the stored one.
+         */
+        RequirementsWrite: {
+            /** Requirements */
+            requirements?: components["schemas"]["RequirementItem"][];
+        };
         /**
          * RoleCreate
          * @description Payload for a new role.
@@ -2319,6 +2785,37 @@ export interface components {
             /** Close */
             close: string;
         };
+        /**
+         * TokenAccess
+         * @description Proof that a valid access token was presented (like ``TripMembership``).
+         *
+         *     Carries ids only, never the token. Services take it as proof that the
+         *     caller may act on exactly this trip and profile.
+         */
+        TokenAccess: {
+            /**
+             * Token Id
+             * Format: uuid
+             */
+            token_id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            scope: components["schemas"]["TokenScope"];
+        };
+        /**
+         * TokenScope
+         * @description What an access token lets its holder do (one narrow function each).
+         * @enum {string}
+         */
+        TokenScope: "vote";
         /**
          * TransferMode
          * @description How people get to a stop.
@@ -2647,6 +3144,52 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    read_vote_access_api_v1_vote_access_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Secret access token (from the link fragment). */
+                "X-Access-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenAccess"];
+                };
+            };
+            /** @description Brak nagłówka z tokenem */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token nieznany, wygasły, odwołany albo inny zakres */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };
@@ -3530,6 +4073,145 @@ export interface operations {
             };
         };
     };
+    list_members_api_v1_trips__trip_id__members_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberRead"][];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.members:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_member_api_v1_trips__trip_id__members__profile_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.members:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_member_api_v1_trips__trip_id__members__profile_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberRoleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.members:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_profiles_api_v1_trips__trip_id__profiles_get: {
         parameters: {
             query?: never;
@@ -3740,6 +4422,149 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProfileRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_access_tokens_api_v1_trips__trip_id__profiles__profile_id__access_tokens_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessTokenRead"][];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.core:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_vote_token_api_v1_trips__trip_id__profiles__profile_id__access_tokens_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessTokenCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessTokenCreated"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_access_token_api_v1_trips__trip_id__profiles__profile_id__access_tokens__token_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                token_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessTokenRead"];
                 };
             };
             /** @description Brak tokenu albo zły token */
@@ -4009,6 +4834,168 @@ export interface operations {
             };
             /** @description Brak uprawnienia `planning.linter:READ` */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_document_api_v1_planning_linter_trips__trip_id__documents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.linter:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Empty text or longer than 20 000 characters. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_requirements_api_v1_trips__trip_id__accommodation_requirements_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequirementsRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `accommodation:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_requirements_api_v1_trips__trip_id__accommodation_requirements_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequirementsWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequirementsRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `accommodation:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
