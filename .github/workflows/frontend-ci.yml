@@ -7,22 +7,28 @@ name: Frontend CI
 # One run per commit: pull_request for branches (the preview is deployed from
 # it), push only for main and develop. A newer commit on the same pull request
 # cancels the unfinished run; main/develop runs are never cancelled.
+# PR previews are off unless the org variable PREVIEW_DEPLOYS is 'true' or the PR
+# has the label `preview`; adding that label re-runs the workflow to deploy it.
 on:
   push:
     branches: [main, develop]
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: frontend-ci-${{ github.event.pull_request.number || github.ref }}
+  # Other labels (type:* from the autolabeler) get their own group, so they never
+  # cancel the run of a real commit.
+  group: frontend-ci-${{ github.event.pull_request.number || github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'preview' && '-label' || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
     name: verify
+    if: github.event.action != 'labeled' || github.event.label.name == 'preview'
     runs-on: [self-hosted, hackathon]
     timeout-minutes: 15
     steps:
@@ -70,6 +76,7 @@ jobs:
 
   build:
     name: build
+    if: github.event.action != 'labeled' || github.event.label.name == 'preview'
     runs-on: [self-hosted, hackathon]
     timeout-minutes: 15
     outputs:
@@ -125,6 +132,12 @@ jobs:
           path: dist
           retention-days: 3
 
+      - name: Say why there is no preview
+        if: >-
+          github.event_name == 'pull_request' && vars.PREVIEW_DEPLOYS != 'true' &&
+          !contains(github.event.pull_request.labels.*.name, 'preview')
+        run: echo 'Preview disabled (PREVIEW_DEPLOYS=false); add label `preview` to deploy' >> "$GITHUB_STEP_SUMMARY"
+
   deploy:
     name: deploy
     needs: [verify, build]
@@ -133,7 +146,8 @@ jobs:
     if: >-
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'develop')) ||
       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository &&
-       github.head_ref != 'develop' && github.head_ref != 'main')
+       github.head_ref != 'develop' && github.head_ref != 'main' &&
+       (vars.PREVIEW_DEPLOYS == 'true' || contains(github.event.pull_request.labels.*.name, 'preview')))
     runs-on: [self-hosted, hackathon]
     timeout-minutes: 15
     permissions:

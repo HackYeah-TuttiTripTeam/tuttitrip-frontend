@@ -121,7 +121,8 @@ with `is_me`) are served from `/trips/{id}/members` and join profiles on `profil
 - **New scenario:** add its name to `scenarioNames` and a `case` in `createWorld`
   (`src/mocks/scenarios.ts`; the switch fails `tsc` until you do), then a test that uses it.
 - **Smoke tests by agents:** states (empty, error, readonly, approval, offline) go through
-  `pnpm dev:mock`; the real API goes through the PR preview. Report both.
+  `pnpm dev:mock`; the real API goes through the local proxy to the develop API (`pnpm dev`),
+  or through the PR preview when the PR has the label `preview`. Report both.
 - **Build safety (rule 8):** `src/mocks/` is imported only by test files and `src/main.tsx`
   (behind `__API_MOCK__`); `msw` only inside `src/mocks/`
   (`scripts/check-arch.mjs`). `scripts/dist.test.mjs` builds and fails if MSW, the worker
@@ -334,7 +335,9 @@ develop; a newer commit on a PR cancels its unfinished run (main/develop runs
 are never cancelled). `verify` (install, `biome ci`, resolve API + `api:sync`,
 `tsc -b`, `test:arch`, unit tests) and `build` (install, resolve API +
 `api:sync`, build) run in parallel. `deploy` (needs both) = pushes to main/develop deploy their Worker;
-pull requests deploy their preview Worker and upsert one PR comment (marker
+pull requests deploy their preview Worker only when the org variable
+`PREVIEW_DEPLOYS` is `true` or the PR has the label `preview` (otherwise the
+`build` job summary says so), and upsert one PR comment (marker
 `<!-- tuttitrip-preview -->`, edited in place, never duplicated). Each deploy
 ends with a smoke test of `/`, a deep link and `/api/v1/health/live` through
 the proxy (skipped for a preview whose backend did not answer).
@@ -474,9 +477,15 @@ innym w drogę i żeby każda funkcja przeszła ten sam proces. Dotyczą też lu
    - `src/api/schema.d.ts` tylko z `pnpm api:sync`, nigdy ręcznie (przy konflikcie wygeneruj od nowa),
    - `src/routeTree.gen.ts` (generowany), `src/styles/*` (tylko z skilla design systemu),
    - `components/ui/*`, `components/shared/*` i pliki z tekstami interfejsu (PL i EN).
-6. Smoke test jest obowiązkowy dla KAŻDEGO zrealizowanego feature'a. Po pushu gałęzi poczekaj na
-   wdrożenie podglądu i przejdź na żywo scenariusz z kryteriów akceptacji issue:
-   - podgląd frontendu powstaje dla PR, więc otwórz najpierw szkic PR (`gh pr create --draft`);
+6. Smoke test jest obowiązkowy dla KAŻDEGO zrealizowanego feature'a. Podglądy gałęzi są domyślnie wyłączone (zmienna organizacji `PREVIEW_DEPLOYS=false`, oszczędzamy
+   moc obliczeniową): develop i main wdrażają się zawsze, gałąź tylko z etykietą `preview` na PR (albo gdy
+   zmienna ma wartość `true`). Użyj etykiety wyłącznie, gdy żywy podgląd jest niezbędny; w pozostałych
+   przypadkach smoke test robisz lokalnie, a po merge'u sprawdzasz develop. Pominięty podgląd zostawia
+   w podsumowaniu joba jedną linię "Preview disabled (PREVIEW_DEPLOYS=false); add label `preview` to deploy".
+   Przejdź scenariusz z kryteriów akceptacji issue:
+   - lokalnie: `pnpm dev:mock` (scenariusze: puste, błąd, tylko do odczytu, zatwierdzenie, offline) i/albo
+     `pnpm dev` z lokalnym proxy `/api` do API develop (`VITE_API_URL`),
+   - tylko gdy podgląd jest niezbędny: otwórz szkic PR (`gh pr create --draft`), dodaj etykietę `preview`;
      adres `https://tuttitrip-preview-<slug>.gburek.app` jest w komentarzu bota,
    - przejdź scenariusz na telefonie (widok 390x844) i na desktopie, w motywie jasnym i ciemnym, po
      polsku i po angielsku (skill `claude-in-chrome` albo ręcznie); zrzuty dołącz do komentarza.
