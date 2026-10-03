@@ -72,6 +72,11 @@ the same plan.
 - Name: TuttiTrip only. The earlier working name WARTO is retired from the UI, docs and pitch.
 - Visual system: the TuttiTrip design system (`.claude/skills/tuttitrip-design-system`) is binding for
   every UI change: tokens, fonts, Keyline icons, components, screens and the UI glossary.
+- Logo: the "Horyzont" mark, a round badge with a road running to the horizon under a gold goal ring,
+  used only as the design system ships it (no recolouring, outline, shadow, gradient, rotation or
+  stretching; always with its own badge; at least 24px). The wordmark is outlined Funnel Display and is
+  never retyped. The tagline "Plan, po którym nikt nie czuje, że przegrał" is fixed and stays out of the
+  app chrome.
 - Voice: Polish on "Ty", short, like a well-organized family member; verbs on buttons; no emoji.
 
 ## Evidence on Hand
@@ -80,7 +85,7 @@ the same plan.
   invent any, in the UI, on the landing page or in the pitch.
 - The three numbers for the jury (violations in a chatbot plan vs ours, repeatability of the plan hash,
   time from one sentence to a first plan) must be measured on real data before they are shown.
-- Real assets: the logo mark (`public/logo.svg`, `.claude/skills/tuttitrip-design-system/assets/Logos`),
+- Real assets: the Horyzont logo (`public/brand/`, source in `.claude/skills/tuttitrip-design-system/assets/Logos`) and app icons (`assets/AppIcons`),
   the design system components and screens, the demo city sheet.
 
 ## Product Principles

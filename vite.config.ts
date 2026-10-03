@@ -27,7 +27,12 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         injectRegister: false, // registered in src/lib/pwa.ts
-        includeAssets: ['favicon.ico', 'favicon.svg', 'apple-touch-icon-180x180.png'],
+        includeAssets: [
+          'favicon.ico',
+          'favicon.svg',
+          'icon-32.png',
+          'apple-touch-icon-180x180.png',
+        ],
         manifest: {
           id: '/',
           name: 'TuttiTrip',

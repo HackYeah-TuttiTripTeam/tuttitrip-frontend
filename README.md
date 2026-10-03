@@ -79,7 +79,6 @@ Po zmianie w backendzie odpal `api:sync` i zacommituj `src/api/schema.d.ts`. CI 
 | `pnpm i18n` | kompilacja `messages/*.json` do `src/paraglide` (uruchamia się sama przy instalacji, `verify` i `build`) |
 | `pnpm verify` | to, co CI odpala przed buildem: `i18n`, `biome ci`, `tsc -b`, `test:arch`, `test` |
 | `pnpm api:sync` | regeneracja typów API |
-| `pnpm pwa:icons` | ikony PWA z `public/logo.svg` |
 
 Przed każdym commitem: `pnpm biome check --write . && pnpm tsc -b && pnpm test:arch`.
 

@@ -60,7 +60,7 @@ product, not decoration.
 | Unit tests | Vitest (`*.test.ts` next to the code) |
 | Lint / format | Biome 2 (strict; GritQL plugin for colors) |
 | Architecture tests | dependency-cruiser + `scripts/check-arch.mjs` |
-| PWA | `vite-plugin-pwa` (generateSW), icons from `@vite-pwa/assets-generator` |
+| PWA | `vite-plugin-pwa` (generateSW), icons copied from the design system (`assets/AppIcons`) into `public/` |
 | Hosting | Cloudflare Workers: static assets + `/api/*` proxy script (`wrangler.jsonc`, `worker/index.ts`) |
 
 shadcn registries allowed by the design system: `@react-bits`, `@aceternity`,
