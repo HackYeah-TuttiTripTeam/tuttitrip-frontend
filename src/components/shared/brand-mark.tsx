@@ -20,6 +20,7 @@ function Themed({
   alt: string
   className?: string
 }) {
+  // Two images, one hidden by CSS: the `.dark` class (not a media query) decides, at the cost of a second small fetch.
   return (
     <>
       <img src={files.light} alt={alt} className={cn('dark:hidden', className)} />

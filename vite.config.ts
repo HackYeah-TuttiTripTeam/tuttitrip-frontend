@@ -44,7 +44,7 @@ export default defineConfig(({ mode }) => {
           display: 'standalone',
           orientation: 'portrait',
           theme_color: '#00774d',
-          background_color: '#ffffff',
+          background_color: '#f7fcf9',
           icons: [
             { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
             { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
@@ -64,6 +64,8 @@ export default defineConfig(({ mode }) => {
           // /api/v1/docs and other API pages are not part of the app shell.
           navigateFallbackDenylist: [/^\/api\//],
           globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+          // Share images are for crawlers only; no need to precache them.
+          globIgnores: ['og-image-*.png'],
           cleanupOutdatedCaches: true,
         },
       }),

@@ -85,8 +85,9 @@ the same plan.
   invent any, in the UI, on the landing page or in the pitch.
 - The three numbers for the jury (violations in a chatbot plan vs ours, repeatability of the plan hash,
   time from one sentence to a first plan) must be measured on real data before they are shown.
-- Real assets: the Horyzont logo (`public/brand/`, source in `.claude/skills/tuttitrip-design-system/assets/Logos`) and app icons (`assets/AppIcons`),
-  the design system components and screens, the demo city sheet.
+- Real assets: the Horyzont logo (`public/brand/`, source in
+  `.claude/skills/tuttitrip-design-system/assets/Logos`) and app icons (`assets/AppIcons`), the design
+  system components and screens, the demo city sheet.
 
 ## Product Principles
 
