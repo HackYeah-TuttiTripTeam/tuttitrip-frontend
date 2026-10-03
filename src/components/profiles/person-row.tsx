@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button'
 import { formatNumber, formatTime, lowerCase } from '@/lib/format'
 import { COMFORT_FIELDS, type ComfortField, hasAccount, type Person, shortTime } from '@/lib/people'
 import { m } from '@/paraglide/messages'
+import { PersonAvatar } from './person-avatar'
 
-const GROUP_LABELS: Record<AgeGroup, () => string> = {
+export const GROUP_LABELS: Record<AgeGroup, () => string> = {
   toddler: m.people_group_toddler,
   child: m.people_group_child,
   teen: m.people_group_teen,
@@ -13,29 +14,11 @@ const GROUP_LABELS: Record<AgeGroup, () => string> = {
   senior: m.people_group_senior,
 }
 
-const ROLE_LABELS = {
+export const ROLE_LABELS = {
   host: m.trip_role_host,
   co_host: m.trip_role_co_host,
   member: m.trip_role_member,
 } as const
-
-/** The six person colours of the design system; the profile id picks one, so it never shifts. */
-const AVATAR_COLORS = [
-  'bg-member-1',
-  'bg-member-2',
-  'bg-member-3',
-  'bg-member-4',
-  'bg-member-5',
-  'bg-member-6',
-] as const
-
-function avatarColor(id: string): string {
-  let sum = 0
-  for (const char of id) sum += char.charCodeAt(0)
-  return AVATAR_COLORS[sum % AVATAR_COLORS.length] ?? AVATAR_COLORS[0]
-}
-
-const initials = (name: string) => name.trim().slice(0, 2).toLocaleUpperCase()
 
 /** Names the API puts in `customized_fields`, as the label of the value the host corrected. */
 const FIELD_LABELS: Record<ComfortField, () => string> = {
@@ -58,10 +41,12 @@ interface PersonRowProps {
   person: Person
   /** Opens the edit form; omitted for people the caller cannot edit (members, accounts). */
   onEdit?: () => void
+  /** Opens the person's preferences: constraints, diet and interests. */
+  onOpen: () => void
 }
 
 /** One person: who, how old, and every comfort value the planner will use. */
-export function PersonRow({ person, onEdit }: PersonRowProps) {
+export function PersonRow({ person, onEdit, onOpen }: PersonRowProps) {
   const { profile, role } = person
   const customized = customizedLabels(profile.customized_fields)
   const tag = role ? ROLE_LABELS[role]() : hasAccount(person) ? null : m.people_profile_only()
@@ -75,12 +60,7 @@ export function PersonRow({ person, onEdit }: PersonRowProps) {
 
   return (
     <div className="flex items-start gap-3 py-4">
-      <span
-        aria-hidden="true"
-        className={`flex size-10 shrink-0 items-center justify-center rounded-full font-heading font-semibold text-on-member text-sm ${avatarColor(profile.id)} ${hasAccount(person) ? '' : 'outline-2 outline-offset-2 outline-muted-foreground/60'}`}
-      >
-        {initials(profile.display_name)}
-      </span>
+      <PersonAvatar id={profile.id} name={profile.display_name} hasAccount={hasAccount(person)} />
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <p className="flex flex-wrap items-baseline gap-x-2">
           <span className="truncate font-medium text-base">{profile.display_name}</span>
@@ -114,6 +94,15 @@ export function PersonRow({ person, onEdit }: PersonRowProps) {
         >
           {customized ? m.people_source_changed({ fields: customized }) : m.people_source_default()}
         </span>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onOpen}
+          aria-label={m.prefs_open_label({ name: profile.display_name })}
+          className="h-11 w-fit md:h-9"
+        >
+          {m.prefs_open()}
+        </Button>
       </div>
       {onEdit && (
         <Button

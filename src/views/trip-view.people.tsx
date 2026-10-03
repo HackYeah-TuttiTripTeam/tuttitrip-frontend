@@ -8,18 +8,28 @@ import { useProfiles } from '@/hooks/use-profiles'
 import { useSession } from '@/hooks/use-session'
 import { m } from '@/paraglide/messages'
 import { TripInvitationsView } from './trip-view.invitations'
+import { TripPersonView } from './trip-view.person'
 
 interface TripPeopleViewProps {
   tripId: string
   tripName: string
   canManage: boolean
+  /** The person whose details are open (the `person` search param), or undefined for the list. */
+  personId: string | undefined
+  onPersonChange: (id: string | undefined) => void
 }
 
 /**
  * The Osoby tab. Named `trip-view.people` because a view may only import views of its own
  * name (rule 1); TripView renders it and passes the trip id and the caller's rights.
  */
-export function TripPeopleView({ tripId, tripName, canManage }: TripPeopleViewProps) {
+export function TripPeopleView({
+  tripId,
+  tripName,
+  canManage,
+  personId,
+  onPersonChange,
+}: TripPeopleViewProps) {
   const session = useSession()
   const { people, rolesFailed, isPending, problem, refetch } = useProfiles(tripId, session.status)
   const actions = useProfileActions(tripId)
@@ -46,6 +56,17 @@ export function TripPeopleView({ tripId, tripName, canManage }: TripPeopleViewPr
     )
   }
 
+  if (personId) {
+    return (
+      <TripPersonView
+        tripId={tripId}
+        person={people.find((person) => person.profile.id === personId)}
+        canManage={canManage}
+        onBack={() => onPersonChange(undefined)}
+      />
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <FamilyBuilder
@@ -56,6 +77,7 @@ export function TripPeopleView({ tripId, tripName, canManage }: TripPeopleViewPr
         onAdd={actions.add}
         onEdit={actions.edit}
         onRemove={actions.remove}
+        onOpenPerson={(profile) => onPersonChange(profile.id)}
       />
       {invitations}
     </div>

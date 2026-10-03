@@ -18,14 +18,19 @@ export type ComfortField = (typeof COMFORT_FIELDS)[number]
 export interface Person {
   profile: Profile
   role: Member['role'] | null
+  /** The signed-in user's own profile. */
+  isMe: boolean
 }
 
 const ROLE_RANK = { host: 0, co_host: 1, member: 2 } as const
 
 /** Joins profiles with members on profile id; hosts first, then people with accounts, then the rest. */
 export function joinPeople(profiles: Profile[], members: Member[]): Person[] {
-  const roles = new Map(members.map((member) => [member.profile_id, member.role]))
-  const people = profiles.map((profile) => ({ profile, role: roles.get(profile.id) ?? null }))
+  const byProfile = new Map(members.map((member) => [member.profile_id, member]))
+  const people = profiles.map((profile) => {
+    const member = byProfile.get(profile.id)
+    return { profile, role: member?.role ?? null, isMe: member?.is_me ?? false }
+  })
   const rank = (person: Person) => (person.role ? ROLE_RANK[person.role] : 3)
   return people.toSorted((a, b) => rank(a) - rank(b))
 }
