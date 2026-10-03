@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { paraglideVitePlugin } from '@inlang/paraglide-js'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import react from '@vitejs/plugin-react'
@@ -19,6 +20,13 @@ export default defineConfig(({ mode }) => {
       // Must come before react()
       tanstackRouter({ target: 'react', autoCodeSplitting: true }),
       react(),
+      // Same options as the `i18n` script in package.json (used outside Vite, e.g. by tsc).
+      paraglideVitePlugin({
+        project: './project.inlang',
+        outdir: './src/paraglide',
+        strategy: ['localStorage', 'preferredLanguage', 'baseLocale'],
+        emitTsDeclarations: true,
+      }),
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',

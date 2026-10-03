@@ -1,5 +1,6 @@
 import { useAuth0 } from '@auth0/auth0-react'
 import { authConfig } from '@/lib/env'
+import { m } from '@/paraglide/messages'
 
 export type SessionStatus = 'disabled' | 'loading' | 'anonymous' | 'authenticated'
 
@@ -18,10 +19,10 @@ const noop = () => undefined
 function describeAuthError(error: Error | undefined): string | undefined {
   if (!error) return undefined
   if (/service not found|audience/i.test(error.message)) {
-    return 'Auth0 nie zna jeszcze API TuttiTrip (VITE_AUTH0_AUDIENCE). Zgłoś to zespołowi backendu.'
+    return m.auth_error_unknown_api()
   }
-  if (/access_denied|denied/i.test(error.message)) return 'Logowanie zostało anulowane.'
-  return `Auth0 odpowiedziało błędem: ${error.message}`
+  if (/access_denied|denied/i.test(error.message)) return m.auth_error_cancelled()
+  return m.auth_error_other({ message: error.message })
 }
 
 /** Auth0 session, or status "disabled" when VITE_AUTH0_* is not configured. */

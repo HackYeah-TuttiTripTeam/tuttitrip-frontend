@@ -75,7 +75,9 @@ Po zmianie w backendzie odpal `api:sync` i zacommituj `src/api/schema.d.ts`. CI 
 | `pnpm biome check --write .` | lint, formatowanie i porządkowanie importów (Biome) |
 | `pnpm tsc -b` | sprawdzenie typów |
 | `pnpm test:arch` | testy architektury (dependency-cruiser i `scripts/check-arch.mjs`) |
-| `pnpm verify` | to, co CI odpala przed buildem: `biome ci`, `tsc -b`, `test:arch` |
+| `pnpm test` | testy jednostkowe (Vitest) |
+| `pnpm i18n` | kompilacja `messages/*.json` do `src/paraglide` (uruchamia się sama przy instalacji, `verify` i `build`) |
+| `pnpm verify` | to, co CI odpala przed buildem: `i18n`, `biome ci`, `tsc -b`, `test:arch`, `test` |
 | `pnpm api:sync` | regeneracja typów API |
 | `pnpm pwa:icons` | ikony PWA z `public/logo.svg` |
 
@@ -109,6 +111,8 @@ Zasady pilnowane automatycznie (`pnpm test:arch` i Biome, CI odrzuca złamanie k
 3. W `hooks/` nie ma JSX (tylko pliki `.ts`).
 4. Pliki tras importują wyłącznie widoki i loadery.
 5. Żadnych zahardkodowanych kolorów w klasach Tailwinda (`bg-[#...]`, `text-[rgb(...)]`, `bg-red-500` i podobne). Używamy tokenów shadcn: `bg-primary`, `text-muted-foreground`, `border` i tak dalej.
+6. Wiadomości w `messages/pl.json` i `messages/en.json` mają te same klucze i parametry.
+7. W widokach i komponentach nie ma tekstów wpisanych na sztywno: wszystko przez `m.klucz()` z Paraglide.
 
 Sortowanie i filtrowanie zawsze trzymamy w adresie URL, np. `/trips?q=kraków&sort=name&dir=asc`. Taki link można wysłać komuś z rodziny i zobaczy dokładnie ten sam widok.
 

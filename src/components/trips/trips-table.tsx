@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/table'
 import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { m } from '@/paraglide/messages'
 import { type SortDirection, TRIP_SORT_LABELS, type Trip, type TripSortKey } from './trip-columns'
 
 const features = tableFeatures({ rowSortingFeature })
@@ -25,24 +26,24 @@ const column = createColumnHelper<typeof features, Trip>()
 
 const columns = column.columns([
   column.accessor('name', {
-    header: TRIP_SORT_LABELS.name,
+    header: () => TRIP_SORT_LABELS.name(),
     cell: ({ row }) => (
       <div className="min-w-0">
         <p className="truncate font-medium">{row.original.name}</p>
         {/* On phones the destination column is hidden, so it rides under the name. */}
         <p className="truncate text-muted-foreground md:hidden">
-          {row.original.destination ?? 'Cel do ustalenia'}
+          {row.original.destination ?? m.trip_destination_undecided_long()}
         </p>
       </div>
     ),
   }),
   column.accessor('destination', {
-    header: TRIP_SORT_LABELS.destination,
+    header: () => TRIP_SORT_LABELS.destination(),
     cell: ({ getValue }) =>
-      getValue() ?? <span className="text-muted-foreground">Do ustalenia</span>,
+      getValue() ?? <span className="text-muted-foreground">{m.trip_destination_undecided()}</span>,
   }),
   column.accessor('created_at', {
-    header: TRIP_SORT_LABELS.created_at,
+    header: () => TRIP_SORT_LABELS.created_at(),
     sortDescFirst: true,
     cell: ({ getValue }) => (
       <time dateTime={getValue()} className="whitespace-nowrap text-muted-foreground tabular-nums">
