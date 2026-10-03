@@ -12,6 +12,7 @@ import type { TripTab } from '@/lib/trip-tabs'
 import { m } from '@/paraglide/messages'
 import { TripPeopleView } from './trip-view.people'
 import { TripPlanView } from './trip-view.plan'
+import { TripSettings } from './trip-view.settings'
 
 const route = getRouteApi('/trips_/$tripId')
 
@@ -111,7 +112,7 @@ export function TripView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <TripHeader trip={trip} />
+      <TripHeader trip={trip} actions={<TripSettings trip={trip} />} />
       <TripTabs
         tab={tab}
         onTabChange={setTab}

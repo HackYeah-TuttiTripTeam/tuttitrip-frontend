@@ -9,6 +9,7 @@ import {
   type Profile,
   plan,
   TRIP_ID,
+  type Trip,
   trip,
 } from './fixtures'
 import { createWorld, type ScenarioName, type World } from './scenarios'
@@ -83,19 +84,36 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       return HttpResponse.json(world.trips)
     }),
 
+    http.get(`${API}/places/cities`, async () => {
+      await latency()
+      return HttpResponse.json(world.cities)
+    }),
+
+    // Like the API: the whole body at once, rules checked on the merged trip.
     http.post(`${API}/trips`, async ({ request }) => {
       await latency()
+      if (world.failures.post) return failure(world.failures.post)
+      if (world.validationErrors) return unprocessable(world.validationErrors)
       const body = (await request.json()) as Schemas['TripCreate']
-      const created = trip({
-        id: crypto.randomUUID(),
-        name: body.name,
-        destination: body.destination ?? null,
-        created_at: new Date().toISOString(),
-        start_date: null,
-        end_date: null,
-        budget_total_min: null,
-        budget_total_max: null,
-      })
+      const created = mergeTrip(
+        trip({
+          id: crypto.randomUUID(),
+          created_at: new Date().toISOString(),
+          destination: null,
+          start_date: null,
+          end_date: null,
+          city_slug: null,
+          currency: null,
+          budget_total_min: null,
+          budget_total_max: null,
+          budget_day_min: null,
+          budget_day_max: null,
+          my_role: 'host',
+        }),
+        body,
+      )
+      const errors = checkTrip(created, body)
+      if (errors.length > 0) return HttpResponse.json({ detail: errors }, { status: 422 })
       world.trips.unshift(created)
       return HttpResponse.json(created, { status: 201 })
     }),
@@ -104,6 +122,31 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       await latency()
       const found = findTrip(params.tripId)
       return found ? HttpResponse.json(found) : notFound('Trip not found')
+    }),
+
+    http.patch(`${API}/trips/:tripId`, async ({ params, request }) => {
+      await latency()
+      const found = findTrip(params.tripId)
+      if (!found) return notFound('Trip not found')
+      if (!canWrite(params.tripId)) return forbidden()
+      if (world.failures.patch) return failure(world.failures.patch)
+      if (world.validationErrors) return unprocessable(world.validationErrors)
+      const body = (await request.json()) as Schemas['TripUpdate']
+      const merged = mergeTrip(found, body)
+      const errors = checkTrip(merged, body)
+      if (errors.length > 0) return HttpResponse.json({ detail: errors }, { status: 422 })
+      world.trips = world.trips.map((t) => (t.id === merged.id ? merged : t))
+      return HttpResponse.json(merged)
+    }),
+
+    http.delete(`${API}/trips/:tripId`, async ({ params }) => {
+      await latency()
+      const found = findTrip(params.tripId)
+      if (!found) return notFound('Trip not found')
+      if (found.my_role !== 'host') return forbidden()
+      if (world.failures.delete) return failure(world.failures.delete)
+      world.trips = world.trips.filter((t) => t.id !== found.id)
+      return new HttpResponse(null, { status: 204 })
     }),
 
     http.get(`${API}/trips/:tripId/profiles`, async ({ params }) => {
@@ -319,4 +362,63 @@ function withoutNulls<T extends object>(body: T): Partial<T> {
   return Object.fromEntries(
     Object.entries(body).filter(([, value]) => value !== null),
   ) as Partial<T>
+}
+
+const unprocessable = (detail: Schemas['TripValidationError'][]) =>
+  HttpResponse.json({ detail }, { status: 422 })
+
+const failure = (status: number) => HttpResponse.json({ detail: 'Mock failure' }, { status })
+
+const MONEY_KEYS = [
+  'budget_total_min',
+  'budget_total_max',
+  'budget_day_min',
+  'budget_day_max',
+] as const
+
+/** Applies the keys a create/PATCH body sent (a sent null clears); money is stored as "x.xx". */
+function mergeTrip(base: Trip, body: Schemas['TripUpdate'] | Schemas['TripCreate']): Trip {
+  const merged = { ...base } as Record<string, unknown>
+  for (const [key, value] of Object.entries(body)) {
+    if (value === undefined) continue
+    merged[key] =
+      (MONEY_KEYS as readonly string[]).includes(key) && value !== null
+        ? Number(value).toFixed(2)
+        : value
+  }
+  const next = merged as unknown as Trip
+  const sameDay = next.start_date !== null && next.start_date === next.end_date
+  return { ...next, kind: sameDay ? 'outing' : 'trip' }
+}
+
+/** The API's trip rules (check_trip, complete) with its stable error codes. */
+function checkTrip(merged: Trip, sent: object): Schemas['TripValidationError'][] {
+  const errors: Schemas['TripValidationError'][] = []
+  const add = (type: Schemas['TripErrorCode'], field: string, msg: string) =>
+    errors.push({ type, loc: ['body', field], msg })
+  for (const field of ['name', 'day_start', 'day_end', 'budget_flex_pct', 'fairness_alpha']) {
+    if (field in sent && (sent as Record<string, unknown>)[field] === null) {
+      add('trip.null_not_allowed', field, `${field} cannot be null`)
+    }
+  }
+  const pairs = [
+    ['start_date', 'end_date', 'trip.dates_order'],
+    ['budget_total_min', 'budget_total_max', 'trip.budget_order'],
+    ['budget_day_min', 'budget_day_max', 'trip.budget_order'],
+  ] as const
+  for (const [lower, upper, orderCode] of pairs) {
+    const lo = merged[lower]
+    const hi = merged[upper]
+    if ((lo === null) !== (hi === null)) {
+      const missing = lo === null ? lower : upper
+      add('trip.pair_required', missing, `${missing} is required with its pair`)
+    } else if (lo !== null && hi !== null) {
+      const ordered = lower === 'start_date' ? hi >= lo : Number(hi) >= Number(lo)
+      if (!ordered) add(orderCode, upper, `${upper} must not be before ${lower}`)
+    }
+  }
+  if (merged.day_end <= merged.day_start) {
+    add('trip.day_window_order', 'day_end', 'day_end must be after day_start')
+  }
+  return errors
 }

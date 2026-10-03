@@ -9,15 +9,17 @@ import {
 import { getRouteApi } from '@tanstack/react-router'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
 import { StatusMessage } from '@/components/shared/status-message'
-import { CreateTripForm } from '@/components/trips/create-trip-form'
+import { TripForm } from '@/components/trips/trip-form'
 import { TripsTable, TripsTableSkeleton } from '@/components/trips/trips-table'
 import { TripsToolbar } from '@/components/trips/trips-toolbar'
 import { Button } from '@/components/ui/button'
-import { useCreateTrip } from '@/hooks/use-create-trip'
+import { useCities } from '@/hooks/use-cities'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
+import { useSaveTrip } from '@/hooks/use-save-trip'
 import { useSession } from '@/hooks/use-session'
 import { useTrips } from '@/hooks/use-trips'
 import { isDev } from '@/lib/env'
+import { EMPTY_TRIP_FORM } from '@/lib/trip-form'
 import type { SortDirection, TripSortKey } from '@/loaders/trips'
 import { m } from '@/paraglide/messages'
 import { useUiStore } from '@/stores/ui-store'
@@ -32,7 +34,8 @@ export function TripsView() {
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
   const createTripOpen = useUiStore((state) => state.createTripOpen)
   const setCreateTripOpen = useUiStore((state) => state.setCreateTripOpen)
-  const createTrip = useCreateTrip()
+  const { cities } = useCities(session.status)
+  const createTrip = useSaveTrip(null, cities)
 
   // replace: typing in the search box should not flood the back button.
   const setQuery = (q: string) =>
@@ -162,15 +165,17 @@ export function TripsView() {
         title={m.action_new_trip()}
         description={m.trips_create_description()}
       >
-        <CreateTripForm
+        <TripForm
+          initial={EMPTY_TRIP_FORM}
+          cities={cities}
+          fieldErrors={createTrip.fieldErrors}
+          submitError={createTrip.submitError}
           isSubmitting={createTrip.isPending}
-          submitError={createTrip.isError ? m.trips_create_failed() : null}
-          onSubmit={(values) =>
-            createTrip.mutate(
-              { body: { name: values.name, destination: values.destination || null } },
-              { onSuccess: () => setCreateTripOpen(false) },
-            )
-          }
+          submitLabel={m.trip_form_submit()}
+          submittingLabel={m.trip_form_submitting()}
+          onSubmit={async (values) => {
+            if (await createTrip.submit(values)) setCreateTripOpen(false)
+          }}
         />
       </ResponsiveModal>
     </div>

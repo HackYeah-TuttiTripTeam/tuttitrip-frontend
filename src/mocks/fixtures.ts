@@ -14,6 +14,7 @@ export type PlanDomainCode = Schemas['PlanDomainCode']
 export type Me = Schemas['MeResponse']
 export type Member = Schemas['MemberRead']
 export type Invitation = Schemas['InvitationRead']
+export type City = Schemas['CityRead']
 
 /** The signed-in test user, the host of most scenarios. */
 export const MOCK_USER_SUB = 'auth0|mock-user'
@@ -406,3 +407,32 @@ export const invitation = (overrides: Partial<Invitation> = {}): Invitation => (
   revoked_at: null,
   ...overrides,
 })
+
+export const city = (overrides: Partial<City> = {}): City => ({
+  slug: 'warszawa',
+  name: 'Warszawa',
+  country: 'PL',
+  timezone: 'Europe/Warsaw',
+  currency: 'PLN',
+  center_lat: 52.2297,
+  center_lon: 21.0122,
+  bbox_south: 52.09,
+  bbox_west: 20.85,
+  bbox_north: 52.37,
+  bbox_east: 21.27,
+  ...overrides,
+})
+
+/** The cities the planner covers (the four demo cities, two of them here). */
+export const cities = (): City[] => [
+  city(),
+  city({
+    slug: 'london',
+    name: 'Londyn',
+    country: 'GB',
+    timezone: 'Europe/London',
+    currency: 'GBP',
+    center_lat: 51.5072,
+    center_lon: -0.1276,
+  }),
+]

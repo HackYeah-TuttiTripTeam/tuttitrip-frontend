@@ -23,6 +23,15 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
     }) as unknown as MediaQueryList
 }
 
+// Radix Slider measures its thumbs with ResizeObserver, which jsdom lacks.
+if (typeof window !== 'undefined' && !globalThis.ResizeObserver) {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+}
+
 // The router scrolls to the top on navigation; jsdom only prints "not implemented".
 if (typeof window !== 'undefined') window.scrollTo = () => undefined
 

@@ -7,3 +7,5 @@ export const tripsQueryOptions = () => $api.queryOptions('get', '/api/v1/trips')
 
 export const tripQueryOptions = (tripId: string) =>
   $api.queryOptions('get', '/api/v1/trips/{trip_id}', { params: { path: { trip_id: tripId } } })
+
+export type TripUpdate = Schemas['TripUpdate']
