@@ -11,6 +11,7 @@ import {
   type TripFormValues,
   tripToFormValues,
 } from '@/lib/trip-form'
+import { PROPOSE_CHEAPER_DEFAULT } from '@/lib/constants'
 import { m } from '@/paraglide/messages'
 import { useCreateTrip } from './use-create-trip'
 import { useUpdateTrip } from './use-update-trip'
