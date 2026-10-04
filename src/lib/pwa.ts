@@ -1,7 +1,6 @@
 import { registerSW } from 'virtual:pwa-register'
+import { pwaUpdateCheckMs } from '@/lib/env'
 import { installStaleAssetReload } from '@/lib/stale-assets'
-
-const UPDATE_CHECK_MS = 60 * 60 * 1000
 
 type ControllerEvents = Pick<ServiceWorkerContainer, 'controller' | 'addEventListener'>
 
@@ -47,7 +46,7 @@ export function registerServiceWorker(): void {
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') check()
       })
-      setInterval(check, UPDATE_CHECK_MS)
+      setInterval(check, pwaUpdateCheckMs)
     },
   })
 }

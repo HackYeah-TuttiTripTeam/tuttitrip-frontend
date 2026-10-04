@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { PlanStop } from '@/api/queries/plans'
+import { MINUTES_PER_HOUR } from '@/lib/constants'
 import { formatClock, formatDuration } from '@/lib/format'
 import { m } from '@/paraglide/messages'
 import { stopPriceText } from './stop-price'
@@ -13,7 +14,7 @@ const KIND_LABELS: Record<PlanStop['kind'], () => string> = {
 
 function minutesOfDay(time: string): number {
   const [hours = 0, minutes = 0] = time.split(':').map(Number)
-  return hours * 60 + minutes
+  return hours * MINUTES_PER_HOUR + minutes
 }
 
 interface PlanTimelineProps {

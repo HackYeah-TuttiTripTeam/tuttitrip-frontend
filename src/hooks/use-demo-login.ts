@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { HTTP_STATUS } from '@/api/constants'
 import { enterDemo, MissingDemoLinkError } from '@/api/demo'
 import { ApiError } from '@/api/errors'
 
@@ -29,9 +30,9 @@ export function useDemoLogin(): DemoLoginState {
         const reason =
           error instanceof MissingDemoLinkError
             ? 'missing'
-            : error instanceof ApiError && error.status === 404
+            : error instanceof ApiError && error.status === HTTP_STATUS.notFound
               ? 'invalid'
-              : error instanceof ApiError && error.status === 429
+              : error instanceof ApiError && error.status === HTTP_STATUS.tooManyRequests
                 ? 'rate_limited'
                 : 'unavailable'
         setState({ phase: 'failed', reason })

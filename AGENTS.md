@@ -193,6 +193,32 @@ loaders/stores/api stay UI-free, and only the folders above exist in `src/`.
 Each rule was proven to fail on a deliberate violation. If you need to break
 one, change the rule here and in the config in the same PR, with a reason.
 
+## Magic values
+
+No magic strings or numbers in code: a bare literal that carries meaning (a limit, a status
+code, a header name, a duration, a storage key used in several places) gets a name. Obvious
+values stay inline: `0`, `1`, `2`, `''`, `true`/`false`, array indices, and literals in tests,
+mocks and generated files.
+
+- **Fixed values** go to a `constants.ts` of the feature or lib (`src/lib/constants.ts`,
+  `src/api/constants.ts`, `worker/constants.ts`): an exported `const` with a JSDoc line that
+  says what it is. A value used by one file only may stay a named `const` at the top of it.
+- **Build- and deploy-tunable values** are `VITE_*` variables read once in `src/lib/env.ts`
+  (typed in `src/vite-env.d.ts`, default in code, a commented line in `.env.example`), or
+  Worker vars in `wrangler.jsonc`. A value that is only ever the same is a constant, not a var.
+- **UI copy stays in Paraglide messages**, never in constants.
+- Biome enforces numbers (`style/noMagicNumbers`, off in tests, mocks, scripts and generated
+  files). Strings are left to code review.
+
+```ts
+// src/lib/constants.ts
+/** Longest name of a person or a search text the API accepts (ProfileCreate, InvitationAccept). */
+export const NAME_MAX_CHARS = 100
+
+// src/lib/env.ts
+export const queryStaleMs = readMs(import.meta.env.VITE_QUERY_STALE_MS, MS_PER_MINUTE)
+```
+
 ## Tłumaczenia (PL i EN)
 
 Każdy tekst interfejsu trafia do **obu** plików wiadomości, `messages/pl.json` (język domyślny) i

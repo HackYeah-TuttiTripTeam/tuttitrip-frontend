@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PERCENT } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { m } from '@/paraglide/messages'
 
@@ -79,18 +80,18 @@ export function FairnessExample({ people, floor, formatShare }: FairnessExampleP
               <span
                 aria-hidden="true"
                 className="absolute inset-y-2 left-0 border-r-2 border-input border-dashed bg-muted"
-                style={{ width: `${floor * 100}%` }}
+                style={{ width: `${floor * PERCENT}%` }}
               />
               <input
                 type="range"
                 min={0}
-                max={100}
+                max={PERCENT}
                 step={1}
-                value={Math.round(person.share * 100)}
+                value={Math.round(person.share * PERCENT)}
                 aria-label={m.example_slider({ name: person.name })}
                 aria-valuetext={formatShare(person.share)}
                 onChange={(event) => {
-                  const next = Number(event.target.value) / 100
+                  const next = Number(event.target.value) / PERCENT
                   setShares((current) => current.map((share, at) => (at === index ? next : share)))
                 }}
                 className={cn('tt-range relative', THUMB_TONE[person.tone])}

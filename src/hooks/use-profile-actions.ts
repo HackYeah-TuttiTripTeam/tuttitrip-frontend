@@ -1,3 +1,4 @@
+import { HTTP_STATUS } from '@/api/constants'
 import { ApiError } from '@/api/errors'
 import type { Profile } from '@/api/queries/profiles'
 import { buildUpdate, type EditValues, type SaveResult } from '@/lib/people'
@@ -9,9 +10,9 @@ import { useUpdateProfile } from './use-update-profile'
 const OK: SaveResult = { ok: true }
 
 const STATUS_MESSAGES: Record<number, () => string> = {
-  403: m.people_error_forbidden,
-  409: m.people_error_has_account,
-  422: m.people_error_invalid,
+  [HTTP_STATUS.forbidden]: m.people_error_forbidden,
+  [HTTP_STATUS.conflict]: m.people_error_has_account,
+  [HTTP_STATUS.unprocessable]: m.people_error_invalid,
 }
 
 function failure(error: unknown): SaveResult {

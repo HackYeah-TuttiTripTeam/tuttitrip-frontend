@@ -1,7 +1,21 @@
+import { MS_PER_HOUR, MS_PER_MINUTE } from './constants'
+
 const read = (value: string | undefined) => value?.trim() || undefined
+
+/** A positive number of milliseconds from an env var, or the default when it is missing or bad. */
+function readMs(value: string | undefined, fallback: number): number {
+  const parsed = Number(read(value))
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
 
 /** True in `vite dev`; setup hints for developers are shown only then. */
 export const isDev = import.meta.env.DEV
+
+/** How long fetched data counts as fresh, in ms (`VITE_QUERY_STALE_MS`, default one minute). */
+export const queryStaleMs = readMs(import.meta.env.VITE_QUERY_STALE_MS, MS_PER_MINUTE)
+
+/** How often an open tab asks for a new service worker, in ms (`VITE_PWA_UPDATE_CHECK_MS`, default one hour). */
+export const pwaUpdateCheckMs = readMs(import.meta.env.VITE_PWA_UPDATE_CHECK_MS, MS_PER_HOUR)
 
 /** Deployment name shown in the UI: main, develop, a branch slug or local. */
 export const appEnv = read(import.meta.env.VITE_APP_ENV) ?? 'local'

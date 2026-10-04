@@ -1,3 +1,5 @@
+import { HTTP_STATUS } from '@/api/constants'
+
 export type ApiProblem = 'unauthorized' | 'not_found' | 'offline' | 'unknown'
 
 /** Thrown by the client for every non-2xx answer, so callers read the status instead of the text. */
@@ -18,11 +20,12 @@ export class ApiError extends Error {
 export function classifyApiError(error: unknown): ApiProblem {
   if (error instanceof TypeError) return 'offline'
   if (!(error instanceof ApiError)) return 'unknown'
-  if (error.status === 401) return 'unauthorized'
+  if (error.status === HTTP_STATUS.unauthorized) return 'unauthorized'
   // The API answers 404 the same way for a missing trip and for a trip of someone else.
-  if (error.status === 404) return 'not_found'
+  if (error.status === HTTP_STATUS.notFound) return 'not_found'
   // A path id that is not a UUID (422) cannot name a trip either.
-  if (error.status === 422 && isPathValidationError(error.detail)) return 'not_found'
+  if (error.status === HTTP_STATUS.unprocessable && isPathValidationError(error.detail))
+    return 'not_found'
   return 'unknown'
 }
 

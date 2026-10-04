@@ -65,7 +65,8 @@
         "noNonNullAssertion": "error",
         "useImportType": "error",
         "useConst": "error",
-        "noParameterAssign": "error"
+        "noParameterAssign": "error",
+        "noMagicNumbers": "error"
       },
       "nursery": {
         "noTailwindRawColors": "error"
@@ -81,6 +82,22 @@
     }
   },
   "overrides": [
+    {
+      "includes": [
+        "**/*.test.*",
+        "src/mocks/**",
+        "src/lib/photo-data.ts",
+        "src/components/ui/**",
+        "scripts/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noMagicNumbers": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["src/components/ui/**"],
       "linter": {

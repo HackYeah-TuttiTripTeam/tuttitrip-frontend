@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { HTTP_STATUS } from '@/api/constants'
 import { ApiError } from '@/api/errors'
 import type { Invitation } from '@/api/queries/invitations'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
@@ -26,7 +27,7 @@ export function TripInvitationsView({ tripId, tripName }: TripInvitationsViewPro
   const [revoking, setRevoking] = useState<Invitation | null>(null)
 
   const createError = creation.error
-    ? creation.error instanceof ApiError && creation.error.status === 409
+    ? creation.error instanceof ApiError && creation.error.status === HTTP_STATUS.conflict
       ? m.invite_create_too_many()
       : m.invite_create_failed()
     : null

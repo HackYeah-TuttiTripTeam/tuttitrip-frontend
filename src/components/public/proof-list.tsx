@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 
+/** Vertical offset of the moving marker from the top of the active row. */
+const MARKER_OFFSET_PX = 26
+
 export interface ProofRow {
   title: string
   body: string
@@ -25,7 +28,7 @@ export function ProofList({ rows }: { rows: ProofRow[] }) {
       <span
         aria-hidden="true"
         className="absolute top-0 left-0 hidden size-[18px] rounded-full bg-primary transition-transform duration-300 ease-out motion-reduce:transition-none md:block"
-        style={{ transform: `translateY(${top + 26}px)` }}
+        style={{ transform: `translateY(${top + MARKER_OFFSET_PX}px)` }}
       />
       {rows.map((row, index) => (
         <div

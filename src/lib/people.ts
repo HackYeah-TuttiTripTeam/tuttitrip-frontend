@@ -1,5 +1,6 @@
 import type { Member } from '@/api/queries/members'
 import type { Profile, ProfileUpdate } from '@/api/queries/profiles'
+import { HH_MM_LENGTH, MINUTES_PER_HOUR } from '@/lib/constants'
 
 /** The comfort fields the host can correct; the server fills them from the age. */
 export const COMFORT_FIELDS = [
@@ -22,6 +23,8 @@ export interface Person {
   isMe: boolean
 }
 
+/** Sorts people without a role (no account yet) after the members. */
+const NO_ROLE_RANK = 3
 const ROLE_RANK = { host: 0, co_host: 1, member: 2 } as const
 
 /** Joins profiles with members on profile id; hosts first, then people with accounts, then the rest. */
@@ -31,7 +34,7 @@ export function joinPeople(profiles: Profile[], members: Member[]): Person[] {
     const member = byProfile.get(profile.id)
     return { profile, role: member?.role ?? null, isMe: member?.is_me ?? false }
   })
-  const rank = (person: Person) => (person.role ? ROLE_RANK[person.role] : 3)
+  const rank = (person: Person) => (person.role ? ROLE_RANK[person.role] : NO_ROLE_RANK)
   return people.toSorted((a, b) => rank(a) - rank(b))
 }
 
@@ -39,7 +42,7 @@ export function joinPeople(profiles: Profile[], members: Member[]): Person[] {
 export const hasAccount = (person: Person) => person.profile.user_sub !== null
 
 /** "13:00:00" -> "13:00"; the form's time input uses the short form. */
-export const shortTime = (time: string) => time.slice(0, 5)
+export const shortTime = (time: string) => time.slice(0, HH_MM_LENGTH)
 
 /** The values of the edit form (hours instead of minutes: what people think in). */
 export interface EditValues {
@@ -61,7 +64,7 @@ export function editDefaults(profile: Profile): EditValues {
     age: profile.age,
     segment_km: profile.segment_km,
     daily_km: profile.daily_km,
-    active_hours: profile.active_min / 60,
+    active_hours: profile.active_min / MINUTES_PER_HOUR,
     nap_start: profile.nap_start ? shortTime(profile.nap_start) : '',
     nap_minutes: profile.nap_minutes,
     stairs_sensitivity: profile.stairs_sensitivity,
@@ -84,7 +87,7 @@ export function buildUpdate(profile: Profile, values: EditValues): ProfileUpdate
   ] as const) {
     if (values[key] !== profile[key]) body[key] = values[key]
   }
-  const activeMin = Math.round(values.active_hours * 60)
+  const activeMin = Math.round(values.active_hours * MINUTES_PER_HOUR)
   if (activeMin !== profile.active_min) body.active_min = activeMin
   const napStart = values.nap_minutes > 0 ? values.nap_start : null
   const before = profile.nap_start ? shortTime(profile.nap_start) : null

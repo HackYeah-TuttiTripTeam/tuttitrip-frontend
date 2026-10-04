@@ -13,6 +13,7 @@
 //   Never localStorage, a query key, the URL or a log. Logout and a failed renewal erase both.
 //   A refresh token, if the API sends one, is not stored: refreshing needs the confidential client.
 
+import { MS_PER_SECOND } from '@/lib/constants'
 import { parseInviteFragment } from './invite-link'
 
 const STORAGE_KEY = 'tuttitrip-demo-session'
@@ -134,7 +135,7 @@ export function setDemoSession(
 ): void {
   session = {
     token: accessToken,
-    expiresAt: Date.now() + expiresInSeconds * 1000,
+    expiresAt: Date.now() + expiresInSeconds * MS_PER_SECOND,
     invitation: invitation ?? session?.invitation,
   }
   expired = false

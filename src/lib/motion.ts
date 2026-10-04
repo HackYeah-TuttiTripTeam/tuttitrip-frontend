@@ -1,3 +1,5 @@
+import { PROGRESS_DECIMALS } from '@/lib/constants'
+
 // Framework-free helpers for the motion of the public pages. Each `observe*` / `track*`
 // function returns its cleanup. With prefers-reduced-motion nothing moves: elements are
 // shown at once and the progress jumps to its end (CSS keeps a plain opacity fade).
@@ -66,7 +68,7 @@ export function trackScrollProgress(
   onChange?: (progress: number) => void,
 ): () => void {
   const apply = (progress: number) => {
-    element.style.setProperty('--progress', progress.toFixed(3))
+    element.style.setProperty('--progress', progress.toFixed(PROGRESS_DECIMALS))
     onChange?.(progress)
   }
   if (prefersReducedMotion()) {

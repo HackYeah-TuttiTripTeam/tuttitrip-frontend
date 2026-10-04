@@ -36,6 +36,8 @@ export interface PublicHeaderProps {
   extras?: ReactNode
 }
 
+/** Scroll distance after which the header gets its border. */
+const SCROLLED_AFTER_PX = 8
 const focusRing = 'outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50'
 
 const linkClass = cn(
@@ -64,7 +66,7 @@ export function PublicHeader({
 }: PublicHeaderProps) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
-  useEffect(() => trackScrolled(8, setScrolled), [])
+  useEffect(() => trackScrolled(SCROLLED_AFTER_PX, setScrolled), [])
 
   return (
     <header

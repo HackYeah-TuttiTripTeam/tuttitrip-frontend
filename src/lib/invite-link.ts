@@ -1,3 +1,5 @@
+import { MS_PER_MINUTE } from '@/lib/constants'
+
 /**
  * The invitation link is `https://<front>/join#t=<token>`. The token sits in the fragment, so it
  * never reaches a server log, a Referer header or the router's search params.
@@ -14,7 +16,7 @@
 const FRAGMENT_KEY = 't'
 const STORAGE_KEY = 'tuttitrip.join-token'
 /** A login round-trip takes seconds; anything older is a forgotten stash. */
-export const STASH_TTL_MS = 10 * 60 * 1000
+export const STASH_TTL_MS = 10 * MS_PER_MINUTE
 
 /** The token between reading the fragment and the end of the flow. Memory only. */
 let handoff: string | null = null

@@ -15,6 +15,18 @@
 import { localizedManifest, MANIFEST_PATH } from '../src/lib/manifest'
 import { pageSeo, requestLocale, robotsTxt, seoHeadHtml, seoPath, sitemapXml } from '../src/lib/seo'
 import { SHELL_PRELOADS, shellHtml } from '../src/lib/seo-shell'
+import {
+  ASSETS_PREFIX,
+  CACHE_CONTROL_CRAWLER_FILES,
+  CACHE_CONTROL_NO_STORE,
+  CACHE_CONTROL_REVALIDATE,
+  CACHE_CONTROL_REVALIDATED_ASSETS,
+  ROBOTS_PATH,
+  SITEMAP_PATH,
+  STATUS_BAD_GATEWAY,
+  STATUS_MOVED_PERMANENTLY,
+  STATUS_NOT_FOUND,
+} from './constants'
 
 interface Env {
   /** Backend origin without a trailing slash, e.g. https://tuttitrip-api.gburek.app */
@@ -76,7 +88,7 @@ async function proxy(request: Request, env: Env): Promise<Response> {
     upstream = await fetch(upstreamRequest(request, url, origin))
   } catch (error) {
     console.error('API proxy: upstream fetch failed', error)
-    return Response.json({ detail: 'API unavailable' }, { status: 502 })
+    return Response.json({ detail: 'API unavailable' }, { status: STATUS_BAD_GATEWAY })
   }
   // Same body stream (SSE and large responses are not buffered), mutable headers.
   const response = new Response(upstream.body, upstream)
@@ -91,7 +103,10 @@ async function proxy(request: Request, env: Env): Promise<Response> {
 
 const text = (body: string, type: string) =>
   new Response(body, {
-    headers: { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'public, max-age=3600' },
+    headers: {
+      'content-type': `${type}; charset=utf-8`,
+      'cache-control': CACHE_CONTROL_CRAWLER_FILES,
+    },
   })
 
 /**
@@ -114,7 +129,7 @@ async function manifest(request: Request, env: Env, url: URL): Promise<Response>
   return new Response(JSON.stringify(localizedManifest(base, locale)), {
     headers: {
       'content-type': 'application/manifest+json; charset=utf-8',
-      'cache-control': 'no-cache',
+      'cache-control': CACHE_CONTROL_REVALIDATE,
       vary: 'Accept-Language',
       // The _headers rules do not apply to a Worker response.
       'referrer-policy': 'no-referrer',
@@ -182,17 +197,17 @@ export default {
     const url = new URL(request.url)
     const { pathname } = url
     if (pathname.startsWith('/api/')) return proxy(request, env)
-    if (pathname.startsWith('/assets/')) return assetsOr404(request, env)
+    if (pathname.startsWith(ASSETS_PREFIX)) return assetsOr404(request, env)
     if (request.method === 'GET' || request.method === 'HEAD') {
       if (pathname === MANIFEST_PATH) return manifest(request, env, url)
-      if (pathname === '/robots.txt') {
+      if (pathname === ROBOTS_PATH) {
         return text(robotsTxt(url.origin, isProduction(env)), 'text/plain')
       }
-      if (pathname === '/sitemap.xml') return text(sitemapXml(url.origin), 'application/xml')
+      if (pathname === SITEMAP_PATH) return text(sitemapXml(url.origin), 'application/xml')
       const clean = cleanPath(pathname)
       // /about/ is /about: one URL per page, so canonical and links agree.
       if (clean !== pathname && seoPath(clean)) {
-        return Response.redirect(`${url.origin}${clean}${url.search}`, 301)
+        return Response.redirect(`${url.origin}${clean}${url.search}`, STATUS_MOVED_PERMANENTLY)
       }
       if (seoPath(pathname)) return publicPage(request, env, url)
     }
@@ -204,7 +219,7 @@ const cleanPath = (pathname: string) =>
   pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
 
 /** Photos and fonts keep their file names (the first screen points to them), so they cannot be immutable. */
-const REVALIDATED_ASSETS = ['/assets/photos/', '/assets/fonts/']
+const REVALIDATED_ASSETS = [`${ASSETS_PREFIX}photos/`, `${ASSETS_PREFIX}fonts/`]
 
 // Reached for /assets/* (run_worker_first). The assets layer answers a path without a file
 // with the SPA fallback: index.html and status 200. For a file that does not exist
@@ -218,8 +233,11 @@ async function assetsOr404(request: Request, env: Env): Promise<Response> {
   const isHtml = response.headers.get('content-type')?.startsWith('text/html')
   if (isFileLike(pathname) && isHtml) {
     return new Response('Not found', {
-      status: 404,
-      headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
+      status: STATUS_NOT_FOUND,
+      headers: {
+        'content-type': 'text/plain; charset=utf-8',
+        'cache-control': CACHE_CONTROL_NO_STORE,
+      },
     })
   }
   // Production only: other deployments keep the always-revalidate headers of the build.
@@ -231,7 +249,7 @@ async function assetsOr404(request: Request, env: Env): Promise<Response> {
   ) {
     // Same name, maybe new content after a deploy: a day, then a week of stale-while-revalidate.
     const revalidated = new Response(response.body, response)
-    revalidated.headers.set('cache-control', 'public, max-age=86400, stale-while-revalidate=604800')
+    revalidated.headers.set('cache-control', CACHE_CONTROL_REVALIDATED_ASSETS)
     return revalidated
   }
   return response

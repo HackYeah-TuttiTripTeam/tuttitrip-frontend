@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { Schemas } from '@/api/client'
+import { HH_MM_LENGTH, MINOR_UNITS_PER_UNIT, TRIP_TEXT_MAX_CHARS } from '@/lib/constants'
 import { m } from '@/paraglide/messages'
 
 type Trip = Schemas['TripRead']
@@ -58,7 +59,7 @@ export function normalizeMoney(raw: string): string {
 /** Amount in hundredths as a bigint, so comparing two amounts never goes through a float. */
 export function toCents(amount: string): bigint {
   const [whole = '0', frac = ''] = normalizeMoney(amount).split('.')
-  return BigInt(whole) * 100n + BigInt(frac.padEnd(2, '0'))
+  return BigInt(whole) * MINOR_UNITS_PER_UNIT + BigInt(frac.padEnd(2, '0'))
 }
 
 /**
@@ -84,7 +85,7 @@ function stripZeros(amount: string): string {
   return amount.replace(/\.0+$/, '')
 }
 
-const hhmm = (time: string) => time.slice(0, 5)
+const hhmm = (time: string) => time.slice(0, HH_MM_LENGTH)
 
 /**
  * The form edits one budget pair. When a trip somehow holds both pairs, the whole-trip pair wins
@@ -121,11 +122,11 @@ export const tripFormSchema = z
       .string()
       .trim()
       .min(1, { error: () => m.trip_form_name_required() })
-      .max(200, { error: () => m.trip_form_max_200() }),
+      .max(TRIP_TEXT_MAX_CHARS, { error: () => m.trip_form_max_200() }),
     destination: z
       .string()
       .trim()
-      .max(200, { error: () => m.trip_form_max_200() }),
+      .max(TRIP_TEXT_MAX_CHARS, { error: () => m.trip_form_max_200() }),
     citySlug: z.string(),
     startDate: z.string(),
     endDate: z.string(),

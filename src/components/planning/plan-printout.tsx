@@ -1,5 +1,6 @@
 import type { Plan, PlanStop } from '@/api/queries/plans'
 import type { Trip } from '@/api/queries/trips'
+import { MINUTES_PER_HOUR } from '@/lib/constants'
 import { formatClock, formatDateRange, formatDuration } from '@/lib/format'
 import { m } from '@/paraglide/messages'
 import { PlanSummary } from './plan-summary'
@@ -14,7 +15,7 @@ const KIND_LABELS: Record<PlanStop['kind'], () => string> = {
 
 function minutesOfDay(time: string): number {
   const [hours = 0, minutes = 0] = time.split(':').map(Number)
-  return hours * 60 + minutes
+  return hours * MINUTES_PER_HOUR + minutes
 }
 
 /** "Source: example.com" for a source worth printing, nothing otherwise. */

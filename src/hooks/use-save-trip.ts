@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { HTTP_STATUS } from '@/api/constants'
 import { ApiError } from '@/api/errors'
 import type { City } from '@/api/queries/cities'
 import type { Trip } from '@/api/queries/trips'
@@ -48,7 +49,9 @@ export function useSaveTrip(trip: Trip | null, cities: City[]) {
       return await update.mutateAsync({ params: { path: { trip_id: trip.id } }, body })
     } catch (error) {
       const errors =
-        error instanceof ApiError && error.status === 422 ? mapValidationErrors(error.detail) : {}
+        error instanceof ApiError && error.status === HTTP_STATUS.unprocessable
+          ? mapValidationErrors(error.detail)
+          : {}
       if (Object.keys(errors).length > 0) setFieldErrors(errors)
       else setSubmitError(m.trip_form_save_failed())
       return null

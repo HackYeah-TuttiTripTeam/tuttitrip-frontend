@@ -7,6 +7,7 @@ import {
   TriangleAlert,
 } from '@keyline-icons/react'
 import { useState } from 'react'
+import { HTTP_STATUS } from '@/api/constants'
 import { ApiError } from '@/api/errors'
 import type { Trip } from '@/api/queries/trips'
 import { DayTabs } from '@/components/planning/day-tabs'
@@ -73,7 +74,7 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
 
   const failure = creation.error && (
     <p role="alert" className="text-destructive text-sm">
-      {creation.error instanceof ApiError && creation.error.status === 403
+      {creation.error instanceof ApiError && creation.error.status === HTTP_STATUS.forbidden
         ? m.plan_compute_forbidden()
         : m.plan_compute_failed()}
     </p>

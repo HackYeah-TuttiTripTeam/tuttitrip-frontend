@@ -1,6 +1,12 @@
 import createFetchClient, { type Middleware } from 'openapi-fetch'
 import createClient from 'openapi-react-query'
 import {
+  ACCEPT_LANGUAGE_HEADER,
+  AUTHORIZATION_HEADER,
+  BEARER_SCHEME,
+  HTTP_STATUS,
+} from '@/api/constants'
+import {
   getDemoInvitation,
   getDemoToken,
   markDemoExpired,
@@ -39,13 +45,13 @@ const authMiddleware: Middleware = {
       demoToken = getDemoToken()
     }
     if (demoToken) {
-      request.headers.set('Authorization', `Bearer ${demoToken}`)
+      request.headers.set(AUTHORIZATION_HEADER, bearer(demoToken))
       return request
     }
     if (!getAccessToken) return request
     try {
       const token = await getAccessToken()
-      if (token) request.headers.set('Authorization', `Bearer ${token}`)
+      if (token) request.headers.set(AUTHORIZATION_HEADER, bearer(token))
     } catch (error) {
       // Expired session: send the request anonymously and let the API answer 401.
       console.warn('Could not get an access token', error)
@@ -57,7 +63,7 @@ const authMiddleware: Middleware = {
 /** Tells the backend (and the interview agent) which language to answer in. */
 const languageMiddleware: Middleware = {
   onRequest({ request }) {
-    request.headers.set('Accept-Language', getLocale())
+    request.headers.set(ACCEPT_LANGUAGE_HEADER, getLocale())
     return request
   },
 }
@@ -76,7 +82,7 @@ const errorMiddleware: Middleware = {
   },
 }
 
-const bearer = (token: string) => `Bearer ${token}`
+const bearer = (token: string) => `${BEARER_SCHEME} ${token}`
 
 /**
  * The demo session's safety net, registered last so its onResponse runs first (openapi-fetch runs
@@ -89,17 +95,17 @@ const demoRetries = new WeakMap<Request, Request>()
 const demoMiddleware: Middleware = {
   onRequest({ request }) {
     const current = getDemoToken()
-    if (current && request.headers.get('Authorization') === bearer(current)) {
+    if (current && request.headers.get(AUTHORIZATION_HEADER) === bearer(current)) {
       demoRetries.set(request, request.clone())
     }
     return undefined
   },
   async onResponse({ request, response }) {
-    if (response.status !== 401) return undefined
+    if (response.status !== HTTP_STATUS.unauthorized) return undefined
     const original = demoRetries.get(request)
     if (!original) return undefined
     demoRetries.delete(request)
-    const used = original.headers.get('Authorization')
+    const used = original.headers.get(AUTHORIZATION_HEADER)
     let token = getDemoToken()
     if (!token || used === bearer(token)) {
       if (!(await renewDemoSession())) return undefined
@@ -107,7 +113,7 @@ const demoMiddleware: Middleware = {
     }
     if (!token) return undefined
     const headers = new Headers(original.headers)
-    headers.set('Authorization', bearer(token))
+    headers.set(AUTHORIZATION_HEADER, bearer(token))
     return fetch(new Request(original, { headers }))
   },
 }
@@ -154,7 +160,10 @@ export function renewDemoSession(): Promise<boolean> {
       await exchangeDemoInvitation(invitation)
       return true
     } catch (error) {
-      if (error instanceof ApiError && (error.status === 404 || error.status === 401)) {
+      if (
+        error instanceof ApiError &&
+        (error.status === HTTP_STATUS.notFound || error.status === HTTP_STATUS.unauthorized)
+      ) {
         markDemoExpired()
       }
       return false

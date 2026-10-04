@@ -1,3 +1,4 @@
+import { HTTP_STATUS } from '@/api/constants'
 import { ApiError } from '@/api/errors'
 import type { Diet, Preferences } from '@/api/queries/preferences'
 import type { Profile } from '@/api/queries/profiles'
@@ -10,8 +11,8 @@ import { type PreferencesChange, useUpdatePreferences } from './use-update-prefe
 const OK: SaveResult = { ok: true }
 
 const STATUS_MESSAGES: Record<number, () => string> = {
-  403: m.prefs_error_forbidden,
-  422: m.prefs_error_invalid,
+  [HTTP_STATUS.forbidden]: m.prefs_error_forbidden,
+  [HTTP_STATUS.unprocessable]: m.prefs_error_invalid,
 }
 
 function failure(error: unknown): SaveResult {

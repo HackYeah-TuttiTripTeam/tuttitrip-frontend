@@ -9,6 +9,13 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/c
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  DAILY_KM_MAX,
+  DISABILITY_NOTE_INPUT_MAX_CHARS,
+  DISABILITY_NOTE_MAX_CHARS,
+  MINUTES_LIMIT_MAX,
+  SEGMENT_KM_MAX,
+} from '@/lib/constants'
 import { formatNumber, formatTime } from '@/lib/format'
 import type { SaveResult } from '@/lib/people'
 import { shortTime } from '@/lib/people'
@@ -29,20 +36,22 @@ const positive = (max: number) =>
 // Same bounds as the profile edit form; the server decides what an age may have.
 const schema = z
   .object({
-    segment_km: positive(50),
-    daily_km: positive(100),
+    segment_km: positive(SEGMENT_KM_MAX),
+    daily_km: positive(DAILY_KM_MAX),
     nap_minutes: z
       .number({ error: () => m.people_form_nap_minutes_invalid() })
       .int({ error: () => m.people_form_nap_minutes_invalid() })
       .min(0, { error: () => m.people_form_nap_minutes_invalid() })
-      .max(600, { error: () => m.people_form_nap_minutes_invalid() }),
+      .max(MINUTES_LIMIT_MAX, { error: () => m.people_form_nap_minutes_invalid() }),
     nap_start: z.string(),
     wheelchair: z.boolean(),
     stairs: z.boolean(),
     heat: z.boolean(),
     cold: z.boolean(),
     audio_description: z.boolean(),
-    disability_note: z.string().max(500, { error: () => m.prefs_note_too_long() }),
+    disability_note: z
+      .string()
+      .max(DISABILITY_NOTE_MAX_CHARS, { error: () => m.prefs_note_too_long() }),
   })
   .superRefine((value, ctx) => {
     if (value.segment_km > value.daily_km)
@@ -169,7 +178,7 @@ export function ConstraintsForm({ profile, constraints, onSubmit }: ConstraintsF
           <FieldLabel htmlFor="constraints-note">{m.prefs_note_label()}</FieldLabel>
           <Textarea
             id="constraints-note"
-            maxLength={600}
+            maxLength={DISABILITY_NOTE_INPUT_MAX_CHARS}
             placeholder={m.prefs_note_placeholder()}
             aria-invalid={Boolean(errors.disability_note)}
             {...form.register('disability_note')}

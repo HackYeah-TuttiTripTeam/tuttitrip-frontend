@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { NAME_MAX_CHARS } from '@/lib/constants'
 import { m } from '@/paraglide/messages'
 
 /** Mirrors InvitationAccept: the name is optional and at most 100 characters. */
@@ -13,7 +14,7 @@ export const joinSchema = z.object({
   name: z
     .string()
     .trim()
-    .max(100, { error: () => m.join_name_max() }),
+    .max(NAME_MAX_CHARS, { error: () => m.join_name_max() }),
 })
 
 export type JoinValues = z.infer<typeof joinSchema>
@@ -41,7 +42,7 @@ export function JoinForm({
 }: JoinFormProps) {
   const form = useForm<JoinValues>({
     resolver: zodResolver(joinSchema),
-    defaultValues: { name: defaultName.slice(0, 100) },
+    defaultValues: { name: defaultName.slice(0, NAME_MAX_CHARS) },
   })
   const { errors } = form.formState
 

@@ -1,3 +1,4 @@
+import { CLOCK_REFERENCE_YEAR, MINUTES_PER_HOUR } from '@/lib/constants'
 import { m } from '@/paraglide/messages'
 import { getLocale } from '@/paraglide/runtime'
 
@@ -121,8 +122,8 @@ export function formatDayMonth(iso: string): string {
 
 /** "2 h", "1 h 30 min", "45 min". */
 export function formatDuration(totalMinutes: number): string {
-  const h = Math.floor(totalMinutes / 60)
-  const min = totalMinutes % 60
+  const h = Math.floor(totalMinutes / MINUTES_PER_HOUR)
+  const min = totalMinutes % MINUTES_PER_HOUR
   if (h > 0 && min > 0) return m.plan_duration_h_min({ h, min })
   return h > 0 ? m.plan_duration_h({ h }) : m.plan_duration_min({ min })
 }
@@ -130,7 +131,7 @@ export function formatDuration(totalMinutes: number): string {
 /** "10:00:00" (an API time of day without a date) -> "10:00" / "10:00 AM". */
 export function formatClock(time: string): string {
   const [hours = 0, minutes = 0] = time.split(':').map(Number)
-  return formatTime(new Date(2000, 0, 1, hours, minutes))
+  return formatTime(new Date(CLOCK_REFERENCE_YEAR, 0, 1, hours, minutes))
 }
 
 /**

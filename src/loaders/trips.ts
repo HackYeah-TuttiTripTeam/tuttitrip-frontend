@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { canCallProtectedApi } from '@/api/client'
 import { tripsQueryOptions } from '@/api/queries/trips'
+import { NAME_MAX_CHARS } from '@/lib/constants'
 import type { RouterContext } from './router-context'
 
 export const TRIP_SORT_KEYS = ['created_at', 'name', 'destination'] as const
@@ -22,7 +23,7 @@ export const tripsSearchSchema = z.object({
   // TanStack Router parses ?q=2026 as a number, so accept both.
   q: z
     .union([z.string(), z.number()])
-    .transform((value) => String(value).slice(0, 100))
+    .transform((value) => String(value).slice(0, NAME_MAX_CHARS))
     .default(tripsSearchDefaults.q)
     .catch(tripsSearchDefaults.q),
   sort: z.enum(TRIP_SORT_KEYS).default(tripsSearchDefaults.sort).catch(tripsSearchDefaults.sort),

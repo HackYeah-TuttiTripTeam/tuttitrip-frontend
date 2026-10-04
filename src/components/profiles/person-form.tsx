@@ -6,6 +6,15 @@ import type { Profile } from '@/api/queries/profiles'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import {
+  ACTIVE_HOURS_MAX,
+  AGE_MAX_YEARS,
+  DAILY_KM_MAX,
+  FLOOR_PERCENT_MAX,
+  MINUTES_LIMIT_MAX,
+  NAME_MAX_CHARS,
+  SEGMENT_KM_MAX,
+} from '@/lib/constants'
 import { type EditValues, editDefaults, type SaveResult } from '@/lib/people'
 import { m } from '@/paraglide/messages'
 
@@ -13,13 +22,13 @@ const name = z
   .string()
   .trim()
   .min(1, { error: () => m.people_form_name_required() })
-  .max(100, { error: () => m.people_form_max_100() })
+  .max(NAME_MAX_CHARS, { error: () => m.people_form_max_100() })
 // Mirrors ProfileCreate: age 0-120 whole years. Which age group that is stays the server's call.
 const age = z
   .number({ error: () => m.people_form_age_invalid() })
   .int({ error: () => m.people_form_age_invalid() })
   .min(0, { error: () => m.people_form_age_invalid() })
-  .max(120, { error: () => m.people_form_age_invalid() })
+  .max(AGE_MAX_YEARS, { error: () => m.people_form_age_invalid() })
 
 export const addPersonSchema = z.object({ display_name: name, age })
 export type AddPersonValues = z.infer<typeof addPersonSchema>
@@ -35,9 +44,9 @@ export const editPersonSchema = z
   .object({
     display_name: name,
     age,
-    segment_km: positive(50),
-    daily_km: positive(100),
-    active_hours: positive(24),
+    segment_km: positive(SEGMENT_KM_MAX),
+    daily_km: positive(DAILY_KM_MAX),
+    active_hours: positive(ACTIVE_HOURS_MAX),
     stairs_sensitivity: z
       .number({ error: () => m.people_form_unit_invalid() })
       .min(0, { error: () => m.people_form_unit_invalid() })
@@ -46,18 +55,18 @@ export const editPersonSchema = z
       .number({ error: () => m.people_form_queue_invalid() })
       .int({ error: () => m.people_form_queue_invalid() })
       .min(0, { error: () => m.people_form_queue_invalid() })
-      .max(600, { error: () => m.people_form_queue_invalid() }),
+      .max(MINUTES_LIMIT_MAX, { error: () => m.people_form_queue_invalid() }),
     floor: z
       .number({ error: () => m.people_form_floor_invalid() })
       .int({ error: () => m.people_form_floor_invalid() })
       .min(0, { error: () => m.people_form_floor_invalid() })
-      .max(100, { error: () => m.people_form_floor_invalid() }),
+      .max(FLOOR_PERCENT_MAX, { error: () => m.people_form_floor_invalid() }),
     nap_start: z.string(),
     nap_minutes: z
       .number({ error: () => m.people_form_nap_minutes_invalid() })
       .int({ error: () => m.people_form_nap_minutes_invalid() })
       .min(0, { error: () => m.people_form_nap_minutes_invalid() })
-      .max(600, { error: () => m.people_form_nap_minutes_invalid() }),
+      .max(MINUTES_LIMIT_MAX, { error: () => m.people_form_nap_minutes_invalid() }),
   })
   .superRefine((value, ctx) => {
     if (value.segment_km > value.daily_km) {
@@ -119,7 +128,7 @@ function NameAgeFields({ idPrefix, form, placeholder, ageHint }: NameAgeFieldsPr
           type="number"
           inputMode="numeric"
           min={0}
-          max={120}
+          max={AGE_MAX_YEARS}
           aria-invalid={Boolean(errors.age)}
           className={inputClass}
           {...register('age', { valueAsNumber: true })}
