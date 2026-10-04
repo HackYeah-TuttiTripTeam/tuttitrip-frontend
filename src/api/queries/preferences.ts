@@ -6,6 +6,7 @@ export type Constraints = Schemas['Constraints']
 export type Diet = Schemas['Diet']
 export type DietTag = Schemas['DietTag']
 export type ImportancePool = Schemas['ImportancePool']
+export type MinTag = Schemas['MinTag']
 export type ExamplePlace = Schemas['ExamplePlace']
 export type ExampleVerdict = Schemas['ExampleVerdict']
 /** The interest taxonomy: the same tags places carry, so the planner can match them. */

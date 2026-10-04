@@ -1,7 +1,7 @@
 import { Minus, Plus } from '@keyline-icons/react'
 import { cn } from 'cn'
-import { type KeyboardEvent, useState } from 'react'
-import type { ImportancePool as Pool } from '@/api/queries/preferences'
+import { type KeyboardEvent, useRef, useState } from 'react'
+import type { MinTag, ImportancePool as Pool } from '@/api/queries/preferences'
 import { Button } from '@/components/ui/button'
 import {
   forcedPlaces,
@@ -23,9 +23,6 @@ const DOMAIN_LABELS: Record<PoolDomain, () => string> = {
   cost: m.prefs_pool_domain_cost,
 }
 
-/** Only these domains carry minimum tags (a cuisine, an attraction tag), so only they force places. */
-const MIN_TAG_DOMAINS: readonly PoolDomain[] = ['food', 'attractions']
-
 /** A filled dot is a solid disc, an empty one a ring: the count never depends on colour alone. */
 function Dots({ points }: { points: number }) {
   return (
@@ -44,10 +41,20 @@ function Dots({ points }: { points: number }) {
   )
 }
 
-function MinimumNote({ domain, points }: { domain: PoolDomain; points: number }) {
-  const count = forcedPlaces(points)
-  if (count === 0 || !MIN_TAG_DOMAINS.includes(domain)) return null
-  return <p className="text-muted-foreground text-sm">{m.prefs_pool_min({ count })}</p>
+const noteId = (domain: PoolDomain) => `pool-min-${domain}`
+
+/** The automatic minimum forces places for a tag, so it matters only where the person has one. */
+function minimumCount(domain: PoolDomain, points: number, minTags: readonly MinTag[]) {
+  return minTags.some((tag) => tag.domain === domain) ? forcedPlaces(points) : 0
+}
+
+function MinimumNote({ domain, count }: { domain: PoolDomain; count: number }) {
+  if (count === 0) return null
+  return (
+    <p id={noteId(domain)} className="text-muted-foreground text-sm">
+      {m.prefs_pool_min({ count })}
+    </p>
+  )
 }
 
 interface ImportancePoolProps {
@@ -55,6 +62,8 @@ interface ImportancePoolProps {
   pool: Pool
   /** Nobody saved the preferences yet, so the pool is the age default. */
   isDefault: boolean
+  /** Minimum tags of the person: the note about forced places shows for their domains only. */
+  minTags: readonly MinTag[]
   readOnly?: boolean
   /** Saves the whole pool, only called when the draft adds up to the total. */
   onSave: (pool: Pool) => Promise<SaveResult>
@@ -65,10 +74,18 @@ interface ImportancePoolProps {
  * points around; saving is possible only when none is left, so the API never gets a wrong sum.
  * Each row is a spin button: arrow keys move one point, Home takes all, End gives all that are free.
  */
-export function ImportancePool({ pool, isDefault, readOnly = false, onSave }: ImportancePoolProps) {
+export function ImportancePool({
+  pool,
+  isDefault,
+  minTags,
+  readOnly = false,
+  onSave,
+}: ImportancePoolProps) {
   const [draft, setDraft] = useState<Pool | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const root = useRef<HTMLDivElement>(null)
+  const lastDomain = useRef<PoolDomain>('lodging')
   const shown = draft ?? pool
 
   if (readOnly) {
@@ -87,7 +104,7 @@ export function ImportancePool({ pool, isDefault, readOnly = false, onSave }: Im
                 total: POOL_TOTAL,
               })}
             </span>
-            <MinimumNote domain={domain} points={pool[domain]} />
+            <MinimumNote domain={domain} count={minimumCount(domain, pool[domain], minTags)} />
           </li>
         ))}
       </ul>
@@ -99,6 +116,8 @@ export function ImportancePool({ pool, isDefault, readOnly = false, onSave }: Im
   const canSave = dirty && remaining === 0 && !saving
 
   const move = (domain: PoolDomain, step: number) => {
+    if (saving) return
+    lastDomain.current = domain
     setError(null)
     setDraft(stepPool(shown, domain, step))
   }
@@ -123,12 +142,15 @@ export function ImportancePool({ pool, isDefault, readOnly = false, onSave }: Im
     setError(null)
     const result = await onSave(shown)
     setSaving(false)
-    if (result.ok) setDraft(null)
-    else setError(result.message)
+    if (result.ok) {
+      setDraft(null)
+      // The save button is gone now; keep the keyboard where the person was.
+      root.current?.querySelector<HTMLElement>(`[data-domain="${lastDomain.current}"]`)?.focus()
+    } else setError(result.message)
   }
 
   return (
-    <div className="flex max-w-md flex-col gap-4">
+    <div ref={root} className="flex max-w-md flex-col gap-4">
       <ul className="flex flex-col gap-4">
         {POOL_DOMAINS.map((domain) => {
           const points = shown[domain]
@@ -158,6 +180,10 @@ export function ImportancePool({ pool, isDefault, readOnly = false, onSave }: Im
                 </Button>
                 <div
                   role="spinbutton"
+                  data-domain={domain}
+                  aria-describedby={
+                    minimumCount(domain, points, minTags) > 0 ? noteId(domain) : undefined
+                  }
                   tabIndex={0}
                   aria-label={label}
                   aria-valuemin={0}
@@ -182,7 +208,7 @@ export function ImportancePool({ pool, isDefault, readOnly = false, onSave }: Im
                   <Plus aria-hidden="true" />
                 </Button>
               </div>
-              <MinimumNote domain={domain} points={points} />
+              <MinimumNote domain={domain} count={minimumCount(domain, points, minTags)} />
             </li>
           )
         })}

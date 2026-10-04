@@ -171,6 +171,7 @@ export function PersonDetails({
         <ImportancePool
           pool={preferences.importance_pool}
           isDefault={!preferences.filled}
+          minTags={preferences.min_tags}
           readOnly={!canEdit}
           onSave={onSetPool}
         />

@@ -27,8 +27,9 @@ export const NO_CONSTRAINTS: Constraints = {
 
 /**
  * The body of a PUT: the API replaces the whole preferences, so everything the person already
- * has goes back with the change. The pool is left out until someone saved it, so the age default
- * keeps following the age. Constraints are null for a member looking at someone else.
+ * has goes back with the change. The pool is left out until preferences were saved once: the
+ * backend then stores the age default as a snapshot, so before that it still follows the age.
+ * Constraints are null for a member looking at someone else.
  */
 export function toWrite(current: Preferences, patch: PreferencesWrite = {}): PreferencesWrite {
   return {

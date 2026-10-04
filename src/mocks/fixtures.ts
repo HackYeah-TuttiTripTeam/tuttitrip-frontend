@@ -211,6 +211,10 @@ export const familyPreferences = (): Preferences[] => [
   preferences(PROFILE_IDS.mama, {
     filled: true,
     interests: { history: 1, museums: 1, local_food: 1 },
+    min_tags: [
+      { domain: 'food', tag: 'polish' },
+      { domain: 'attractions', tag: 'museums' },
+    ],
     updated_at: '2026-10-02T09:00:00Z',
   }),
   preferences(PROFILE_IDS.tata, {

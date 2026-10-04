@@ -17,10 +17,7 @@ export interface PlaceRating {
  * one, so a rating is never echoed back through it. Shown at once, put back on failure.
  */
 export function useRatePlace(tripId: string, profileId: string) {
-  const { queryClient, queryKey, scope, reload, reloadIfLast } = usePreferencesSync(
-    tripId,
-    profileId,
-  )
+  const { queryClient, queryKey, scope, reloadIfLast } = usePreferencesSync(tripId, profileId)
 
   return useMutation({
     scope,
@@ -43,7 +40,7 @@ export function useRatePlace(tripId: string, profileId: string) {
           example_places: withCatalogRating(shown.example_places, rating),
         })
     },
-    onError: reload,
+    onError: reloadIfLast,
     onSuccess: reloadIfLast,
   })
 }

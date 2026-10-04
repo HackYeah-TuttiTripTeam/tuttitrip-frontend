@@ -280,22 +280,36 @@ describe('Pula ważności', () => {
     expect(pace.getAttribute('aria-valuenow')).toBe('2')
   })
 
-  it('shows the automatic minimum from 4 points: 1 place at 4 to 6, 2 at 7 to 9, 3 at 10', async () => {
-    openPerson(PROFILE_IDS.zosia)
-    await heading('Zosia')
+  it('shows the automatic minimum from 4 points, only where the person has a minimum tag', async () => {
+    openPerson(PROFILE_IDS.mama)
+    await heading('Ola')
     const min = (count: number) => m.prefs_pool_min({ count })
     expect(screen.queryByText(min(1))).toBeNull()
     for (const domain of [m.prefs_pool_domain_lodging(), m.prefs_pool_domain_pace()]) {
       ;(await spin(domain)).focus()
       await userEvent.keyboard('{Home}')
     }
-    ;(await spin(m.prefs_pool_domain_attractions())).focus()
-    await userEvent.keyboard('{End}')
-    expect(screen.getByText(min(1))).toBeTruthy() // attractions 6
+    const attractions = await spin(m.prefs_pool_domain_attractions())
+    attractions.focus()
+    await userEvent.keyboard('{End}') // 6 points: 1 place
+    const note = screen.getByText(min(1))
+    expect(attractions.getAttribute('aria-describedby')).toBe(note.id)
     await userEvent.keyboard('{Home}')
     ;(await spin(m.prefs_pool_domain_food())).focus()
+    await userEvent.keyboard('{End}') // 8 points: 2 places
+    expect(screen.getByText(min(2))).toBeTruthy()
+    // Pace has 0 points and no tag; lodging never carries a minimum.
+    expect(screen.getAllByText(/miejsc na tag|places per tag/)).toHaveLength(1)
+  })
+
+  it('shows no minimum for a person without minimum tags', async () => {
+    openPerson(PROFILE_IDS.zosia)
+    await heading('Zosia')
+    ;(await spin(m.prefs_pool_domain_lodging())).focus()
+    await userEvent.keyboard('{Home}')
+    ;(await spin(m.prefs_pool_domain_attractions())).focus()
     await userEvent.keyboard('{End}')
-    expect(screen.getByText(min(2))).toBeTruthy() // food 9: 2 + 2 + 2 + 2 + 1 free... see below
+    expect(screen.queryByText(m.prefs_pool_min({ count: 1 }))).toBeNull()
   })
 
   it('saves a full pool as the whole body, only the pool changed', async () => {
@@ -315,6 +329,12 @@ describe('Pula ważności', () => {
     })
     expect(await screen.findByText(m.prefs_pool_complete())).toBeTruthy()
     expect(screen.queryByRole('button', { name: m.prefs_pool_save() })).toBeNull()
+    // The save button is gone; focus stays on the row that was edited last.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('spinbutton', { name: m.prefs_pool_domain_food() }),
+      ),
+    )
   })
 
   it('leaves the pool out of other saves until someone saved it, so the age default keeps following', async () => {
@@ -437,7 +457,11 @@ describe('Lubiane i nielubiane miejsca', () => {
     await userEvent.click(screen.getByRole('button', { name: m.prefs_places_add_dislike() }))
 
     expect(await screen.findByText(m.people_error_generic())).toBeTruthy()
-    await waitFor(() => expect(screen.queryByText('Muzeum Narodowe')).toBeNull())
+    // Gone from the list, still typed in the field so the save can be retried.
+    expect(screen.getAllByText(m.prefs_places_none())).toHaveLength(2)
+    expect((screen.getByLabelText(m.prefs_places_name_label()) as HTMLInputElement).value).toBe(
+      'Muzeum Narodowe',
+    )
   })
 
   it('takes a failed typed name back off the list', async () => {
@@ -466,6 +490,7 @@ describe('Lubiane i nielubiane miejsca', () => {
     const input = await screen.findByLabelText(m.prefs_places_name_label())
     await userEvent.type(input, 'Pierwsze')
     await userEvent.click(screen.getByRole('button', { name: m.prefs_places_add_like() }))
+    await userEvent.clear(input)
     await userEvent.type(input, 'Drugie')
     await userEvent.click(screen.getByRole('button', { name: m.prefs_places_add_like() }))
     await waitFor(() => expect(puts).toBe(2))

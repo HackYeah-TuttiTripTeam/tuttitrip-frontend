@@ -14,10 +14,7 @@ export type PreferencesChange = (current: Preferences) => PreferencesWrite
  * A failure, like the last save, reloads from the server, which also takes the value back.
  */
 export function useUpdatePreferences(tripId: string, profileId: string) {
-  const { queryClient, queryKey, scope, reload, reloadIfLast } = usePreferencesSync(
-    tripId,
-    profileId,
-  )
+  const { queryClient, queryKey, scope, reloadIfLast } = usePreferencesSync(tripId, profileId)
   const path = { params: { path: { trip_id: tripId, profile_id: profileId } } }
 
   return useMutation({
@@ -39,7 +36,7 @@ export function useUpdatePreferences(tripId: string, profileId: string) {
       const shown = queryClient.getQueryData<Preferences>(queryKey)
       if (shown) queryClient.setQueryData(queryKey, applyWrite(shown, change(shown)))
     },
-    onError: reload,
+    onError: reloadIfLast,
     onSuccess: reloadIfLast,
   })
 }

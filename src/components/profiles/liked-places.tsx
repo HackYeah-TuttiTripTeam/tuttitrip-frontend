@@ -75,13 +75,19 @@ export function LikedPlaces({
     setError(null)
     const result = await action()
     if (!result.ok) setError(result.message)
+    return result.ok
   }
 
   const add = (verdict: ExampleVerdict) => {
     const place = picked ?? catalog.find((option) => sameName(option.name, query))
-    setText('')
-    setPicked(null)
-    void run(() => onAdd({ name: place?.name ?? query, placeId: place?.id ?? null, verdict }))
+    // The typed name stays until the save worked, so a failure can be retried without retyping.
+    void run(() => onAdd({ name: place?.name ?? query, placeId: place?.id ?? null, verdict })).then(
+      (saved) => {
+        if (!saved) return
+        setText('')
+        setPicked(null)
+      },
+    )
   }
 
   return (
