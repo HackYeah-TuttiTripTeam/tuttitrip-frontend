@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { VotePage, VotePageSkeleton } from '@/components/voting/vote-page'
 import { useLocale } from '@/hooks/use-locale'
 import { useTheme } from '@/hooks/use-theme'
-import { useVoteSession, useVoteToken } from '@/hooks/use-vote-session'
+import { useVoteSession, useVoteVisit } from '@/hooks/use-vote-session'
 import { m } from '@/paraglide/messages'
 
 /**
@@ -35,8 +35,8 @@ function Page({ children }: { children: ReactNode }) {
 }
 
 export function VoteView() {
-  const token = useVoteToken()
-  const vote = useVoteSession(token)
+  const { token, visit } = useVoteVisit()
+  const vote = useVoteSession(token, visit)
 
   if (token === null || vote.problem === 'dead_link') {
     return (

@@ -67,7 +67,7 @@ function PlaceRow({ place }: { place: PlaceVoteSummary }) {
   return (
     <li className="flex flex-col gap-2 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-        <h4 className="font-medium">{place.place_name}</h4>
+        <h3 className="font-medium">{place.place_name}</h3>
         <p className="flex items-center gap-3 text-sm tabular-nums">
           <span className="flex items-center gap-1" title={m.vote_want()}>
             <ThumbsUp aria-hidden="true" className="size-4" />

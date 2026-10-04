@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-import { configure, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, configure, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { clearVoteToken } from '@/lib/vote-link'
-import { VOTE_TOKEN } from '@/mocks/fixtures'
+import { VOTE_TOKEN, VOTE_TOKEN_OTHER } from '@/mocks/fixtures'
 import { server, useScenario } from '@/mocks/node'
 import { renderApp } from '@/mocks/render-app'
 import { m } from '@/paraglide/messages'
@@ -169,5 +169,23 @@ describe('VoteView', () => {
     await user.click(placeRow('Zamek Królewski').getByRole('button', { name: m.vote_want() }))
     expect(await screen.findByText(m.vote_write_failed())).toBeTruthy()
     expect(screen.queryByText(m.vote_thanks())).toBeNull()
+  })
+
+  it("never shows the previous link's session for the next link", async () => {
+    const user = userEvent.setup()
+    openVote()
+    await screen.findByRole('heading', { name: m.vote_page_title({ name: 'Zosia' }) })
+    // Zosia rates something, so her session in the cache differs from a fresh one.
+    await user.click(placeRow('Zamek Królewski').getByRole('button', { name: m.vote_want() }))
+    await screen.findByText(m.vote_thanks())
+    cleanup()
+
+    // The same app, the same cache, a different link.
+    openVote(`#t=${VOTE_TOKEN_OTHER}`)
+    expect(
+      await screen.findByRole('heading', { name: m.vote_page_title({ name: 'Antek' }) }),
+    ).toBeTruthy()
+    expect(screen.queryByText('Zosia')).toBeNull()
+    expect(placeRow('Zamek Królewski').queryByText(/Zapisane/)).toBeNull()
   })
 })

@@ -1,6 +1,11 @@
 import type { Schemas } from './client'
 
 /**
+ * ASSUMPTIONS TO VERIFY AGAINST backend#81 (nothing below is generated): the paths, the shape of
+ * `VoteSession` and `VotePlace` (names, `description`, `photo_url`, `rating`, `reason_code`,
+ * `veto_id`), that every write answers 200 with the changed `VotePlace`, and that a veto of a place
+ * the plan dropped still comes back in the session. Swap to the generated types when it lands.
+ *
  * The routes of the voting page without an account (tuttitrip-backend#81). They are not in
  * `schema.d.ts` until that issue is merged, so the contract of the issue is written out here in
  * the same shape openapi-typescript generates; once `pnpm api:sync` brings the real paths, delete
@@ -36,7 +41,8 @@ export interface RatingWrite {
 
 type Parameters<PathParams = never> = {
   query?: never
-  header: { 'X-Access-Token': string }
+  // Like the generated schema (see /vote/access): optional and nullable, the API answers 401 without it.
+  header?: { 'X-Access-Token'?: string | null }
   cookie?: never
 } & ([PathParams] extends [never] ? { path?: never } : { path: PathParams })
 

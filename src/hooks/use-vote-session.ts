@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { classifyApiError } from '@/api/errors'
 import {
   deleteVeto,
@@ -14,10 +14,15 @@ import {
 } from '@/api/queries/vote'
 import { clearVoteToken, currentVoteToken } from '@/lib/vote-link'
 
-/** The token of this visit, read once (the route already took it off the address bar). */
-export function useVoteToken(): string | null {
-  const [token] = useState(currentVoteToken)
-  return token
+/**
+ * The token and the key of this visit, read once (the route already took the token off the
+ * address bar). A ref keeps them across the extra mount of React StrictMode, whose cleanup would
+ * otherwise have erased the token the second mount needs.
+ */
+export function useVoteVisit(): { token: string | null; visit: string } {
+  const ref = useRef<{ token: string | null; visit: string } | null>(null)
+  ref.current ??= { token: currentVoteToken(), visit: crypto.randomUUID() }
+  return ref.current
 }
 
 /** What the page shows when something fails: a dead link has its own message. */
@@ -40,18 +45,28 @@ const withPlace = (session: VoteSession | undefined, place: VotePlace) =>
  * The voting page's data: the session and the three writes. Every write answers with the place's
  * new state, which is put into the cache, so the screen follows the server without a reload.
  */
-export function useVoteSession(token: string | null) {
+export function useVoteSession(token: string | null, visit: string) {
   const queryClient = useQueryClient()
   const session = useQuery({
-    ...voteSessionQueryOptions(token ?? ''),
+    ...voteSessionQueryOptions(token ?? '', visit),
     enabled: token !== null,
   })
 
-  // The token has done its job once the page is gone.
-  useEffect(() => clearVoteToken, [])
+  // The token and the answers have done their job once the page is gone. (React StrictMode runs
+  // this cleanup once on the first mount too; the ref above keeps the visit, and the query is
+  // fetched again by the observer that mounts next.)
+  useEffect(
+    () => () => {
+      clearVoteToken()
+      queryClient.removeQueries({ queryKey: voteSessionKey(visit) })
+    },
+    [queryClient, visit],
+  )
 
   const store = (place: VotePlace) =>
-    queryClient.setQueryData<VoteSession>(voteSessionKey, (current) => withPlace(current, place))
+    queryClient.setQueryData<VoteSession>(voteSessionKey(visit), (current) =>
+      withPlace(current, place),
+    )
 
   const rate = useMutation({
     mutationFn: (args: { placeId: string; value: RatingValue; reason?: ReasonCode }) =>

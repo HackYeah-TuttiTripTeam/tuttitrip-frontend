@@ -1,5 +1,5 @@
 import { Ban, Check, Minus, ThumbsDown, ThumbsUp } from '@keyline-icons/react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { RatingValue, ReasonCode, VotePlace } from '@/api/queries/vote'
 import { Button } from '@/components/ui/button'
 import { REASON_CODES, REASON_LABELS } from '@/lib/vote-reasons'
@@ -32,7 +32,21 @@ export function VotePlaceItem({ place, busy, onRate, onVeto, onWithdrawVeto }: V
   const vetoed = place.veto_id !== null
   // "I don't want it" needs a reason before it can be saved, so it is only asked for here.
   const askingReason = step === 'reason' || (place.rating === 'dont_want' && !place.reason_code)
-  const headingId = `place-${place.place_id}`
+
+  // Keyboard and screen reader users must not lose their place when a panel opens or closes.
+  const firstReason = useRef<HTMLButtonElement>(null)
+  const confirmVeto = useRef<HTMLButtonElement>(null)
+  const vetoButton = useRef<HTMLButtonElement>(null)
+  const withdrawButton = useRef<HTMLButtonElement>(null)
+  const previous = useRef({ step, vetoed })
+  useEffect(() => {
+    const before = previous.current
+    previous.current = { step, vetoed }
+    if (before.step !== 'reason' && step === 'reason') firstReason.current?.focus()
+    else if (before.step !== 'veto' && step === 'veto') confirmVeto.current?.focus()
+    else if (before.step === 'veto' && step !== 'veto') vetoButton.current?.focus()
+    if (!before.vetoed && vetoed) withdrawButton.current?.focus()
+  }, [step, vetoed])
 
   return (
     <li className="flex flex-col gap-3 py-5">
@@ -45,9 +59,7 @@ export function VotePlaceItem({ place, busy, onRate, onVeto, onWithdrawVeto }: V
         />
       )}
       <div className="flex flex-col gap-1">
-        <h2 id={headingId} className="font-medium text-lg leading-snug">
-          {place.name}
-        </h2>
+        <h2 className="font-medium text-lg leading-snug">{place.name}</h2>
         {place.description && (
           <p className="text-muted-foreground text-sm leading-relaxed">{place.description}</p>
         )}
@@ -61,6 +73,7 @@ export function VotePlaceItem({ place, busy, onRate, onVeto, onWithdrawVeto }: V
           </p>
           <p className="text-muted-foreground text-sm">{m.vote_veto_active_body()}</p>
           <Button
+            ref={withdrawButton}
             variant="outline"
             className="h-11"
             disabled={busy}
@@ -103,9 +116,10 @@ export function VotePlaceItem({ place, busy, onRate, onVeto, onWithdrawVeto }: V
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-1 font-medium text-sm">{m.vote_reason_title()}</legend>
               <div className="flex flex-wrap gap-2">
-                {REASON_CODES.map((code) => (
+                {REASON_CODES.map((code, index) => (
                   <Button
                     key={code}
+                    ref={index === 0 ? firstReason : undefined}
                     type="button"
                     variant={place.reason_code === code ? 'default' : 'outline'}
                     aria-pressed={place.reason_code === code}
@@ -133,6 +147,7 @@ export function VotePlaceItem({ place, busy, onRate, onVeto, onWithdrawVeto }: V
               </p>
               <div className="flex flex-col gap-2 sm:flex-row-reverse">
                 <Button
+                  ref={confirmVeto}
                   variant="destructive"
                   className="h-12 flex-1"
                   disabled={busy}
@@ -150,6 +165,7 @@ export function VotePlaceItem({ place, busy, onRate, onVeto, onWithdrawVeto }: V
             </fieldset>
           ) : (
             <Button
+              ref={vetoButton}
               type="button"
               variant="ghost"
               className="h-11 w-fit px-2 text-destructive"

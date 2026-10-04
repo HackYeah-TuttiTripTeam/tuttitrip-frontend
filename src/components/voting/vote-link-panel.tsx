@@ -2,7 +2,6 @@ import { Link as LinkIcon, QrCode as QrIcon, UserPlus } from '@keyline-icons/rea
 import type { VoteLink } from '@/api/queries/vote-links'
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/format'
-import { type VoteLinkStatus, voteLinkStatus } from '@/lib/vote-links'
 import { m } from '@/paraglide/messages'
 
 export interface OffAccountPerson {
@@ -27,8 +26,9 @@ interface VoteLinkPanelProps {
   onRetryLinks: () => void
 }
 
-function statusText(link: VoteLink | undefined, status: VoteLinkStatus): string {
-  if (!link || status === 'none') return m.vote_link_status_none()
+function statusText(link: VoteLink | undefined): string {
+  if (!link) return m.vote_link_status_none()
+  const status = link.state
   if (status === 'revoked') return m.vote_link_status_revoked()
   if (status === 'expired') return m.vote_link_status_expired({ date: formatDate(link.expires_at) })
   return link.last_used_at
@@ -74,13 +74,13 @@ export function VoteLinkPanel({
       ) : (
         <ul aria-label={m.vote_links_list_label()} className="flex flex-col divide-y border-y">
           {people.map((person) => {
-            const status = voteLinkStatus(person.link)
             const link = person.link
+            const status = link?.state
             return (
               <li key={person.profileId} className="flex flex-col gap-3 py-4">
                 <div className="flex flex-col gap-0.5">
                   <p className="font-medium">{person.name}</p>
-                  <p className="text-muted-foreground text-sm">{statusText(link, status)}</p>
+                  <p className="text-muted-foreground text-sm">{statusText(link)}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button

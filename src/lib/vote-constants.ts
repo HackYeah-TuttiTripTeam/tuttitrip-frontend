@@ -3,8 +3,14 @@ import type { Schemas } from '@/api/client'
 type VoteSource = Schemas['VoteSource']
 type VoteSummarySort = Schemas['VoteSummarySort']
 
-/** How often the host's result is asked again while the panel is open, in ms (the veto shows within seconds). */
-export const VOTE_SUMMARY_POLL_MS = 2000
+/**
+ * Base interval, in ms, of asking again for the host's result and the plan while a voting link is
+ * working and nothing is open on top of the page. A failed poll doubles it, up to the maximum below.
+ */
+export const VOTE_POLL_MS = 7000
+
+/** The longest wait between two polls after failures, in ms. */
+export const VOTE_POLL_MAX_MS = 60_000
 
 /** Places per page of the vote summary. */
 export const VOTE_SUMMARY_PAGE_SIZE = 10

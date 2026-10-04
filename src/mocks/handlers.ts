@@ -15,7 +15,9 @@ import {
   type Trip,
   trip,
   VOTE_TOKEN,
+  VOTE_TOKEN_OTHER,
   voteLink,
+  votePlaces,
 } from './fixtures'
 import { permissionHandlers } from './permissions'
 import { createWorld, type ScenarioName, type World } from './scenarios'
@@ -34,8 +36,14 @@ const unauthorized = () => HttpResponse.json({ detail: 'Unauthorized' }, { statu
 const serverError = () => HttpResponse.json({ detail: 'Internal Server Error' }, { status: 500 })
 
 /** The voting token of a request: sent in the header, and still working. */
-const liveToken = (request: Request, world: World) =>
-  request.headers.get('X-Access-Token') === VOTE_TOKEN && world.vote.link === 'ok'
+const liveToken = (request: Request, world: World) => {
+  const token = request.headers.get('X-Access-Token')
+  return (token === VOTE_TOKEN || token === VOTE_TOKEN_OTHER) && world.vote.link === 'ok'
+}
+
+/** Whose link it is: the second token belongs to Antek, who has rated nothing. */
+const profileNameFor = (request: Request, world: World) =>
+  request.headers.get('X-Access-Token') === VOTE_TOKEN_OTHER ? 'Antek' : world.vote.profileName
 
 function paged<T>(items: T[], page: number, size: number) {
   return {
@@ -580,8 +588,8 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       if (!liveToken(request, world)) return unauthorized()
       return HttpResponse.json({
         trip_name: world.trips[0]?.name ?? '',
-        profile_name: world.vote.profileName,
-        places: world.vote.places,
+        profile_name: profileNameFor(request, world),
+        places: profileNameFor(request, world) === 'Antek' ? votePlaces() : world.vote.places,
       })
     }),
 

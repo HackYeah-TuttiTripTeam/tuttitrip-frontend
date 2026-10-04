@@ -154,7 +154,7 @@ describe('the result of the voting', () => {
   it('shows a veto from a phone within the poll', async () => {
     const calls = recordCalls()
     let summary: import('@/mocks/fixtures').PlaceVoteSummary[] = []
-    useScenario('family-warsaw', {
+    useScenario('vote-with-link', {
       tweak: (world) => {
         summary = world.voteSummary
       },
@@ -176,10 +176,12 @@ describe('the result of the voting', () => {
     })
 
     expect(
-      await screen.findByText(/Weto \(1\): Zosia \(link\)/, {}, { timeout: 6000 }),
+      await screen.findByText(/Weto \(1\): Zosia \(link\)/, {}, { timeout: 15_000 }),
     ).toBeTruthy()
     expect(calls.filter((call) => call.path.endsWith('/vote-summary')).length).toBeGreaterThan(1)
-  }, 10_000)
+    // The plan is polled on its own, not only when this page of the list happens to change.
+    expect(calls.filter((call) => call.path.endsWith('/plans/latest')).length).toBeGreaterThan(1)
+  }, 25_000)
 })
 
 describe('a named invitation', () => {

@@ -119,6 +119,19 @@ describe('missing files', () => {
   })
 })
 
+describe('voting page', () => {
+  it('serves the SPA shell with no Referer policy, with or without a trailing slash', async () => {
+    for (const path of ['/glos', '/glos/']) {
+      const response = await worker.fetch(
+        new Request(`https://app.test${path}`),
+        env(() => new Response('<html></html>', { headers: { 'content-type': 'text/html' } })),
+      )
+      expect(response.status).toBe(200)
+      expect(response.headers.get('referrer-policy')).toBe('no-referrer')
+    }
+  })
+})
+
 describe('public pages', () => {
   const page = () =>
     new Response(

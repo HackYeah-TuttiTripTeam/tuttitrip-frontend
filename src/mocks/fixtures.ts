@@ -569,6 +569,8 @@ export const catalogPlaces = (): CatalogPlace[] => [
 ]
 /** The secret of the voting link a mock host creates (shown once, in the 201 answer). */
 export const VOTE_TOKEN = 'mock-vote-token'
+/** The voting link of a second person (Antek), to open two links one after the other. */
+export const VOTE_TOKEN_OTHER = 'mock-vote-token-other'
 export const VOTE_LINK_ID = 'c4e1f2a0-5b6d-4c7e-8f90-1a2b3c4d5e01'
 
 export const voteLink = (overrides: Partial<VoteLink> = {}): VoteLink => ({

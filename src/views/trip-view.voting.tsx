@@ -36,7 +36,7 @@ const createFailedMessage = (error: unknown, conflict: string, failed: string) =
 
 /**
  * Host tools for people without an account, under the Osoby tab: a voting link with a QR code, a
- * named invitation, and the group's answers place by place (asked again every two seconds).
+ * named invitation, and the group's answers place by place (asked again every few seconds while a link works).
  */
 export function TripVotingView({ tripId, tripName, people }: TripVotingViewProps) {
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
@@ -59,13 +59,21 @@ export function TripVotingView({ tripId, tripName, people }: TripVotingViewProps
     inviting: invitation.pendingProfileId === person.profile.id,
   }))
 
-  const summary = useVoteSummary(tripId, {
-    page: search.vpage,
-    size: VOTE_SUMMARY_PAGE_SIZE,
-    sort: search.vsort,
-    source: search.vsource,
-    hasVeto: search.vveto ? true : undefined,
-  })
+  // Asking again is worth it while somebody can still vote, and not while a dialog is on top.
+  const dialogOpen =
+    revoking !== null || linkCreation.created !== undefined || invitation.created !== undefined
+  const polling = links.links.some((link) => link.state === 'active') && !dialogOpen
+  const summary = useVoteSummary(
+    tripId,
+    {
+      page: search.vpage,
+      size: VOTE_SUMMARY_PAGE_SIZE,
+      sort: search.vsort,
+      source: search.vsource,
+      hasVeto: search.vveto ? true : undefined,
+    },
+    polling,
+  )
 
   const setSearch = (
     patch: Partial<Pick<typeof search, 'vpage' | 'vsort' | 'vsource' | 'vveto'>>,
