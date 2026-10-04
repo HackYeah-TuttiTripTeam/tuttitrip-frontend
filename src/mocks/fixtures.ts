@@ -76,6 +76,7 @@ export const trip = (overrides: Partial<Trip> = {}): Trip => ({
   my_role: 'host',
   my_status: 'confirmed',
   kind: 'trip',
+  propose_cheaper_alternatives: true,
   ...overrides,
 })
 

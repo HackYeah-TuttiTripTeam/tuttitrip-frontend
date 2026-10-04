@@ -39,6 +39,7 @@ const trip = (over: Partial<Trip> = {}): Trip => ({
   my_role: 'host',
   my_status: 'confirmed',
   kind: 'trip',
+  propose_cheaper_alternatives: true,
   ...over,
 })
 

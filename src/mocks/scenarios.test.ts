@@ -66,7 +66,9 @@ describe('family-warsaw', () => {
   })
 
   it('creates a trip and lists it first', async () => {
-    const created = await fetchClient.POST('/api/v1/trips', { body: { name: 'Gdańsk' } })
+    const created = await fetchClient.POST('/api/v1/trips', {
+      body: { name: 'Gdańsk', propose_cheaper_alternatives: null },
+    })
     expect(created.data?.name).toBe('Gdańsk')
     const list = await fetchClient.GET('/api/v1/trips')
     expect(list.data?.items[0]?.name).toBe('Gdańsk')
