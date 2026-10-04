@@ -1,7 +1,7 @@
 import { ClipboardPaste, CloudOff, KeyRound, TriangleAlert } from '@keyline-icons/react'
 import { getRouteApi } from '@tanstack/react-router'
 import { useState } from 'react'
-import { PASTE_MAX_CHARS } from '@/api/queries/linter'
+import { PASTE_MAX_CHARS, unrecognizedItems } from '@/api/queries/linter'
 import type { Trip } from '@/api/queries/trips'
 import { LintCompare } from '@/components/linter/lint-compare'
 import { PasteForm } from '@/components/linter/paste-form'
@@ -126,7 +126,7 @@ export function TripLintView({ trip }: TripLintViewProps) {
           </p>
         )}
         <UnrecognizedItems
-          items={lint.paste.unrecognized}
+          items={unrecognizedItems(lint.paste)}
           busyIndex={lint.choosingIndex}
           canChoose={canChoose}
           onChoose={lint.choose}

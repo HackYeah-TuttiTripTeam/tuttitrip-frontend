@@ -33,9 +33,9 @@ export function catalogMissingAnswer(world: World): Response | null {
     {
       detail: {
         code: 'catalog_missing',
-        workflow_id: workflowId,
+        message: 'The city has no places yet',
         city_slug: city.slug,
-        city_name: city.name,
+        job_id: workflowId,
       },
     },
     { status: 409 },
@@ -53,27 +53,29 @@ export function placesHandlers(world: World, latency: () => Promise<void>): Requ
         : HttpResponse.json({ detail: 'The city is in the catalogue' }, { status: 409 })
     }),
 
-    http.get(`${API}/trips/:tripId/places/candidates/status`, async () => {
+    http.get(`${API}/trips/:tripId/places/candidates/status`, async ({ request }) => {
       await latency()
       const city = world.newCity
       if (!city) return HttpResponse.json({ detail: 'Not found' }, { status: 404 })
-      const base = { city_slug: city.slug, city_name: city.name, workflow_id: city.workflowId }
-      const job = city.workflowId ? world.jobs[city.workflowId] : undefined
-      if (!job) return HttpResponse.json({ ...base, status: 'idle', places_count: 0 })
+      const jobId = new URL(request.url).searchParams.get('job_id') ?? city.workflowId
+      const base = { city_slug: city.slug, job_id: jobId }
+      const job = jobId ? world.jobs[jobId] : undefined
+      if (!job) return HttpResponse.json({ ...base, state: 'empty', place_count: 0 })
       if (job.pendingPolls > 0) {
         job.pendingPolls -= 1
-        return HttpResponse.json({ ...base, status: 'pending', places_count: 0 })
+        return HttpResponse.json({ ...base, state: 'running', place_count: 0 })
       }
       if (job.outcome === 'ERROR') {
         return HttpResponse.json({
           ...base,
-          status: 'failed',
-          places_count: 0,
+          state: 'failed',
+          place_count: 0,
           error_code: job.errorCode ?? null,
+          error: 'The job failed',
         })
       }
       city.fetched = true
-      return HttpResponse.json({ ...base, status: 'ready', places_count: FOUND_PLACES })
+      return HttpResponse.json({ ...base, state: 'ready', place_count: FOUND_PLACES })
     }),
   ]
 }

@@ -403,6 +403,7 @@ const withinBudget = (): PlanBudget => ({
   currency: 'PLN',
   cost: '1480.00',
   b_from: '1200.00',
+  unlimited: false,
   b_to: '1600.00',
   b_max: '1760.00',
   zone: 'up_to_b_to',

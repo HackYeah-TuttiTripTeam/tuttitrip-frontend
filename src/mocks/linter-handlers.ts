@@ -45,44 +45,62 @@ export function lintReport(
 }
 
 const CAFE_INDEX = 3
+const OAK_INDEX = 7
+const TRIP_UUID_PLACEHOLDER = '00000000-0000-4000-8000-000000000000'
 
-const UNRECOGNIZED: PendingSchemas['PasteUnrecognized'][] = [
-  {
-    index: 3,
-    name: 'Kawiarnia nad rzeką',
-    day: '2026-10-12',
-    candidates: [
-      {
-        place_id: 'c0000000-0000-4000-8000-000000000001',
-        name: 'Cafe Vistula',
-        address: 'Wybrzeże Kościuszkowskie 20',
-        score: 0.62,
-      },
-      {
-        place_id: 'c0000000-0000-4000-8000-000000000002',
-        name: 'Kawiarnia Pod Mostem',
-        address: 'Bulwary Wiślane',
-        score: 0.48,
-      },
-    ],
-  },
-  {
-    index: 7,
-    name: 'Restauracja Pod Dębem',
-    day: '2026-10-13',
-    candidates: [
-      {
-        place_id: 'c0000000-0000-4000-8000-000000000003',
-        name: 'Pod Dębem',
-        address: 'ul. Dębowa 3',
-        score: 0.55,
-      },
-    ],
-  },
-]
+const CANDIDATES: Record<number, PendingSchemas['MatchCandidate'][]> = {
+  [CAFE_INDEX]: [
+    {
+      place_id: 'c0000000-0000-4000-8000-000000000001',
+      name: 'Cafe Vistula',
+      address: 'Wybrzeże Kościuszkowskie 20',
+      score: 0.62,
+    },
+    {
+      place_id: 'c0000000-0000-4000-8000-000000000002',
+      name: 'Kawiarnia Pod Mostem',
+      address: 'Bulwary Wiślane',
+      score: 0.48,
+    },
+  ],
+  [OAK_INDEX]: [
+    {
+      place_id: 'c0000000-0000-4000-8000-000000000003',
+      name: 'Pod Dębem',
+      address: 'ul. Dębowa 3',
+      score: 0.55,
+    },
+  ],
+}
+
+const NAMES: Record<number, string> = {
+  [CAFE_INDEX]: 'Kawiarnia nad rzeką',
+  [OAK_INDEX]: 'Restauracja Pod Dębem',
+}
+
+/** The pasted items: two the matcher could not place, until the host picks a candidate. */
+function pasteItems(resolved: number[]): PendingSchemas['PasteItemRead'][] {
+  return [CAFE_INDEX, OAK_INDEX].map((index) => {
+    const chosen = resolved.includes(index)
+    return {
+      index,
+      day: index === CAFE_INDEX ? 1 : 2,
+      place_name: NAMES[index] ?? '',
+      quote: NAMES[index] ?? '',
+      status: chosen ? ('matched' as const) : ('unrecognized' as const),
+      place_id: chosen ? (CANDIDATES[index]?.[0]?.place_id ?? null) : null,
+      chosen_by_host: chosen,
+      candidates: CANDIDATES[index] ?? [],
+    }
+  })
+}
 
 /** The chatbot's plan: five violations, and two stops the matcher could not place. */
-function pastedReport(resolved: number[]): PendingSchemas['PasteReport'] {
+function pastedCheck(
+  pasteId: string,
+  jobId: string,
+  resolved: number[],
+): PendingSchemas['PasteCheckRead'] {
   const findings: Record<string, Schemas['Finding'][]> = {
     closed_day: [
       finding('closed_day', 'Muzeum jest zamknięte w poniedziałek', {
@@ -114,9 +132,9 @@ function pastedReport(resolved: number[]): PendingSchemas['PasteReport'] {
         person_name: 'Babcia Halina',
       }),
     ],
-    unknown_place: UNRECOGNIZED.filter((item) => !resolved.includes(item.index)).map((item) =>
-      finding('unknown_place', `Nie rozpoznano miejsca: ${item.name}`, { day: item.day }),
-    ),
+    unknown_place: [CAFE_INDEX, OAK_INDEX]
+      .filter((index) => !resolved.includes(index))
+      .map((index) => finding('unknown_place', `Nie rozpoznano miejsca: ${NAMES[index]}`)),
   }
   // A stop that got matched is checked by the other rules now; the cafe's hours do not fit.
   if (resolved.includes(CAFE_INDEX)) {
@@ -127,10 +145,16 @@ function pastedReport(resolved: number[]): PendingSchemas['PasteReport'] {
       }),
     ]
   }
+  const report = lintReport(findings)
   return {
-    status: 'ready',
-    report: lintReport(findings),
-    unrecognized: UNRECOGNIZED.filter((item) => !resolved.includes(item.index)),
+    paste_id: pasteId,
+    trip_id: TRIP_UUID_PLACEHOLDER,
+    state: 'done',
+    job_id: jobId,
+    violations: report.count,
+    report,
+    items: pasteItems(resolved),
+    unread: [],
   }
 }
 
@@ -170,9 +194,20 @@ export function linterHandlers(
       const job = world.jobs[stored.workflowId]
       if (job && job.pendingPolls > 0) {
         job.pendingPolls -= 1
-        return HttpResponse.json({ status: 'pending', report: null, unrecognized: [] })
+        return HttpResponse.json({
+          paste_id: String(params.pasteId),
+          trip_id: TRIP_UUID_PLACEHOLDER,
+          state: 'pending',
+          job_id: stored.workflowId,
+          violations: null,
+          report: null,
+          items: [],
+          unread: [],
+        })
       }
-      return HttpResponse.json(pastedReport(stored.resolved))
+      return HttpResponse.json(
+        pastedCheck(String(params.pasteId), stored.workflowId, stored.resolved),
+      )
     }),
 
     http.patch(`${API}/trips/:tripId/linter/pastes/:pasteId/items/:index`, async ({ params }) => {
@@ -183,7 +218,9 @@ export function linterHandlers(
         return HttpResponse.json({ detail: 'Forbidden' }, { status: 403 })
       }
       stored.resolved = [...new Set([...stored.resolved, Number(params.index)])]
-      return HttpResponse.json(pastedReport(stored.resolved))
+      return HttpResponse.json(
+        pastedCheck(String(params.pasteId), stored.workflowId, stored.resolved),
+      )
     }),
   ]
 }

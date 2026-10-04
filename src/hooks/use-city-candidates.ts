@@ -27,39 +27,38 @@ export function useCityCandidates(
   onReady: () => void,
 ) {
   // A retry starts a new job; it counts only for the 409 it answers, not for a later one.
-  const [retried, setRetried] = useState<{ after: string; id: string } | null>(null)
-  const workflowId = missing
-    ? retried?.after === missing.workflow_id
-      ? retried.id
-      : missing.workflow_id
-    : null
+  const [retried, setRetried] = useState<{ after: string | null; id: string } | null>(null)
+  const retriedHere =
+    missing !== null && retried !== null && retried.after === (missing.job_id ?? null)
+  const jobId = missing ? (retriedHere && retried ? retried.id : (missing.job_id ?? null)) : null
+
   const status = useQuery({
-    ...candidatesStatusQueryOptions(tripId),
-    enabled: missing !== null,
+    ...candidatesStatusQueryOptions(tripId, jobId),
+    enabled: missing !== null && jobId !== null,
     refetchInterval: (current) =>
-      current.state.data?.status === 'ready' || current.state.data?.status === 'failed'
-        ? false
-        : CANDIDATES_POLL_MS,
+      current.state.data?.state === 'running' || current.state.data === undefined
+        ? CANDIDATES_POLL_MS
+        : false,
   })
   const start = $api.useMutation('post', '/api/v1/trips/{trip_id}/places/candidates', {
-    onSuccess: (job) => {
-      if (missing) setRetried({ after: missing.workflow_id, id: job.workflow_id })
-      // The status of the failed job is still cached: ask again, which also restarts the polling.
+    onSuccess: (answer) => {
+      // 202 carries the new job; 200 says the city has places by now (the status shows it).
+      if (missing && 'workflow_id' in answer) {
+        setRetried({ after: missing.job_id ?? null, id: answer.workflow_id })
+      }
       void status.refetch()
     },
   })
-
-  const job = useJob(workflowId)
+  const job = useJob(jobId)
 
   const data = status.data
-  const jobFailed = job.isFailed || (start.isError && !start.isPending)
-  const placesCount = data?.places_count ?? 0
+  const placesCount = data?.place_count ?? 0
   const phase: CityFetchPhase =
-    jobFailed || data?.status === 'failed'
+    start.isError || job.isFailed || data?.state === 'failed' || data?.state === 'empty'
       ? 'failed'
-      : data?.status === 'ready' && placesCount > 0
+      : data?.state === 'ready' && placesCount > 0
         ? 'ready'
-        : data?.status === 'ready'
+        : missing && jobId === null && !start.isPending
           ? 'failed'
           : 'fetching'
 
@@ -69,7 +68,7 @@ export function useCityCandidates(
       ? null
       : code === CODE_CITY_NOT_FOUND
         ? 'city_not_found'
-        : data?.status === 'ready'
+        : data?.state === 'empty'
           ? 'no_places'
           : code === CODE_RATE_LIMITED || start.isError || job.isFailed
             ? 'external'
@@ -77,20 +76,17 @@ export function useCityCandidates(
 
   const announced = useRef<string | null>(null)
   useEffect(() => {
-    if (phase !== 'ready' || !workflowId || announced.current === workflowId) return
-    announced.current = workflowId
+    if (phase !== 'ready' || !jobId || announced.current === jobId) return
+    announced.current = jobId
     onReady()
-  }, [phase, workflowId, onReady])
+  }, [phase, jobId, onReady])
 
   return {
     phase,
     failure,
     percent: job.progress?.percent ?? null,
     placesCount,
-    cityName: data?.city_name ?? missing?.city_name ?? null,
     isRetrying: start.isPending,
-    retry: () => {
-      start.mutate({ params: { path: { trip_id: tripId } }, body: {} })
-    },
+    retry: () => start.mutate({ params: { path: { trip_id: tripId } }, body: null }),
   }
 }

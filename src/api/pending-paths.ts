@@ -2,8 +2,8 @@ import type { components } from './schema'
 
 /**
  * Endpoints of backend issues that are not in `schema.d.ts` yet, typed from the contract written
- * in the issue: linter for a trip's plan and pasted plans (backend #66), fetching places for a new
- * city (#72), the "rain" replan and its approvals (#74). `ApiPaths` (client.ts) adds them to the
+ * in the issue or the backend PR: the linter of a trip's plan and of pasted plans and the places of a
+ * new city (backend PR #201), the "rain" replan and its approvals (#74, PR #208). `ApiPaths` (client.ts) adds them to the
  * generated paths, so the calls are as type-safe as the rest. When a backend PR lands, run
  * `pnpm api:sync`, delete that block here and fix what tsc points at: the real shapes win.
  */
@@ -28,54 +28,65 @@ interface WriteOp<P, B, R extends Record<number, unknown>> {
   responses: Answers<R>
 }
 
-type LintReport = components['schemas']['LintReport']
 type PlanStop = components['schemas']['PlanStop']
+type LintReport = components['schemas']['LintReport']
+type JobAccepted = components['schemas']['JobAccepted']
 
 export interface PendingSchemas {
-  /** #66: the pasted text is saved and a worker reads it. */
-  PasteCreate: { text: string }
+  /** PR #201, linter: a plan pasted from a chatbot, read by a worker, then linted. */
+  PasteCreate: { text: string; provider: 'openrouter' | 'local' }
   PasteAccepted: { workflow_id: string; paste_id: string }
-  PasteCandidate: {
+  MatchCandidate: {
     place_id: string
     name: string
     address?: string | null
     category?: string | null
     score: number
   }
-  /** A pasted item the matcher could not place; the host picks one of the candidates. */
-  PasteUnrecognized: {
+  PasteItemRead: {
     index: number
-    name: string
-    day: string | null
-    candidates: PendingSchemas['PasteCandidate'][]
+    /** Day number in the text; null when absent. */
+    day: number | null
+    place_name: string
+    quote: string
+    /** Anything but `matched` counts as an unknown place in the report. */
+    status: 'matched' | 'needs_confirmation' | 'unrecognized'
+    place_id: string | null
+    suggested_place_id?: string | null
+    chosen_by_host?: boolean
+    candidates?: PendingSchemas['MatchCandidate'][]
   }
-  PasteReport: {
-    status: 'pending' | 'ready' | 'failed'
-    /** Null until the job is done. */
+  PasteCheckRead: {
+    paste_id: string
+    trip_id: string
+    state: 'pending' | 'done' | 'failed'
+    job_id: string
+    error_code?: string | null
+    violations: number | null
     report: LintReport | null
-    unrecognized: PendingSchemas['PasteUnrecognized'][]
-    error_code?: string | null
+    items?: PendingSchemas['PasteItemRead'][]
+    unread?: { quote: string; reason: string }[]
   }
-  PasteItemChoice: { place_id: string }
+  ItemPick: { place_id: string }
 
-  /** #72 */
+  /** PR #201, places of a new city. */
+  CandidatesRequest: { city_query?: string | null }
   CandidatesStatus: {
-    status: 'idle' | 'pending' | 'ready' | 'failed'
-    workflow_id?: string | null
     city_slug: string
-    city_name?: string | null
-    /** Places in the city's catalogue now. */
-    places_count: number
+    place_count: number
+    /** `empty`: no places and no job. */
+    state: 'ready' | 'running' | 'failed' | 'empty'
+    job_id?: string | null
     error_code?: string | null
+    error?: string | null
   }
-  /** The body of the 409 that plan generation answers for a city with an empty catalogue. */
-  CatalogMissing: {
+  /** The 409 plan generation answers for a city with no places; `job_id` null: no worker took it. */
+  PlanCatalogMissing: {
     code: 'catalog_missing'
-    workflow_id: string
+    message: string
     city_slug: string
-    city_name?: string | null
+    job_id?: string | null
   }
-  JobStarted: { workflow_id: string }
 
   /** #74 */
   ReplanRequest: { context: 'rain'; day: number; as_of?: string | null }
@@ -113,23 +124,31 @@ type TripPath = { trip_id: string }
 
 export interface PendingPaths {
   '/api/v1/trips/{trip_id}/linter/plans/{plan_id}': {
-    post: WriteOp<TripPath & { plan_id: string }, Record<string, never>, { 200: LintReport }>
+    post: {
+      parameters: { query?: never; header?: never; path: TripPath & { plan_id: string }; cookie?: never }
+      requestBody?: never
+      responses: Answers<{ 200: LintReport }>
+    }
   }
   '/api/v1/trips/{trip_id}/linter/pastes': {
     post: WriteOp<TripPath, S['PasteCreate'], { 202: S['PasteAccepted'] }>
   }
   '/api/v1/trips/{trip_id}/linter/pastes/{paste_id}': {
-    get: ReadOp<TripPath & { paste_id: string }, { 200: S['PasteReport'] }>
+    get: ReadOp<TripPath & { paste_id: string }, { 200: S['PasteCheckRead'] }>
   }
   '/api/v1/trips/{trip_id}/linter/pastes/{paste_id}/items/{index}': {
     patch: WriteOp<
       TripPath & { paste_id: string; index: number },
-      S['PasteItemChoice'],
-      { 200: S['PasteReport'] }
+      S['ItemPick'],
+      { 200: S['PasteCheckRead'] }
     >
   }
   '/api/v1/trips/{trip_id}/places/candidates': {
-    post: WriteOp<TripPath, Record<string, never>, { 202: S['JobStarted'] }>
+    post: WriteOp<
+      TripPath,
+      S['CandidatesRequest'] | null,
+      { 200: S['CandidatesStatus']; 202: JobAccepted | S['CandidatesStatus'] }
+    >
   }
   '/api/v1/trips/{trip_id}/places/candidates/status': {
     get: ReadOp<TripPath, { 200: S['CandidatesStatus'] }>

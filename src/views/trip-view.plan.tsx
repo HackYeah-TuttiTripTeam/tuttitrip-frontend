@@ -109,7 +109,7 @@ function PlanBody({ trip }: TripPlanViewProps) {
     return (
       <CityFetchStatus
         phase={candidates.phase}
-        cityName={creation.missing.city_name ?? trip.destination}
+        cityName={trip.destination}
         percent={candidates.percent}
         placesCount={candidates.placesCount}
         failure={candidates.failure}

@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
 import { $api } from '@/api/client'
 import { ApiError, classifyApiError } from '@/api/errors'
 import { JOB_POLL_MS } from '@/api/queries/jobs'
@@ -31,20 +30,16 @@ export function usePasteLint(
   onCreated: (pasteId: string) => void,
 ) {
   const queryClient = useQueryClient()
-  const [workflowId, setWorkflowId] = useState<string | null>(null)
 
   const create = $api.useMutation('post', '/api/v1/trips/{trip_id}/linter/pastes', {
-    onSuccess: (accepted) => {
-      setWorkflowId(accepted.workflow_id)
-      onCreated(accepted.paste_id)
-    },
+    onSuccess: (accepted) => onCreated(accepted.paste_id),
   })
   const query = useQuery({
     ...pasteQueryOptions(tripId, pasteId ?? ''),
     enabled: pasteId !== undefined,
-    refetchInterval: (current) => (current.state.data?.status === 'pending' ? JOB_POLL_MS : false),
+    refetchInterval: (current) => (current.state.data?.state === 'pending' ? JOB_POLL_MS : false),
   })
-  const job = useJob(query.data?.status === 'pending' ? workflowId : null)
+  const job = useJob(query.data?.state === 'pending' ? query.data.job_id : null)
   const choose = $api.useMutation(
     'patch',
     '/api/v1/trips/{trip_id}/linter/pastes/{paste_id}/items/{index}',
@@ -60,13 +55,16 @@ export function usePasteLint(
   const paste = query.data
   return {
     paste,
-    isReading: pasteId !== undefined && (query.isPending || paste?.status === 'pending'),
-    isFailed: paste?.status === 'failed',
+    isReading: pasteId !== undefined && (query.isPending || paste?.state === 'pending'),
+    isFailed: paste?.state === 'failed',
     /** 0..100 from the job while the worker reads, null before it reports. */
     percent: job.progress?.percent ?? null,
     loadProblem: query.isError ? classifyApiError(query.error) : null,
     submit: (text: string) =>
-      create.mutate({ params: { path: { trip_id: tripId } }, body: { text } }),
+      create.mutate({
+        params: { path: { trip_id: tripId } },
+        body: { text, provider: 'openrouter' },
+      }),
     isSubmitting: create.isPending,
     submitFailure: create.isError ? pasteFailure(create.error) : null,
     resetSubmit: create.reset,

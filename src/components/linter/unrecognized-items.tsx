@@ -1,10 +1,10 @@
 import { CircleQuestion } from '@keyline-icons/react'
-import type { PasteUnrecognized } from '@/api/queries/linter'
+import type { PasteItem } from '@/api/queries/linter'
 import { Button } from '@/components/ui/button'
 import { m } from '@/paraglide/messages'
 
 interface UnrecognizedItemsProps {
-  items: PasteUnrecognized[]
+  items: PasteItem[]
   /** Index of the item whose choice is being saved now. */
   busyIndex: number | null
   /** Only the host may match an item; the others see the list. */
@@ -35,16 +35,18 @@ export function UnrecognizedItems({
         {items.map((item) => (
           <li key={item.index} className="flex flex-col gap-2 rounded-md border p-3">
             <p className="font-medium text-sm">
-              {item.name}
-              {item.day && (
-                <span className="ml-2 font-normal text-muted-foreground">{item.day}</span>
+              {item.place_name}
+              {item.day != null && (
+                <span className="ml-2 font-normal text-muted-foreground">
+                  {m.plan_day_n({ n: item.day })}
+                </span>
               )}
             </p>
-            {item.candidates.length === 0 ? (
+            {(item.candidates ?? []).length === 0 ? (
               <p className="text-muted-foreground text-sm">{m.lint_unrecognized_none()}</p>
             ) : (
               <ul className="flex flex-col">
-                {item.candidates.map((candidate) => (
+                {(item.candidates ?? []).map((candidate) => (
                   <li
                     key={candidate.place_id}
                     className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 border-t py-1 text-sm"
@@ -62,7 +64,7 @@ export function UnrecognizedItems({
                         variant="outline"
                         disabled={busyIndex === item.index}
                         aria-label={m.lint_unrecognized_pick_label({
-                          item: item.name,
+                          item: item.place_name,
                           place: candidate.name,
                         })}
                         onClick={() => onChoose(item.index, candidate.place_id)}
