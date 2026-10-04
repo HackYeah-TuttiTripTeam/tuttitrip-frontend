@@ -26,3 +26,17 @@ export let authConfig: AuthConfig | null = readAuthConfig()
 export function setAuthConfig(config: AuthConfig | null): void {
   authConfig = config
 }
+
+export interface MapsConfig {
+  /** Browser key of Maps JavaScript API and Places UI Kit; public by design, limited by referrer. */
+  apiKey: string
+  /** Vector map id (needed by AdvancedMarker). */
+  mapId: string
+}
+
+/** Google Maps settings, or null when the key or the map id is missing: the UI then hides maps. */
+export const mapsConfig: MapsConfig | null = (() => {
+  const apiKey = read(import.meta.env.VITE_GOOGLE_MAPS_API_KEY)
+  const mapId = read(import.meta.env.VITE_GOOGLE_MAPS_MAP_ID)
+  return apiKey && mapId ? { apiKey, mapId } : null
+})()

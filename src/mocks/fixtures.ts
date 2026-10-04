@@ -3,6 +3,7 @@
 // Amounts are decimal strings, like in the API.
 import type { Schemas } from '@/api/client'
 import type { VotePlace } from '@/api/vote-contract'
+import { allocate, centsToDecimal, toCents } from '@/lib/money'
 
 export type Trip = Schemas['TripRead']
 export type Profile = Schemas['ProfileRead']
@@ -20,6 +21,7 @@ export type VoteLink = Schemas['VoteLinkRead']
 export type PlaceVoteSummary = Schemas['PlaceVoteSummary']
 export type City = Schemas['CityRead']
 export type Preferences = Schemas['PreferencesRead']
+export type Expense = Schemas['ExpenseRead']
 export type CatalogPlace = Schemas['PlaceRead']
 
 /** The signed-in test user, the host of most scenarios. */
@@ -38,6 +40,12 @@ export const PROFILE_IDS = {
   babcia: '0b1f5c1a-7d3e-4e0a-9c11-1a2b3c4d5e03',
   zosia: '0b1f5c1a-7d3e-4e0a-9c11-1a2b3c4d5e04',
   antek: '0b1f5c1a-7d3e-4e0a-9c11-1a2b3c4d5e05',
+} as const
+
+/** Google Place IDs of two catalogue places; the others have none (no card button). */
+export const GOOGLE_PLACE_IDS = {
+  zamek: 'ChIJ-mock-zamek-krolewski',
+  kopernik: 'ChIJ-mock-centrum-kopernik',
 } as const
 
 const PLACE_IDS = {
@@ -317,6 +325,9 @@ const days = (): PlanDay[] => [
         place_id: PLACE_IDS.zamek,
         name: 'Zamek Królewski',
         address: 'Plac Zamkowy 4, 00-277 Warszawa',
+        lat: 52.248,
+        lon: 21.0147,
+        google_place_id: GOOGLE_PLACE_IDS.zamek,
         start: '10:00:00',
         end: '12:00:00',
       }),
@@ -324,6 +335,8 @@ const days = (): PlanDay[] => [
       verifiedStop({
         place_id: PLACE_IDS.prasowy,
         name: 'Bar Mleczny Prasowy',
+        lat: 52.2338,
+        lon: 21.0205,
         kind: 'food',
         start: '12:30:00',
         end: '13:30:00',
@@ -338,6 +351,8 @@ const days = (): PlanDay[] => [
       verifiedStop({
         place_id: PLACE_IDS.lazienki,
         name: 'Łazienki Królewskie',
+        lat: 52.215,
+        lon: 21.0357,
         start: '15:00:00',
         end: '17:30:00',
         transfer: { minutes: 25, mode: 'transit', cost: '4.40' },
@@ -354,6 +369,9 @@ const days = (): PlanDay[] => [
       verifiedStop({
         place_id: PLACE_IDS.kopernik,
         name: 'Centrum Nauki Kopernik',
+        lat: 52.2397,
+        lon: 21.0287,
+        google_place_id: GOOGLE_PLACE_IDS.kopernik,
         start: '10:00:00',
         end: '13:00:00',
         cost_per_person: '35.00',
@@ -364,6 +382,8 @@ const days = (): PlanDay[] => [
       verifiedStop({
         place_id: PLACE_IDS.pyzy,
         name: 'Pyzy Flaki Gorące',
+        lat: 52.231,
+        lon: 21.012,
         kind: 'food',
         start: '13:30:00',
         end: '14:30:00',
@@ -396,12 +416,12 @@ const days = (): PlanDay[] => [
 ]
 
 const withinBudget = (): PlanBudget => ({
-  unlimited: false,
   currency: 'PLN',
   cost: '1480.00',
   b_from: '1200.00',
   b_to: '1600.00',
   b_max: '1760.00',
+  unlimited: false,
   zone: 'up_to_b_to',
   over_budget: '0.00',
   needs_approval: false,
@@ -446,7 +466,7 @@ export const plan = (tripId: string = TRIP_ID, overrides: Partial<Plan> = {}): P
   input_hash: 'a'.repeat(64),
   plan_hash: 'a1b2c3d4e5f6',
   created_at: '2026-10-02T12:00:00Z',
-  params: { alpha: 1, weight_preset: 'default' },
+  params: { alpha: 1, weight_preset: 'default', draft: false },
   days: days(),
   lodging: lodging(),
   fairness: {
@@ -546,6 +566,95 @@ export const cities = (): City[] => [
   }),
 ]
 
+/** Another user of the trip: the author of expenses the caller did not write. */
+export const OTHER_USER_SUB = 'auth0|mock-other'
+
+/** The parts of an expense the way the API stores them: allocated to the cent like the backend. */
+export function expenseParticipants(
+  amount: string,
+  method: Expense['split_method'],
+  shares: { profile_id: string; value?: string | null }[],
+): Expense['participants'] {
+  const parts = allocate(
+    toCents(amount),
+    method,
+    shares.map((share) => ({ profileId: share.profile_id, value: share.value ?? null })),
+  )
+  return shares.map((share) => ({
+    profile_id: share.profile_id,
+    value: share.value ?? null,
+    amount: centsToDecimal(parts.get(share.profile_id) ?? 0n),
+  }))
+}
+
+export const expense = (overrides: Partial<Expense> = {}): Expense => {
+  const amount = overrides.amount ?? '100.00'
+  const method = overrides.split_method ?? 'equal'
+  const shares =
+    overrides.participants ??
+    Object.values(PROFILE_IDS).map((profile_id) => ({ profile_id, value: null, amount: '0.00' }))
+  return {
+    id: crypto.randomUUID(),
+    trip_id: TRIP_ID,
+    payer_profile_id: PROFILE_IDS.mama,
+    amount,
+    currency: 'PLN',
+    trip_amount: overrides.amount ?? '100.00',
+    exchange_rate: null,
+    status: 'confirmed',
+    has_evidence: false,
+    description: 'Obiad',
+    spent_on: '2026-10-10',
+    category: 'food',
+    split_method: method,
+    created_by_sub: MOCK_USER_SUB,
+    created_at: '2026-10-10T12:00:00Z',
+    ...overrides,
+    participants: expenseParticipants(amount, method, shares),
+  }
+}
+
+/** Three expenses of the family trip: a hotel for all, a dinner for four, a taxi for two. */
+export const familyExpenses = (): Expense[] => {
+  const ids = PROFILE_IDS
+  return [
+    expense({
+      id: '5a1c0e11-8b2d-4c3e-9f40-000000000001',
+      description: 'Nocleg',
+      category: 'lodging',
+      amount: '300.00',
+      spent_on: '2026-10-10',
+      payer_profile_id: ids.mama,
+    }),
+    expense({
+      id: '5a1c0e11-8b2d-4c3e-9f40-000000000002',
+      description: 'Kolacja',
+      amount: '90.00',
+      spent_on: '2026-10-10',
+      payer_profile_id: ids.tata,
+      created_by_sub: OTHER_USER_SUB,
+      participants: [ids.mama, ids.tata, ids.babcia, ids.zosia].map((profile_id) => ({
+        profile_id,
+        value: null,
+        amount: '0.00',
+      })),
+    }),
+    expense({
+      id: '5a1c0e11-8b2d-4c3e-9f40-000000000003',
+      description: 'Taksówka',
+      category: 'transport',
+      amount: '45.50',
+      spent_on: '2026-10-11',
+      payer_profile_id: ids.babcia,
+      created_by_sub: OTHER_USER_SUB,
+      participants: [ids.babcia, ids.zosia].map((profile_id) => ({
+        profile_id,
+        value: null,
+        amount: '0.00',
+      })),
+    }),
+  ]
+}
 const CATALOG_IDS = {
   narodowe: '5d1c8e20-3b4a-4c75-9e2f-0000000000b1',
   zamek: '5d1c8e20-3b4a-4c75-9e2f-0000000000b2',
@@ -677,3 +786,69 @@ export const votePlaces = (): VotePlace[] =>
     reason_code: null,
     veto_id: null,
   }))
+
+export type Checkin = Schemas['CheckinRead']
+export type Photo = Schemas['PhotoRead']
+export type MemberLocation = Schemas['LocationRead']
+
+/** A 1x1 PNG: enough for a thumbnail or a full picture in a test. */
+export const PIXEL_PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+export const PIXEL_DATA_URL = `data:image/png;base64,${PIXEL_PNG_BASE64}`
+
+export const checkin = (profileId: string, overrides: Partial<Checkin> = {}): Checkin => ({
+  profile_id: profileId,
+  display_name: 'Ola',
+  accommodation: 'Hotel Polonia',
+  room: '214',
+  updated_at: '2026-10-09T18:00:00Z',
+  is_me: false,
+  ...overrides,
+})
+
+/** Marek has settled in with the grandmother's room next door; Ola has not entered hers yet. */
+export const familyCheckins = (): Checkin[] => [
+  checkin(PROFILE_IDS.tata, { display_name: 'Marek', accommodation: 'Hotel Polonia', room: '214' }),
+  checkin(PROFILE_IDS.babcia, {
+    display_name: 'Babcia Halina',
+    accommodation: 'Hotel Polonia',
+    room: '216',
+  }),
+]
+
+export const photo = (id: string, overrides: Partial<Photo> = {}): Photo => ({
+  id,
+  author_name: 'Marek',
+  is_mine: false,
+  content_type: 'image/jpeg',
+  size_bytes: 120_000,
+  created_at: '2026-10-10T12:00:00Z',
+  thumbnail: PIXEL_DATA_URL,
+  ...overrides,
+})
+
+/** Thirty photos, newest first by id, every third one the caller's. */
+export const galleryPhotos = (count = 30): Photo[] =>
+  Array.from({ length: count }, (_, index) =>
+    photo(`6b0f1c20-0000-4000-8000-${String(index).padStart(12, '0')}`, {
+      is_mine: index % 3 === 0,
+      author_name: index % 3 === 0 ? 'Ola' : 'Marek',
+      size_bytes: 100_000 + index * 1000,
+      created_at: new Date(Date.UTC(2026, 9, 10, 8, index)).toISOString(),
+    }),
+  )
+
+export const location = (
+  profileId: string,
+  overrides: Partial<MemberLocation> = {},
+): MemberLocation => ({
+  profile_id: profileId,
+  display_name: 'Marek',
+  latitude: 52.2297,
+  longitude: 21.0122,
+  accuracy_m: 20,
+  recorded_at: new Date().toISOString(),
+  expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+  is_me: false,
+  ...overrides,
+})

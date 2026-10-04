@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { Schemas } from '@/api/client'
+import { MONEY_WHOLE_DIGITS } from '@/lib/constants'
 import { m } from '@/paraglide/messages'
 
 type Trip = Schemas['TripRead']
@@ -45,7 +46,7 @@ export const EMPTY_TRIP_FORM: TripFormValues = {
   flexPct: DEFAULT_FLEX_PCT,
 }
 
-const MONEY = /^\d{1,10}([.,]\d{1,2})?$/
+const MONEY = new RegExp(`^\\d{1,${MONEY_WHOLE_DIGITS}}([.,]\\d{1,2})?$`)
 
 /** "2000,5" -> "2000.50"; the string stays a string. */
 export function normalizeMoney(raw: string): string {
@@ -59,15 +60,6 @@ export function normalizeMoney(raw: string): string {
 export function toCents(amount: string): bigint {
   const [whole = '0', frac = ''] = normalizeMoney(amount).split('.')
   return BigInt(whole) * 100n + BigInt(frac.padEnd(2, '0'))
-}
-
-/**
- * A typed amount as a number, for placing slider thumbs only (never for comparing or sending
- * money). null while the text is empty or not an amount yet.
- */
-export function moneyToNumber(raw: string): number | null {
-  if (!MONEY.test(raw.trim())) return null
-  return Number.parseFloat(normalizeMoney(raw))
 }
 
 /** Currency of a trip: the chosen city's, else the trip's own, else PLN. One rule for field and save. */

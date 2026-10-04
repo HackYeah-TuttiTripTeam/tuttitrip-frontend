@@ -226,7 +226,7 @@ export function useVoiceCall({
       stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       // Hold-to-talk: the microphone stays shut until the button is pressed.
       setMicOpen(readMode() === 'open')
-      for (const track of stream.getAudioTracks()) track.enabled = readMode() === 'open'
+      for (const track of stream.getTracks()) track.enabled = readMode() === 'open'
       await startSession()
       connection = new RTCPeerConnection()
       const audio = new Audio()
@@ -313,7 +313,7 @@ export function useVoiceCall({
   }, [status, mode, micOpen])
   useEffect(() => {
     const enabled = status === 'live' && micOpen
-    for (const track of callRef.current?.stream.getAudioTracks() ?? []) track.enabled = enabled
+    for (const track of callRef.current?.stream.getTracks() ?? []) track.enabled = enabled
   }, [status, micOpen])
   // "Speak anyway" lasts until the host has spoken and finished.
   const userSpeaking = view.userSpeaking
@@ -358,7 +358,7 @@ export function useVoiceCall({
   const pressEnd = useCallback(() => {
     if (!held) return
     setHeld(false)
-    for (const track of callRef.current?.stream.getAudioTracks() ?? []) track.enabled = false
+    for (const track of callRef.current?.stream.getTracks() ?? []) track.enabled = false
     const long = performance.now() - heldSince.current >= PTT_MIN_HOLD_MS
     send(...(long ? COMMIT_EVENTS : DISCARD_EVENTS))
   }, [held, send])

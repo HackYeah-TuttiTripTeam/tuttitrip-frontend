@@ -71,7 +71,7 @@ beforeEach(() => {
   track.stop.mockClear()
   track.enabled = true
   getUserMedia.mockReset()
-  getUserMedia.mockResolvedValue({ getTracks: () => [track], getAudioTracks: () => [track] })
+  getUserMedia.mockResolvedValue({ getTracks: () => [track] })
   FakePeer.last = null
   vi.stubGlobal('RTCPeerConnection', FakePeer)
   Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia }, configurable: true })

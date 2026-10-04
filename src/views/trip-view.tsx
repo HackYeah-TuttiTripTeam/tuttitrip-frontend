@@ -7,15 +7,21 @@ import { TripTabs } from '@/components/trips/trip-tabs'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useHelpTopic } from '@/hooks/use-help-topic'
+import { useLocationBeacon } from '@/hooks/use-locations'
 import { useSession } from '@/hooks/use-session'
 import { useTrip } from '@/hooks/use-trip'
 import { isDev } from '@/lib/env'
 import { TOUR } from '@/lib/help'
 import { tripTopics } from '@/lib/help-topics'
+import { tripHasEnded } from '@/lib/trip-dates'
 import type { TripTab } from '@/lib/trip-tabs'
+import { expenseSearchReset } from '@/loaders/expenses'
 import { m } from '@/paraglide/messages'
+import { TripExpensesView } from './trip-view.expenses'
+import { TripLocationsView } from './trip-view.locations'
 import { TripMembersView } from './trip-view.members'
 import { TripPeopleView } from './trip-view.people'
+import { TripPhotosView } from './trip-view.photos'
 import { TripPlanView } from './trip-view.plan'
 import { TripSettings } from './trip-view.settings'
 
@@ -28,16 +34,21 @@ const TripInterviewView = lazy(() =>
 
 export function TripView() {
   const { tripId } = route.useParams()
-  const { tab, person } = route.useSearch()
+  const { tab, person, voice } = route.useSearch()
   const navigate = route.useNavigate()
   const session = useSession()
   const { trip, isPending, problem, refetch } = useTrip(tripId, session.status)
   // Only a loaded trip has the elements the steps point at.
   useHelpTopic(trip && !problem ? tripTopics[tab] : null)
+  // Serves a location-sharing consent the person gave, as long as this trip is open.
+  useLocationBeacon(trip?.id, tripHasEnded(trip?.end_date))
 
   // replace: switching tabs should not fill the back button.
   const setTab = (next: TripTab) =>
-    void navigate({ search: (prev) => ({ ...prev, tab: next, person: undefined }), replace: true })
+    void navigate({
+      search: (prev) => ({ ...prev, ...expenseSearchReset, tab: next, person: undefined }),
+      replace: true,
+    })
 
   // Opening a person is a step forward (the back button closes it); the tab switch above is not.
   const setPerson = (id: string | undefined) =>
@@ -151,9 +162,14 @@ export function TripView() {
               key={trip.id}
               tripId={trip.id}
               canManage={trip.my_role !== 'member'}
+              startVoice={voice !== undefined}
+              onVoiceHandled={() =>
+                void navigate({ search: (prev) => ({ ...prev, voice: undefined }), replace: true })
+              }
               onOpenPerson={(id) =>
                 void navigate({ search: (prev) => ({ ...prev, tab: 'people', person: id }) })
               }
+              onPlanBuilt={() => setTab('plan')}
             />
           </Suspense>
         }
@@ -164,6 +180,7 @@ export function TripView() {
             tripName={trip.name}
             canManage={trip.my_role !== 'member'}
             citySlug={trip.city_slug}
+            canFillIn={trip.my_role === 'host'}
             personId={person}
             onPersonChange={setPerson}
           />
@@ -178,6 +195,9 @@ export function TripView() {
           />
         }
         plan={<TripPlanView key={trip.id} trip={trip} />}
+        photos={<TripPhotosView key={trip.id} tripId={trip.id} isHost={trip.my_role === 'host'} />}
+        locations={<TripLocationsView key={trip.id} tripId={trip.id} />}
+        expenses={<TripExpensesView key={trip.id} trip={trip} />}
       />
     </div>
   )

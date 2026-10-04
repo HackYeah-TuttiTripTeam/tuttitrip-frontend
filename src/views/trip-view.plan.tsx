@@ -6,22 +6,28 @@ import {
   RefreshCcw,
   TriangleAlert,
 } from '@keyline-icons/react'
+import { getRouteApi } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ApiError } from '@/api/errors'
 import type { Trip } from '@/api/queries/trips'
 import { DayTabs } from '@/components/planning/day-tabs'
+import { DraftBanner } from '@/components/planning/draft-banner'
 import { PlanHashLabel } from '@/components/planning/plan-hash-label'
 import { PlanPrintout } from '@/components/planning/plan-printout'
 import { PlanSummary } from '@/components/planning/plan-summary'
-import { PlanTimeline } from '@/components/planning/plan-timeline'
 import { StatusMessage } from '@/components/shared/status-message'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCreatePlan } from '@/hooks/use-create-plan'
+import { useDraftAssumptions } from '@/hooks/use-draft-plan'
 import { usePlan } from '@/hooks/use-plan'
 import { usePrinting } from '@/hooks/use-printing'
 import { TOUR } from '@/lib/help'
 import { m } from '@/paraglide/messages'
+import { TripPlanProposal } from './trip-view.plan.proposal'
+import { PlanDayPanel } from './trip-view.plan-day'
+
+const route = getRouteApi('/trips_/$tripId')
 
 interface TripPlanViewProps {
   trip: Trip
@@ -33,7 +39,12 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
   const printing = usePrinting()
   const { plan, isPending, hasNoPlan, forbidden, problem, refetch } = usePlan(tripId)
   const creation = useCreatePlan(tripId)
+  const assumptions = useDraftAssumptions(tripId, plan?.id)
   const [day, setDay] = useState(1)
+  const { view } = route.useSearch()
+  const navigate = route.useNavigate()
+  const setView = (next: typeof view) =>
+    void navigate({ search: (prev) => ({ ...prev, view: next }), replace: true })
   const canBuild = role !== 'member'
 
   if (isPending) return <PlanSkeleton />
@@ -72,13 +83,13 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
     )
   }
 
-  const failure = creation.error && (
+  const failure = creation.error ? (
     <p role="alert" className="text-destructive text-sm">
       {creation.error instanceof ApiError && creation.error.status === 403
         ? m.plan_compute_forbidden()
         : m.plan_compute_failed()}
     </p>
-  )
+  ) : null
 
   if (hasNoPlan || !plan) {
     return (
@@ -154,6 +165,8 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
         <div role="status" className={recalculating ? 'text-muted-foreground text-sm' : 'sr-only'}>
           {recalculating && m.plan_recomputing_status()}
         </div>
+        {plan.params.draft && <DraftBanner assumptions={assumptions} />}
+        <TripPlanProposal tripId={tripId} canManage={canBuild} plan={plan} />
         <div data-tour={TOUR.planSummary}>
           <PlanSummary plan={plan} />
         </div>
@@ -170,7 +183,13 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
               planDay.items.length === 0 ? (
                 <p className="text-muted-foreground text-sm">{m.plan_day_empty()}</p>
               ) : (
-                <PlanTimeline stops={planDay.items} currency={plan.budget.currency} />
+                <PlanDayPanel
+                  key={planDay.index}
+                  day={planDay}
+                  currency={plan.budget.currency}
+                  view={view}
+                  onViewChange={setView}
+                />
               )
             }
           />

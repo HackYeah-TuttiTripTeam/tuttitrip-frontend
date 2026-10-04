@@ -1,23 +1,33 @@
 import type { Schemas } from '@/api/client'
 import type { VotePlace } from '@/api/vote-contract'
+import type { CitySearchMode } from './city-search'
 import {
   type AdminUser,
   adminUsers,
   type CatalogPlace,
+  type Checkin,
   type City,
   catalogPlaces,
   cities,
+  type Expense,
+  expense,
+  familyCheckins,
+  familyExpenses,
   familyMembers,
   familyPreferences,
   familyProfiles,
+  galleryPhotos,
   type Invitation,
   invitation,
+  location,
   type Me,
   type Member,
+  type MemberLocation,
   MOCK_USER_NAME,
   me,
   needsApprovalBudget,
   outing,
+  type Photo,
   type PlaceVoteSummary,
   type Plan,
   PROFILE_IDS,
@@ -33,13 +43,18 @@ import {
 } from './fixtures'
 import { emptyInterviewWorld, emptyTrip, type InterviewWorld, resumedMessages } from './interview'
 import { adminMe, createPermissionsWorld, type PermissionsWorld } from './permissions'
+import { answer, type ProposalState, sentProposal, staleProposal } from './proposals'
 
 export const scenarioNames = [
   'family-warsaw',
   'many-trips',
   'needs-approval',
   'no-plan',
+  'others-share-location',
   'member-readonly',
+  'no-expenses',
+  'many-expenses',
+  'settlement-closed',
   'member-pending',
   'cohost',
   'users-admin',
@@ -66,6 +81,17 @@ export const scenarioNames = [
   'interview-empty',
   'interview-resumed',
   'interview-voice-elsewhere',
+  'interview-resumed-partial',
+  'interview-city-only',
+  'proposal-none',
+  'proposal-sent',
+  'proposal-approved',
+  'proposal-outdated',
+  'proposal-many-answers',
+  'proposal-member',
+  'proposal-draft',
+  'city-search-geocoder-down',
+  'city-search-error',
 ] as const
 
 export type ScenarioName = (typeof scenarioNames)[number]
@@ -94,6 +120,8 @@ export interface World {
   trips: Trip[]
   /** The city catalogue (`GET /places/cities`). */
   cities: City[]
+  /** How the live city search (`GET /places/cities/search`) behaves. */
+  citySearch: CitySearchMode
   /** Status the API answers with for one kind of trip write, for a failure no scenario has. */
   failures: { post?: number; patch?: number; delete?: number }
   /** When set, create and PATCH answer 422 with these items (a rule the client cannot see). */
@@ -111,8 +139,22 @@ export interface World {
   places: CatalogPlace[]
   /** Every PUT of preferences or of a place rating answers 500, to see the rollback. */
   preferencesSaveFails: boolean
+  /** Expenses of the main trip (`/trips/{id}/expenses`); the settlement is computed from them. */
+  expenses: Expense[]
+  /** The host has closed the settlement: expense writes answer 409 and `closed_at` is set. */
+  settlementClosed: boolean
   /** The latest plan of the main trip; null until "Policz plan" creates one. */
   plan: Plan | null
+  /** Check-ins (where everyone stays) of the main trip. */
+  checkins: Checkin[]
+  /** Photos of the main trip, in upload order (the handler sorts them). */
+  photos: Photo[]
+  /** Positions members share right now. */
+  locations: MemberLocation[]
+  /** Status the photo upload answers with, for a refusal (413, 422) no scenario has. */
+  photoUploadStatus?: number
+  /** The caller's own location-sharing consent. */
+  consent: { enabled: boolean; until: string | null }
   /** Invitations of the main trip, newest first (the host's list). */
   invitations: Invitation[]
   /** Voting links of the main trip, newest first (the host's panel; never holds a token). */
@@ -128,6 +170,8 @@ export interface World {
     /** Every write answers 500. */
     writeFails: boolean
   }
+  /** The proposal last sent for the main trip; null until the host sends one. */
+  proposal: ProposalState | null
   /** The interview of the main trip: session, scripted assistant, knowledge sources. */
   interview: InterviewWorld
   /** Whether POST /auth/demo accepts the invitation token (false: switched off, answers 404). */
@@ -171,6 +215,23 @@ function manyTrips(count: number): Trip[] {
   })
 }
 
+/** 45 expenses for the paginated list: payers rotate, one day apart, amounts differ. */
+function manyExpenses(count: number): Expense[] {
+  const payers = [PROFILE_IDS.mama, PROFILE_IDS.tata, PROFILE_IDS.babcia] as const
+  const categories = ['food', 'transport', 'lodging', 'activities', 'shopping', 'other'] as const
+  return Array.from({ length: count }, (_, index) =>
+    expense({
+      id: `5a1c0e11-8b2d-4c3e-9f40-${String(index + 100).padStart(12, '0')}`,
+      description: `Wydatek ${index + 1}`,
+      amount: `${10 + index}.00`,
+      spent_on: `2026-10-${String((index % 28) + 1).padStart(2, '0')}`,
+      created_at: `2026-10-01T10:${String(index).padStart(2, '0')}:00Z`,
+      category: categories[index % categories.length] ?? null,
+      payer_profile_id: payers[index % payers.length] ?? PROFILE_IDS.mama,
+    }),
+  )
+}
+
 export function createWorld(name: ScenarioName): World {
   const main = trip()
   const base: World = {
@@ -179,6 +240,7 @@ export function createWorld(name: ScenarioName): World {
     permissions: createPermissionsWorld(),
     trips: [main, outing()],
     cities: cities(),
+    citySearch: 'ok',
     failures: {},
     profiles: familyProfiles(),
     members: familyMembers(),
@@ -187,11 +249,18 @@ export function createWorld(name: ScenarioName): World {
     preferences: familyPreferences(),
     places: catalogPlaces(),
     preferencesSaveFails: false,
+    expenses: familyExpenses(),
+    settlementClosed: false,
     plan: plan(main.id),
+    checkins: familyCheckins(),
+    photos: galleryPhotos(),
+    locations: [],
+    consent: { enabled: false, until: null },
     invitations: [invitation()],
     voteLinks: [],
     voteSummary: voteSummary(),
     vote: { link: 'ok', profileName: 'Zosia', places: votePlaces(), writeFails: false },
+    proposal: null,
     interview: emptyInterviewWorld(),
     demoEnabled: true,
     demoRateLimited: false,
@@ -213,12 +282,35 @@ export function createWorld(name: ScenarioName): World {
       return { ...base, plan: plan(main.id, { budget: needsApprovalBudget() }) }
     case 'no-plan':
       return { ...base, plan: null }
+    case 'others-share-location':
+      return {
+        ...base,
+        locations: [
+          location(PROFILE_IDS.tata, { display_name: 'Marek' }),
+          location(PROFILE_IDS.babcia, {
+            display_name: 'Babcia Halina',
+            latitude: 52.2319,
+            longitude: 21.0067,
+            recorded_at: new Date(Date.now() - 6 * 60_000).toISOString(),
+          }),
+        ],
+      }
+    case 'city-search-geocoder-down':
+      return { ...base, citySearch: 'geocoder-down' }
+    case 'city-search-error':
+      return { ...base, citySearch: 'error' }
     case 'member-readonly':
       return {
         ...base,
         trips: [trip({ my_role: 'member' }), outing({ my_role: 'member' })],
         members: familyMembers('member'),
       }
+    case 'no-expenses':
+      return { ...base, expenses: [] }
+    case 'settlement-closed':
+      return { ...base, settlementClosed: true }
+    case 'many-expenses':
+      return { ...base, expenses: manyExpenses(45) }
     case 'member-pending': {
       const members = familyMembers('member')
       for (const member of members) if (member.is_me) member.status = 'pending'
@@ -305,6 +397,81 @@ export function createWorld(name: ScenarioName): World {
       const messages = resumedMessages(40)
       return { ...base, interview: { ...emptyInterviewWorld(), started: true, messages } }
     }
+    case 'interview-resumed-partial': {
+      // Back to a talk where the city, the dates and two people are settled and the budget is not.
+      const partial = trip({
+        budget_total_min: null,
+        budget_total_max: null,
+        budget_day_min: null,
+        budget_day_max: null,
+      })
+      const messages = resumedMessages(6)
+      return {
+        ...base,
+        trips: [partial, outing()],
+        profiles: familyProfiles().slice(0, 3),
+        interview: { ...emptyInterviewWorld(), started: true, messages },
+      }
+    }
+    case 'interview-city-only': {
+      // Only the city is known: "Build plan now" works and lists what it had to assume.
+      const cityOnly = emptyTrip()
+      cityOnly.city_slug = 'warszawa'
+      cityOnly.destination = 'Warszawa'
+      return {
+        ...base,
+        trips: [cityOnly, outing()],
+        profiles: familyProfiles().slice(0, 1),
+        preferences: [],
+        plan: null,
+      }
+    }
+    case 'proposal-none':
+      return base
+    case 'proposal-sent':
+      return { ...base, proposal: sentProposal(base, [answer('Marek', 'approve', '10:00')]) }
+    case 'proposal-approved':
+      return {
+        ...base,
+        proposal: sentProposal(base, [
+          answer('Marek', 'approve', '10:00'),
+          answer('Babcia Halina', 'approve', '10:30'),
+          answer('Ola', 'approve', '11:00', null, true),
+        ]),
+      }
+    case 'proposal-outdated':
+      return { ...base, proposal: staleProposal(base) }
+    case 'proposal-many-answers':
+      return {
+        ...base,
+        proposal: sentProposal(
+          base,
+          Array.from({ length: 25 }, (_, index) =>
+            answer(
+              `Osoba ${String(index + 1).padStart(2, '0')}`,
+              index % 5 === 0 ? 'reject' : index % 3 === 0 ? 'comment' : 'approve',
+              `${String(8 + (index % 12)).padStart(2, '0')}:00`,
+              index % 3 === 0 ? `Uwaga numer ${index + 1}` : null,
+            ),
+          ),
+        ),
+      }
+    case 'proposal-member': {
+      const member = {
+        ...base,
+        trips: [trip({ my_role: 'member' }), outing({ my_role: 'member' })],
+        members: familyMembers('member'),
+      }
+      return {
+        ...member,
+        proposal: sentProposal(member, [answer('Marek', 'reject', '10:00', 'Za dużo chodzenia')]),
+      }
+    }
+    case 'proposal-draft':
+      return {
+        ...base,
+        plan: plan(main.id, { params: { alpha: 1, weight_preset: 'default', draft: true } }),
+      }
     case 'join-named':
       return {
         ...base,

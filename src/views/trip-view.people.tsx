@@ -7,6 +7,7 @@ import { useProfileActions } from '@/hooks/use-profile-actions'
 import { useProfiles } from '@/hooks/use-profiles'
 import { useSession } from '@/hooks/use-session'
 import { m } from '@/paraglide/messages'
+import { TripCheckinsView } from './trip-view.checkins'
 import { TripInvitationsView } from './trip-view.invitations'
 import { TripPersonView } from './trip-view.person'
 import { TripVotingView } from './trip-view.voting'
@@ -16,6 +17,8 @@ interface TripPeopleViewProps {
   tripName: string
   canManage: boolean
   citySlug: string | null
+  /** Host only: fills in check-ins of people without an account. */
+  canFillIn: boolean
   /** The person whose details are open (the `person` search param), or undefined for the list. */
   personId: string | undefined
   onPersonChange: (id: string | undefined) => void
@@ -30,6 +33,7 @@ export function TripPeopleView({
   tripName,
   canManage,
   citySlug,
+  canFillIn,
   personId,
   onPersonChange,
 }: TripPeopleViewProps) {
@@ -89,6 +93,7 @@ export function TripPeopleView({
         onRemove={actions.remove}
         onOpenPerson={(profile) => onPersonChange(profile.id)}
       />
+      <TripCheckinsView tripId={tripId} people={people} canFillIn={canFillIn} />
       {hostTools}
     </div>
   )
