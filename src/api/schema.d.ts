@@ -3267,6 +3267,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/places/cities/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * City suggestions while typing
+         * @description Catalog cities that match `q` come first (`catalog_ready` says whether they have places), then OpenStreetMap cities from the Photon geocoder (`source=geocoder`, with the `city_query` to pass to `POST /trips/{id}/places/candidates`). When the geocoder is down, slow or over its request budget the answer is 200 with catalog cities only and `geocoder_available=false`. The geocoder has no offset: the list is capped by `TUTTITRIP_GEOCODER__MAX_RESULTS`, `page`/`size` slice it.
+         *
+         *     Wymagane uprawnienie: `places.catalog:READ`.
+         */
+        get: operations["search_cities_api_v1_places_cities_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/places/cities": {
         parameters: {
             query?: never;
@@ -3866,6 +3888,83 @@ export interface components {
              * @description Room number or name; omit when there is none.
              */
             room?: string | null;
+        };
+        /**
+         * CityLang
+         * @description Language of the suggestions (the UI language).
+         * @enum {string}
+         */
+        CityLang: "pl" | "en";
+        /**
+         * CitySource
+         * @description Where a suggestion comes from.
+         * @enum {string}
+         */
+        CitySource: "catalog" | "geocoder";
+        /**
+         * CitySuggestion
+         * @description One city the user can pick.
+         */
+        CitySuggestion: {
+            /**
+             * Slug
+             * @description Value for the trip's `city_slug`. A geocoder suggestion's slug is `slugify(city_query)`.
+             */
+            slug: string;
+            /** Name */
+            name: string;
+            /**
+             * Country
+             * @description ISO 3166-1 alpha-2.
+             */
+            country: string;
+            /**
+             * Region
+             * @description State or voivodeship.
+             */
+            region?: string | null;
+            source: components["schemas"]["CitySource"];
+            /**
+             * Catalog Ready
+             * @description In the catalog with places: planning needs no fetch.
+             */
+            catalog_ready: boolean;
+            /**
+             * City Query
+             * @description Geocoder suggestions only: send it as `city_query` to `POST /trips/{id}/places/candidates` so the places get fetched.
+             */
+            city_query?: string | null;
+            /** Center Lat */
+            center_lat: number;
+            /** Center Lon */
+            center_lon: number;
+        };
+        /**
+         * CitySuggestionPage
+         * @description A page of suggestions, catalog first.
+         */
+        CitySuggestionPage: {
+            /** Items */
+            items: components["schemas"]["CitySuggestion"][];
+            /**
+             * Total
+             * @description Rows matching the filters.
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /**
+             * Pages
+             * @description Pages in total; 0 when empty.
+             */
+            pages: number;
+            /**
+             * Geocoder Available
+             * @description False when the geocoder was down, slow or over its request budget: only catalog cities are listed.
+             */
+            geocoder_available: boolean;
         };
         /**
          * CityRead
@@ -14430,6 +14529,60 @@ export interface operations {
                 content?: never;
             };
             /** @description Brak uprawnienia `expenses.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_cities_api_v1_places_cities_search_get: {
+        parameters: {
+            query: {
+                /** @description Page number, from 1. */
+                page?: number;
+                /** @description Suggestions per page. */
+                size?: number;
+                /** @description Sort direction. */
+                dir?: components["schemas"]["SortDir"];
+                /** @description What the user typed so far (at least 2 characters). */
+                q: string;
+                /** @description UI language: names of geocoder suggestions follow it. */
+                lang?: components["schemas"]["CityLang"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CitySuggestionPage"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `places.catalog:READ` */
             403: {
                 headers: {
                     [name: string]: unknown;

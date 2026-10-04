@@ -14,6 +14,7 @@ import { TripForm } from '@/components/trips/trip-form'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCities } from '@/hooks/use-cities'
+import { useCitySearch } from '@/hooks/use-city-search'
 import { type InterviewError, useInterview } from '@/hooks/use-interview'
 import { useInterviewSession } from '@/hooks/use-interview-session'
 import { useKnowledge } from '@/hooks/use-knowledge'
@@ -129,6 +130,7 @@ function InterviewWorkspace({
     onRunEnd: knowledge.refresh,
   })
   const { cities } = useCities(session.status)
+  const citySearch = useCitySearch(session.status)
   const saveTrip = useSaveTrip(knowledge.knowledge?.trip ?? null, cities)
   const profileActions = useProfileActions(tripId)
   const [editing, setEditing] = useState<Editing>(null)
@@ -355,6 +357,7 @@ function InterviewWorkspace({
           saveTrip.reset()
         }}
         isDesktop={isDesktop}
+        wide
         title={m.interview_trip_edit_title()}
         description={m.interview_trip_edit_description()}
       >
@@ -363,6 +366,7 @@ function InterviewWorkspace({
             initial={tripToFormValues(knowledge.knowledge.trip)}
             tripCurrency={knowledge.knowledge.trip.currency}
             cities={cities}
+            citySearch={citySearch}
             fieldErrors={saveTrip.fieldErrors}
             submitError={saveTrip.submitError}
             isSubmitting={saveTrip.isPending}
