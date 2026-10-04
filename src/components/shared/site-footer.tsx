@@ -1,7 +1,7 @@
 import { ArrowUpRight } from '@keyline-icons/react'
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { EXTERNAL_LINK, GITHUB_ORG_URL } from '@/lib/links'
+import { EXTERNAL_LINK, GITHUB_ORG_URL, ISSUES_URL } from '@/lib/links'
 import { UNSPLASH_LICENSE_URL } from '@/lib/photos'
 import { cn } from '@/lib/utils'
 import { m } from '@/paraglide/messages'
@@ -25,16 +25,11 @@ interface SiteFooterProps {
   language: LanguageState
   /** Extra controls next to the language switch (e.g. the theme toggle). */
   extras?: ReactNode
-  /**
-   * "full" on the public pages: logo, description and link columns. "compact" in the app
-   * after sign-in: one row with the same links.
-   */
-  variant?: 'full' | 'compact'
   className?: string
 }
 
-/** Footer of the public pages (full) and of the app shell (compact). */
-export function SiteFooter({ language, extras, variant = 'full', className }: SiteFooterProps) {
+/** Footer of the public pages and of the app shell: logo, description, link columns, language. */
+export function SiteFooter({ language, extras, className }: SiteFooterProps) {
   const year = new Date().getFullYear()
   const legal = (
     <p className="text-muted-foreground text-sm">
@@ -48,35 +43,10 @@ export function SiteFooter({ language, extras, variant = 'full', className }: Si
     </div>
   )
 
-  if (variant === 'compact') {
-    return (
-      <footer className={cn('border-t', className)}>
-        <div className="mx-auto flex max-w-5xl flex-col gap-1 px-4 py-3 md:flex-row md:items-center md:justify-between md:px-6">
-          <nav aria-label={m.shell_nav_footer()} className="-mx-1 flex flex-wrap gap-x-3">
-            <Link to="/about" className={linkClass}>
-              {m.nav_about()}
-            </Link>
-            <Link to="/contact" className={linkClass}>
-              {m.nav_contact()}
-            </Link>
-            <Link to="/prywatnosc" className={linkClass}>
-              {m.nav_privacy()}
-            </Link>
-            <External href={GITHUB_ORG_URL}>{m.footer_github()}</External>
-          </nav>
-          <div className="flex items-center justify-between gap-4 md:justify-end">
-            {legal}
-            {controls}
-          </div>
-        </div>
-      </footer>
-    )
-  }
-
   return (
     <footer className={cn('border-t', className)}>
-      <div className="mx-auto grid max-w-5xl gap-10 px-4 py-10 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:px-6 md:py-14">
-        <div className="flex flex-col items-start gap-4">
+      <div className="mx-auto grid max-w-5xl grid-cols-2 gap-x-6 gap-y-8 px-4 py-10 md:grid-cols-4 md:px-6 md:py-14 lg:grid-cols-[1.5fr_repeat(4,1fr)]">
+        <div className="col-span-2 flex flex-col items-start gap-4 md:col-span-4 lg:col-span-1">
           <Link
             to="/"
             className="rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
@@ -114,9 +84,6 @@ export function SiteFooter({ language, extras, variant = 'full', className }: Si
             <Link to="/about" className={linkClass}>
               {m.nav_about()}
             </Link>
-            <Link to="/contact" className={linkClass}>
-              {m.nav_contact()}
-            </Link>
             <External href={GITHUB_ORG_URL}>{m.footer_github()}</External>
           </FooterColumn>
           <FooterColumn title={m.footer_licences()}>
@@ -124,6 +91,12 @@ export function SiteFooter({ language, extras, variant = 'full', className }: Si
               {m.nav_privacy()}
             </Link>
             <External href={UNSPLASH_LICENSE_URL}>{m.footer_unsplash_licence()}</External>
+          </FooterColumn>
+          <FooterColumn title={m.footer_contact()}>
+            <Link to="/contact" className={linkClass}>
+              {m.nav_contact()}
+            </Link>
+            <External href={ISSUES_URL}>{m.footer_report_issue()}</External>
           </FooterColumn>
         </nav>
       </div>

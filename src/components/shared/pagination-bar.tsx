@@ -44,7 +44,10 @@ export function PaginationBar({
   const to = Math.min(page * size, total)
 
   return (
-    <div className="flex flex-col items-center gap-3 border-t pt-4 md:flex-row md:justify-between">
+    <div
+      data-slot="pagination-bar"
+      className="sticky bottom-[calc(4rem+1px+env(safe-area-inset-bottom))] z-10 mt-auto flex flex-col items-center gap-3 border-t bg-background py-3 md:bottom-0 md:flex-row md:justify-between"
+    >
       <p className="text-muted-foreground text-sm tabular-nums" aria-live="polite">
         {m.list_range({ from, to, total })}
       </p>

@@ -505,6 +505,8 @@
   "footer_copyright": "© {year} TuttiTrip",
   "footer_hackyeah": "HackYeah 2026, Kraków",
   "footer_language": "Język",
+  "footer_contact": "Kontakt",
+  "footer_report_issue": "Zgłoś problem",
   "example_hint": "Przesuń kropkę, żeby zobaczyć, jak zmienia się najmniej zadowolona osoba.",
   "example_reset": "Przywróć przykład",
   "example_slider": "Udział osoby: {name}",

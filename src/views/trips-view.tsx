@@ -63,7 +63,7 @@ export function TripsView() {
     !needsLogin && !problem && !isPending && !pastTheEnd && session.status !== 'loading'
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-1 flex-col gap-6">
       <div className="flex items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="font-semibold text-2xl tracking-tight md:text-3xl">{m.trips_title()}</h1>
