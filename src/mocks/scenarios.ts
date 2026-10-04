@@ -4,6 +4,7 @@ import {
   type City,
   catalogPlaces,
   cities,
+  type Decision,
   familyMembers,
   familyPreferences,
   familyProfiles,
@@ -13,12 +14,15 @@ import {
   type Member,
   me,
   needsApprovalBudget,
+  type Offer,
   outing,
   type Plan,
   PROFILE_IDS,
   type Preferences,
   type Profile,
   plan,
+  type RequirementItem,
+  type SearchOpening,
   type Trip,
   trip,
 } from './fixtures'
@@ -88,6 +92,16 @@ export interface World {
   preferencesSaveFails: boolean
   /** The latest plan of the main trip; null until "Policz plan" creates one. */
   plan: Plan | null
+  /** Lodging requirements of the main trip and their version (it moves with every change). */
+  requirements: { requirements: RequirementItem[]; version: number }
+  /** Pasted offer texts by document id. */
+  documents: Map<string, string>
+  /** Checked offers of the main trip. */
+  offers: Offer[]
+  /** The log of approved search openings, newest first. */
+  searchOpenings: SearchOpening[]
+  /** The log of host decisions, newest first. */
+  decisions: Decision[]
   /** Invitations of the main trip, newest first (the host's list). */
   invitations: Invitation[]
   /** Whether POST /auth/demo accepts the invitation token (false: switched off, answers 404). */
@@ -146,6 +160,11 @@ export function createWorld(name: ScenarioName): World {
     places: catalogPlaces(),
     preferencesSaveFails: false,
     plan: plan(main.id),
+    requirements: { requirements: [], version: 1 },
+    documents: new Map(),
+    offers: [],
+    searchOpenings: [],
+    decisions: [],
     invitations: [invitation()],
     demoEnabled: true,
     demoRateLimited: false,

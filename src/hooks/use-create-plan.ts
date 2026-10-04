@@ -17,6 +17,7 @@ export function useCreatePlan(tripId: string) {
   return {
     create: () => mutation.mutate({ params: { path: { trip_id: tripId } }, body: null }),
     isPending: mutation.isPending,
-    error: mutation.error,
+    // The generated type of the error is `never` (no error body is documented); it is an ApiError.
+    error: mutation.error as Error | null,
   }
 }

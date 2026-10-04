@@ -443,6 +443,89 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/users/{sub}/block": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Block User
+         * @description Block an account in Auth0 and in this API (tokens already issued stop too).
+         *
+         *     Args:
+         *         sub: Auth0 user id.
+         *         admin: The calling administrator.
+         *         session: Database session.
+         *         client: Management API client.
+         *
+         *     Returns:
+         *         Empty 204.
+         *
+         *     Wymagane uprawnienie: `admin.users:WRITE`.
+         */
+        post: operations["block_user_api_v1_admin_users__sub__block_post"];
+        /**
+         * Unblock User
+         * @description Lift a block in Auth0 and in this API.
+         *
+         *     Args:
+         *         sub: Auth0 user id.
+         *         admin: The calling administrator.
+         *         session: Database session.
+         *         client: Management API client.
+         *
+         *     Returns:
+         *         Empty 204.
+         *
+         *     Wymagane uprawnienie: `admin.users:WRITE`.
+         */
+        delete: operations["unblock_user_api_v1_admin_users__sub__block_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{sub}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete User
+         * @description Delete an account in Auth0 and clear its data.
+         *
+         *     Trips it hosts pass to the co-host who joined first; **a trip without a
+         *     co-host is deleted** with everything under it. Memberships, roles, grants,
+         *     issued access tokens and open invitations go; profiles are detached from
+         *     the account; expenses stay. The account is blocked first and stays refused
+         *     afterwards. The audit entry carries the counts.
+         *
+         *     Args:
+         *         sub: Auth0 user id.
+         *         admin: The calling administrator.
+         *         session: Database session.
+         *         client: Management API client.
+         *
+         *     Returns:
+         *         Empty 204.
+         *
+         *     Wymagane uprawnienie: `admin.users:WRITE`.
+         */
+        delete: operations["delete_user_api_v1_admin_users__sub__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/account": {
         parameters: {
             query?: never;
@@ -1741,10 +1824,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Generate a plan with the fairness measure (STUB)
-         * @description STUB: until backend#50 the content is a fixed sample (section 7 of `docs/algorytm.md`); the shape is final. The variant is chosen from the trip: `sha256(str(trip_id).encode())[0] % 3` (first byte of the digest) gives `group`, `solo` or `approval` (`needs_approval` with `kappa`), so one trip always returns the same plan and `plan_hash`. `group` and `approval` include an unverified price and a free stop; `solo` (two days) has neither; all variants have a stop without an hours source and transfers with and without a cost.
-         *
-         *     Generates a plan with the fairness measure, ledger, verdicts and budget. Repeating the call with the same `input_hash` returns 200 with the existing version instead of 201 (the stub always returns 201).
+         * Generate a plan with the fairness measure
+         * @description Runs the algorithm of `docs/algorytm.md` (one solo run per person, then the group plan) and stores a new version. The same input (trip, people, preferences, ratings, vetoes, catalog, `alpha`, preset) returns the latest version with 200 and the same `plan_hash`; an input that went back to an older state gets a new version. Any member may ask (a member's veto triggers the recompute): the input is read with a host-level view, so the result does not depend on who asks. `explain` is limited to the caller's own cards below the co-host role, because the effort of a person depends on their health limits; the ledger (`u`, `r`, domains) is visible to all. The examples show the response shape.
          *
          *     Wymagane uprawnienie: `planning.plans:WRITE`.
          */
@@ -1763,14 +1844,145 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Latest plan of the trip (STUB)
-         * @description STUB: until backend#50 the content is a fixed sample (section 7 of `docs/algorytm.md`); the shape is final. The variant is chosen from the trip: `sha256(str(trip_id).encode())[0] % 3` (first byte of the digest) gives `group`, `solo` or `approval` (`needs_approval` with `kappa`), so one trip always returns the same plan and `plan_hash`. `group` and `approval` include an unverified price and a free stop; `solo` (two days) has neither; all variants have a stop without an hours source and transfers with and without a cost.
-         *
-         *     Returns 404 `No plan yet` when the trip has no plan (the empty state of the plan view); the stub always has one and never returns it.
+         * Latest plan of the trip
+         * @description Returns 404 `No plan yet` when the trip has no plan (the empty state of the plan view).
          *
          *     Wymagane uprawnienie: `planning.plans:READ`.
          */
         get: operations["get_latest_plan_api_v1_trips__trip_id__plans_latest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One stored plan version
+         * @description One stored version.
+         *
+         *     Args:
+         *         session: Database session.
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         plan_id: Version id.
+         *
+         *     Returns:
+         *         The version.
+         *
+         *     Raises:
+         *         HTTPException: 404 when the trip has no such version.
+         *
+         *     Wymagane uprawnienie: `planning.plans:READ`.
+         */
+        get: operations["get_plan_api_v1_trips__trip_id__plans__plan_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/overrides/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * What a host decision would cost, nothing stored
+         * @description Computes the plan with and without the decision and returns the change of `min r`, Jain's index, `r` per person, cost and active time. The solo plans are not recomputed (their reference points are reused).
+         *
+         *     Wymagane uprawnienie: `planning.plans:WRITE`.
+         */
+        post: operations["preview_override_api_v1_trips__trip_id__overrides_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/overrides": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Force a place into the plan or block it
+         * @description Stores the decision (a hard constraint of the next plan) and one entry of the decision log with the same numbers as the preview. Only the host may do it; call `POST .../plans` to recompute.
+         *
+         *     Wymagane uprawnienie: `planning.plans:WRITE`.
+         */
+        post: operations["create_override_api_v1_trips__trip_id__overrides_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/overrides/{override_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Take a host decision back
+         * @description Revoke a decision; the log records what that changed.
+         *
+         *     Args:
+         *         session: Database session.
+         *         membership: The host's membership of ``{trip_id}``.
+         *         override_id: The decision.
+         *
+         *     Returns:
+         *         The revoked decision.
+         *
+         *     Raises:
+         *         HTTPException: 404 when the trip has no such decision, 422 when the
+         *             trip cannot be planned.
+         *
+         *     Wymagane uprawnienie: `planning.plans:WRITE`.
+         */
+        delete: operations["revoke_override_api_v1_trips__trip_id__overrides__override_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Log of host decisions
+         * @description Append-only; newest first by default. Paged, filter by `kind`.
+         *
+         *     Wymagane uprawnienie: `planning.plans:READ`.
+         */
+        get: operations["list_decisions_api_v1_trips__trip_id__decisions_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2546,7 +2758,7 @@ export interface components {
          * @description Why a conflict is reported; the UI writes the text (PL/EN).
          * @enum {string}
          */
-        ConflictCode: "lodging_hard_requirement" | "veto_blocks_place" | "budget_limit" | "floor_unreachable" | "other";
+        ConflictCode: "lodging_hard_requirement" | "veto_blocks_place" | "budget_limit" | "floor_unreachable" | "unknown_price" | "other";
         /**
          * Constraints
          * @description Health and access limits.
@@ -2595,6 +2807,74 @@ export interface components {
          * @enum {string}
          */
         Currency: "PLN" | "EUR" | "GBP";
+        /**
+         * DecisionEffects
+         * @description What a decision costs: the plan with it minus the plan without it.
+         *
+         *     Fairness is the measure of the ledger (``min r`` and Jain's index of ``r``,
+         *     docs/algorytm.md sections 7 and 10). The solo plans are not recomputed (the
+         *     reference points ``u*`` of the plan without the decision are reused), so a
+         *     block that a person wanted is charged to them through ``r``.
+         */
+        DecisionEffects: {
+            /** D Min R */
+            d_min_r: number;
+            /** D Jain */
+            d_jain: number;
+            /** D R */
+            d_r: components["schemas"]["PersonDelta"][];
+            /**
+             * D Cost
+             * @description Change of c(P), in the trip currency.
+             */
+            d_cost: string;
+            /**
+             * D Minutes
+             * @description Change of the active minutes of the plan.
+             */
+            d_minutes: number;
+        };
+        /**
+         * DecisionKind
+         * @description What a log entry records.
+         * @enum {string}
+         */
+        DecisionKind: "must" | "block" | "revoke" | "budget_approval";
+        /**
+         * DecisionRead
+         * @description An entry of the append-only log.
+         */
+        DecisionRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            kind: components["schemas"]["DecisionKind"];
+            /** Place Id */
+            place_id: string | null;
+            /** Reason */
+            reason: string | null;
+            effects: components["schemas"]["DecisionEffects"];
+            /** Created By Sub */
+            created_by_sub: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * DecisionSort
+         * @description Sort keys of the decision log.
+         * @enum {string}
+         */
+        DecisionSort: "created_at";
         /**
          * DemoSession
          * @description Auth0 tokens of the demo account.
@@ -3307,8 +3587,9 @@ export interface components {
          *     by the worker show up as ERROR with the worker's message in ``error``.
          *     ``error_code`` is the worker's machine code (``invalid_payload``,
          *     ``unsupported_contract_version``, ``not_implemented``, ``document_not_found``,
-         *     ``model_output_invalid``, ``city_not_found`` or ``rate_limited``); such a job
-         *     is not retried by the backend and ``error`` carries a readable message.
+         *     ``model_output_invalid``, ``city_not_found``, ``rate_limited`` or
+         *     ``slug_conflict``); such a job is not retried by the backend and ``error``
+         *     carries a readable message.
          */
         JobState: {
             /** Workflow Id */
@@ -3326,8 +3607,13 @@ export interface components {
             /** Error */
             error?: string | null;
             /**
+             * Error En
+             * @description English text of `error` for codes the API knows; else null.
+             */
+            error_en?: string | null;
+            /**
              * Error Code
-             * @description Machine code of a worker error: `unsupported_contract_version`, `invalid_payload`, `not_implemented`, `document_not_found`, `model_output_invalid`, `city_not_found` or `rate_limited`. Clients branch on this, never on the text of `error`.
+             * @description Machine code of a worker error: `unsupported_contract_version`, `invalid_payload`, `not_implemented`, `document_not_found`, `model_output_invalid`, `city_not_found`, `rate_limited` or `slug_conflict`. Clients branch on this, never on the text of `error`.
              */
             error_code?: string | null;
             progress?: components["schemas"]["Progress"] | null;
@@ -3886,6 +4172,84 @@ export interface components {
          * @enum {string}
          */
         OsmType: "node" | "way" | "relation";
+        /**
+         * OverrideConflict
+         * @description 409: the decision contradicts a hard constraint.
+         */
+        OverrideConflict: {
+            /** Detail */
+            detail: string;
+            /** Conflicts */
+            conflicts: components["schemas"]["PlanConflict"][];
+        };
+        /**
+         * OverrideCreate
+         * @description Force a place into the plan or block it.
+         */
+        OverrideCreate: {
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            kind: components["schemas"]["OverrideKind"];
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
+         * OverrideKind
+         * @description What the host does with a place; both are hard constraints (E0).
+         * @enum {string}
+         */
+        OverrideKind: "must" | "block";
+        /**
+         * OverridePreview
+         * @description The cost of a decision, nothing stored.
+         */
+        OverridePreview: {
+            kind: components["schemas"]["OverrideKind"];
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            effects: components["schemas"]["DecisionEffects"];
+        };
+        /**
+         * OverrideRead
+         * @description A decision of the host with the effects it had when it was made.
+         */
+        OverrideRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            kind: components["schemas"]["OverrideKind"];
+            /** Reason */
+            reason: string | null;
+            /** Created By Sub */
+            created_by_sub: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            /** @description Same numbers as the log entry. */
+            effects?: components["schemas"]["DecisionEffects"] | null;
+        };
         /** Page[AdminUserRead] */
         Page_AdminUserRead_: {
             /** Items */
@@ -3909,6 +4273,25 @@ export interface components {
         Page_CheckinRead_: {
             /** Items */
             items: components["schemas"]["CheckinRead"][];
+            /**
+             * Total
+             * @description Rows matching the filters.
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /**
+             * Pages
+             * @description Pages in total; 0 when empty.
+             */
+            pages: number;
+        };
+        /** Page[DecisionRead] */
+        Page_DecisionRead_: {
+            /** Items */
+            items: components["schemas"]["DecisionRead"][];
             /**
              * Total
              * @description Rows matching the filters.
@@ -4072,6 +4455,19 @@ export interface components {
             participants: string[];
         };
         /**
+         * PersonDelta
+         * @description Change of one person's ``r`` caused by a decision.
+         */
+        PersonDelta: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** D R */
+            d_r: number;
+        };
+        /**
          * PersonFairness
          * @description One row of the fairness ledger.
          */
@@ -4120,7 +4516,8 @@ export interface components {
              * @description Days with a place of their own (m >= 0.6).
              */
             own_place_days: number;
-            weakest_domain: components["schemas"]["PlanDomainCode"];
+            /** @description The applicable domain with the lowest q; null if none applies. */
+            weakest_domain: components["schemas"]["PlanDomainCode"] | null;
         };
         /**
          * PersonUtility
@@ -4401,14 +4798,20 @@ export interface components {
             b_from: string;
             /**
              * B To
-             * @description B_do.
+             * @description B_do; null for a trip without a budget.
              */
-            b_to: string;
+            b_to: string | null;
             /**
              * B Max
-             * @description B_max (hard).
+             * @description B_max (hard); null for a trip without a budget.
              */
-            b_max: string;
+            b_max: string | null;
+            /**
+             * Unlimited
+             * @description The trip has no budget: nothing limits the cost, q_cost is n/a.
+             * @default false
+             */
+            unlimited: boolean;
             zone: components["schemas"]["BudgetZone"];
             /**
              * Over Budget
@@ -4467,11 +4870,13 @@ export interface components {
         PlanCreate: {
             /**
              * Alpha
-             * @description Fairness slider: 0 utility, 1 Nash, 3 near-egalitarian.
-             * @default 1
+             * @description Fairness slider: 0 utility, 1 Nash, 3 near-egalitarian. Omitted: the trip's own `fairness_alpha`.
              */
-            alpha: number;
-            /** @default default */
+            alpha?: number | null;
+            /**
+             * @description Recorded with the plan and part of its input hash, but it has no effect on the computation yet: the weights come from the profiles (`PUT /trips/{id}/profiles/weights`).
+             * @default default
+             */
             weight_preset: components["schemas"]["WeightPreset"];
         };
         /**
@@ -4593,9 +4998,13 @@ export interface components {
         };
         /**
          * PlanRead
-         * @description A plan with the fairness measure, ledger, verdicts and budget.
+         * @description A stored plan version with the fairness measure, ledger and budget.
          *
-         *     STUB: until backend#50 the content is a fixed sample; the shape is final.
+         *     The content is a copy made when the plan was computed. ``verdicts`` stay
+         *     null until backend#51 fills them; ``lodging`` is null until a lodging base
+         *     can be chosen (backend#70), and then the lodging domain of every person is
+         *     "not applicable". ``budget.needs_approval`` is set by backend#53; places
+         *     without a price are reported as ``unknown_price`` conflicts.
          */
         PlanRead: {
             /**
@@ -4726,7 +5135,7 @@ export interface components {
         PlanTelemetry: {
             /**
              * Solver
-             * @description Solver name; 'stub' while the response is fixed.
+             * @description Solver name and version.
              */
             solver: string;
             /** Steps */
@@ -4756,6 +5165,11 @@ export interface components {
             yes?: components["schemas"]["VoteReason"][];
             /** No */
             no?: components["schemas"]["VoteReason"][];
+            /**
+             * Skip Codes
+             * @description E0 codes of a skip: veto, blocked, closed, no_fit, segment, stairs.
+             */
+            skip_codes?: string[];
             /** Substitute Place Id */
             substitute_place_id?: string | null;
             /**
@@ -6676,6 +7090,219 @@ export interface operations {
             };
             /** @description Brak uprawnienia `admin.users:READ` */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Auth0 did not answer correctly. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Management API credentials are not configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    block_user_api_v1_admin_users__sub__block_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.users:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Auth0 has no such account. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Own account or a superadmin. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Auth0 did not answer correctly. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Management API credentials are not configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    unblock_user_api_v1_admin_users__sub__block_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.users:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Auth0 has no such account. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Own account or a superadmin. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Auth0 did not answer correctly. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Management API credentials are not configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    delete_user_api_v1_admin_users__sub__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.users:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Auth0 has no such account. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Own account or a superadmin. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9059,7 +9686,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Brak uprawnienia `planning.plans:WRITE` */
+            /** @description Missing the `planning.plans:WRITE` permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9073,14 +9700,12 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Validation Error */
+            /** @description The trip lacks dates, a city or people. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
+                content?: never;
             };
         };
     };
@@ -9120,6 +9745,275 @@ export interface operations {
             };
             /** @description No plan yet, trip not found or caller not on it. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_plan_api_v1_trips__trip_id__plans__plan_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan, trip not found or caller not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_override_api_v1_trips__trip_id__overrides_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OverrideCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverridePreview"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A "must" runs into a veto or another hard rule (E0). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverrideConflict"];
+                };
+            };
+            /** @description The trip lacks dates, a city or people. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    create_override_api_v1_trips__trip_id__overrides_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OverrideCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverrideRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A "must" runs into a veto or another hard rule (E0). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverrideConflict"];
+                };
+            };
+            /** @description The trip lacks dates, a city or people. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    revoke_override_api_v1_trips__trip_id__overrides__override_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                override_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverrideRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such decision on this trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The trip lacks dates, a city or people. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_decisions_api_v1_trips__trip_id__decisions_get: {
+        parameters: {
+            query?: {
+                kind?: components["schemas"]["DecisionKind"] | null;
+                /** @description Page number, from 1. */
+                page?: number;
+                /** @description Items per page (max 100). */
+                size?: number;
+                dir?: components["schemas"]["SortDir"];
+                sort?: components["schemas"]["DecisionSort"];
+            };
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_DecisionRead_"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:READ` */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

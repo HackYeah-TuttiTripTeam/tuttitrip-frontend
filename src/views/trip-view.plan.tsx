@@ -14,13 +14,17 @@ import { PlanHashLabel } from '@/components/planning/plan-hash-label'
 import { PlanPrintout } from '@/components/planning/plan-printout'
 import { PlanSummary } from '@/components/planning/plan-summary'
 import { PlanTimeline } from '@/components/planning/plan-timeline'
+import { VerdictChip } from '@/components/planning/verdict-chip'
 import { StatusMessage } from '@/components/shared/status-message'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCreatePlan } from '@/hooks/use-create-plan'
 import { usePlan } from '@/hooks/use-plan'
 import { usePrinting } from '@/hooks/use-printing'
+import { useVerdicts } from '@/hooks/use-verdict'
 import { m } from '@/paraglide/messages'
+import { PlanConsent } from './trip-view.consent'
+import { PlanDecisions } from './trip-view.decisions'
 
 interface TripPlanViewProps {
   trip: Trip
@@ -33,6 +37,8 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
   const { plan, isPending, hasNoPlan, forbidden, problem, refetch } = usePlan(tripId)
   const creation = useCreatePlan(tripId)
   const [day, setDay] = useState(1)
+  const [verdictPlace, setVerdictPlace] = useState<string | null>(null)
+  const verdicts = useVerdicts(plan)
   const canBuild = role !== 'member'
 
   if (isPending) return <PlanSkeleton />
@@ -149,6 +155,7 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
           {recalculating && m.plan_recomputing_status()}
         </div>
         <PlanSummary plan={plan} />
+        <PlanConsent plan={plan} trip={trip} />
         {failure}
         <div className={recalculating ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
           <DayTabs
@@ -159,11 +166,37 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
               planDay.items.length === 0 ? (
                 <p className="text-muted-foreground text-sm">{m.plan_day_empty()}</p>
               ) : (
-                <PlanTimeline stops={planDay.items} currency={plan.budget.currency} />
+                <PlanTimeline
+                  stops={planDay.items}
+                  currency={plan.budget.currency}
+                  renderActions={(stop) => {
+                    const verdict = verdicts.byPlace.get(stop.place_id)
+                    return verdict ? (
+                      <div>
+                        <VerdictChip
+                          verdict={verdict.verdict}
+                          onClick={() => setVerdictPlace(stop.place_id)}
+                        />
+                      </div>
+                    ) : null
+                  }}
+                />
               )
             }
           />
         </div>
+        <PlanDecisions
+          plan={plan}
+          trip={trip}
+          verdictPlace={verdictPlace}
+          onVerdictPlace={setVerdictPlace}
+          onShowOnPlan={(placeId) => {
+            const found = plan.days.find((planDay) =>
+              planDay.items.some((stop) => stop.place_id === placeId),
+            )
+            if (found) setDay(found.index)
+          }}
+        />
       </div>
     </>
   )

@@ -5,12 +5,15 @@ export class ApiError extends Error {
   readonly status: number
   /** The `detail` field of the API's JSON error body, if there was one. */
   readonly detail: unknown
+  /** The whole JSON error body, for answers that carry more than `detail` (a 409 with conflicts). */
+  readonly body: unknown
 
-  constructor(status: number, detail: unknown) {
+  constructor(status: number, detail: unknown, body?: unknown) {
     super(`API answered ${status}`)
     this.name = 'ApiError'
     this.status = status
     this.detail = detail
+    this.body = body
   }
 }
 

@@ -10,6 +10,9 @@ import {
   formatDuration,
   formatMoney,
   formatNumber,
+  formatSigned,
+  formatSignedDecimal,
+  formatSignedMinutes,
   formatTime,
   lowerCase,
 } from './format'
@@ -111,5 +114,19 @@ describe('plan formats', () => {
   it('writes a verification date in UTC, whatever the time zone', () => {
     useLocale('pl')
     expect(formatDayMonth(`${new Date().getFullYear()}-09-20T00:30:00Z`)).toBe('20 wrz')
+  })
+})
+
+describe('signed formats', () => {
+  it('writes a change with its sign, a real minus and no sign for zero', () => {
+    useLocale('pl')
+    expect(formatSigned(0.04)).toBe('+0,04')
+    expect(formatSigned(-0.04)).toBe('−0,04')
+    expect(formatSigned(0)).toBe('0')
+    expect(formatSignedDecimal('120.00')).toMatch(/^\+120\szł$/)
+    expect(formatSignedDecimal('-45.50')).toMatch(/^−45,50\szł$/)
+    expect(formatSignedMinutes(25)).toBe('+25 min')
+    expect(formatSignedMinutes(-65)).toBe('−1 h 5 min')
+    expect(formatSignedMinutes(0)).toBe('0 min')
   })
 })

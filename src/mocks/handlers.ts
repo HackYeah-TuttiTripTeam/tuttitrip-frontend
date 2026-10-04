@@ -16,6 +16,8 @@ import {
   trip,
 } from './fixtures'
 import { permissionHandlers } from './permissions'
+import { accommodationHandlers } from './handlers.accommodation'
+import { planningHandlers } from './handlers.planning'
 import { createWorld, type ScenarioName, type World } from './scenarios'
 
 const API = '*/api/v1'
@@ -508,6 +510,9 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       world.plan = created
       return HttpResponse.json(created, { status: 201 })
     }),
+
+    ...accommodationHandlers(world, latency),
+    ...planningHandlers(world, latency),
   ]
 }
 

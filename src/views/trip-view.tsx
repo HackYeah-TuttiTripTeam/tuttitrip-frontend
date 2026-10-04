@@ -10,6 +10,7 @@ import { useTrip } from '@/hooks/use-trip'
 import { isDev } from '@/lib/env'
 import type { TripTab } from '@/lib/trip-tabs'
 import { m } from '@/paraglide/messages'
+import { TripAccommodationView } from './trip-view.accommodation'
 import { TripPeopleView } from './trip-view.people'
 import { TripPlanView } from './trip-view.plan'
 import { TripSettings } from './trip-view.settings'
@@ -134,6 +135,7 @@ export function TripView() {
           />
         }
         plan={<TripPlanView key={trip.id} trip={trip} />}
+        accommodation={<TripAccommodationView key={trip.id} trip={trip} />}
       />
     </div>
   )
@@ -143,7 +145,7 @@ function TripSkeleton() {
   return (
     <div className="flex flex-col gap-6">
       <TripHeaderSkeleton />
-      <Skeleton aria-hidden="true" className="h-[54px] w-full rounded-full md:max-w-md" />
+      <Skeleton aria-hidden="true" className="h-[54px] w-full rounded-full md:max-w-xl" />
     </div>
   )
 }

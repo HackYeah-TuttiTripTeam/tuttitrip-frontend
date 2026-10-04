@@ -72,7 +72,7 @@ const errorMiddleware: Middleware = {
       .catch(() => undefined)
     const detail =
       typeof body === 'object' && body !== null && 'detail' in body ? body.detail : undefined
-    throw new ApiError(response.status, detail)
+    throw new ApiError(response.status, detail, body)
   },
 }
 
@@ -114,11 +114,17 @@ const demoMiddleware: Middleware = {
 
 // Same origin: the paths in schema.d.ts start with /api/v1, and /api/* is proxied
 // to the backend by the Worker (deployed) or the Vite dev server (local).
-export const fetchClient = createFetchClient<paths>()
-fetchClient.use(languageMiddleware)
-fetchClient.use(authMiddleware)
-fetchClient.use(errorMiddleware)
-fetchClient.use(demoMiddleware)
+/** A client with the session, language, error and demo middleware, for any (generated or local) paths type. */
+export function createApiClient<P extends object>() {
+  const client = createFetchClient<P>()
+  client.use(languageMiddleware)
+  client.use(authMiddleware)
+  client.use(errorMiddleware)
+  client.use(demoMiddleware)
+  return client
+}
+
+export const fetchClient = createApiClient<paths>()
 
 /** For the entry call only: no demo token, no retry, so a bad link never touches a session. */
 const bareClient = createFetchClient<paths>()

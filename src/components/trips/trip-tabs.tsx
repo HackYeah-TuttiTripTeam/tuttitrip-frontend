@@ -1,4 +1,4 @@
-import { Calendar, MessageSquare, Users } from '@keyline-icons/react'
+import { Bed, Calendar, MessageSquare, Users } from '@keyline-icons/react'
 import type { ReactNode } from 'react'
 import { StatusMessage } from '@/components/shared/status-message'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -9,12 +9,14 @@ const TAB_LABELS: Record<TripTab, () => string> = {
   interview: m.trip_tab_interview,
   people: m.trip_tab_people,
   plan: m.trip_tab_plan,
+  accommodation: m.trip_tab_accommodation,
 }
 
 const TAB_ICONS: Record<TripTab, ReactNode> = {
   interview: <MessageSquare />,
   people: <Users />,
   plan: <Calendar />,
+  accommodation: <Bed />,
 }
 
 interface TripTabsProps {
@@ -24,10 +26,12 @@ interface TripTabsProps {
   people: ReactNode
   /** The content of the Plan tab: a view, so this component stays free of the data layer. */
   plan: ReactNode
+  /** The content of the Noclegi tab: a view, so this component stays free of the data layer. */
+  accommodation: ReactNode
 }
 
-/** Wywiad, Osoby, Plan: a three-segment switch. The Interview panel is a placeholder for the next issue. */
-export function TripTabs({ tab, onTabChange, people, plan }: TripTabsProps) {
+/** Wywiad, Osoby, Plan, Noclegi: a four-segment switch. The Interview panel is a placeholder for the next issue. */
+export function TripTabs({ tab, onTabChange, people, plan, accommodation }: TripTabsProps) {
   return (
     <Tabs
       value={tab}
@@ -36,7 +40,7 @@ export function TripTabs({ tab, onTabChange, people, plan }: TripTabsProps) {
         if (next) onTabChange(next)
       }}
     >
-      <TabsList aria-label={m.trip_tabs_label()} className="md:max-w-md print:hidden">
+      <TabsList aria-label={m.trip_tabs_label()} className="md:max-w-xl print:hidden">
         {TRIP_TABS.map((value) => (
           <TabsTrigger key={value} value={value}>
             <span aria-hidden="true">{TAB_ICONS[value]}</span>
@@ -52,6 +56,7 @@ export function TripTabs({ tab, onTabChange, people, plan }: TripTabsProps) {
       </TabsContent>
       <TabsContent value="people">{people}</TabsContent>
       <TabsContent value="plan">{plan}</TabsContent>
+      <TabsContent value="accommodation">{accommodation}</TabsContent>
     </Tabs>
   )
 }

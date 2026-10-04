@@ -17,6 +17,13 @@ export type Invitation = Schemas['InvitationRead']
 export type City = Schemas['CityRead']
 export type Preferences = Schemas['PreferencesRead']
 export type CatalogPlace = Schemas['PlaceRead']
+export type PlanVerdict = Schemas['PlanVerdict']
+export type ExplainEntry = Schemas['ExplainEntry']
+export type Decision = Schemas['DecisionRead']
+export type DecisionEffects = Schemas['DecisionEffects']
+export type RequirementItem = Schemas['RequirementItem']
+export type Offer = Schemas['OfferRead']
+export type SearchOpening = Schemas['SearchOpeningRead']
 
 /** The signed-in test user, the host of most scenarios. */
 export const MOCK_USER_SUB = 'auth0|mock-user'
@@ -383,6 +390,7 @@ const withinBudget = (): PlanBudget => ({
   b_from: '1200.00',
   b_to: '1600.00',
   b_max: '1760.00',
+  unlimited: false,
   zone: 'up_to_b_to',
   over_budget: '0.00',
   needs_approval: false,
@@ -420,6 +428,89 @@ const lodging = (): NonNullable<Plan['lodging']> => ({
   requirements: [],
 })
 
+/** A place of the catalog that the plan left out (it has stairs, and the grandmother avoids them). */
+export const SKIPPED_PLACE_ID = '5d1c8e20-3b4a-4c75-9e2f-0000000000b1'
+/** A catalog place the verdict of the castle proposes instead. */
+export const SUBSTITUTE_PLACE_ID = '5d1c8e20-3b4a-4c75-9e2f-0000000000b5'
+/** A catalog place somebody vetoed: forcing it into the plan answers 409. */
+export const VETOED_PLACE_ID = '5d1c8e20-3b4a-4c75-9e2f-0000000000b3'
+
+/**
+ * Verdicts of the sample plan: the castle is iconic but not for everyone (with a replacement),
+ * the bar fits, the science centre has no votes yet, and two catalog places were left out.
+ */
+export const verdicts = (): PlanVerdict[] => [
+  {
+    place_id: PLACE_IDS.zamek,
+    verdict: 'iconic_not_yours',
+    v_p: -0.1,
+    yes: [{ profile_id: PROFILE_IDS.mama }, { profile_id: PROFILE_IDS.tata }],
+    no: [
+      { profile_id: PROFILE_IDS.zosia, reason_code: 'not_my_style' },
+      { profile_id: PROFILE_IDS.antek, reason_code: 'too_hard_for_child' },
+    ],
+    skip_codes: [],
+    substitute_place_id: SUBSTITUTE_PLACE_ID,
+    explanation: null,
+  },
+  {
+    place_id: PLACE_IDS.prasowy,
+    verdict: 'fits',
+    v_p: 0.6,
+    yes: [{ profile_id: PROFILE_IDS.mama }, { profile_id: PROFILE_IDS.babcia }],
+    no: [],
+    skip_codes: [],
+    substitute_place_id: null,
+    explanation: null,
+  },
+  {
+    place_id: PLACE_IDS.kopernik,
+    verdict: 'fits',
+    v_p: 0.3,
+    yes: [],
+    no: [],
+    skip_codes: [],
+    substitute_place_id: null,
+    explanation: null,
+  },
+  {
+    place_id: SKIPPED_PLACE_ID,
+    verdict: 'skip',
+    v_p: -0.5,
+    yes: [{ profile_id: PROFILE_IDS.mama }],
+    no: [{ profile_id: PROFILE_IDS.babcia, reason_code: 'too_hard_for_child' }],
+    skip_codes: ['stairs'],
+    substitute_place_id: null,
+    explanation: null,
+  },
+  {
+    place_id: VETOED_PLACE_ID,
+    verdict: 'skip',
+    v_p: -0.8,
+    yes: [],
+    no: [{ profile_id: PROFILE_IDS.zosia, reason_code: 'other' }],
+    skip_codes: ['veto'],
+    substitute_place_id: null,
+    explanation: null,
+  },
+]
+
+/** The E1 numbers behind the castle: match, effort and utility of each person. */
+export const explainCastle = (): ExplainEntry[] =>
+  [
+    [PROFILE_IDS.mama, 0.82, 0.2, 74],
+    [PROFILE_IDS.tata, 0.7, 0.2, 61],
+    [PROFILE_IDS.babcia, 0.55, 0.6, 28],
+    [PROFILE_IDS.zosia, 0.3, 0.4, 12],
+    [PROFILE_IDS.antek, 0.2, 0.7, -5],
+  ].map(([profileId, match, effort, utility]) => ({
+    place_id: PLACE_IDS.zamek,
+    profile_id: String(profileId),
+    match: Number(match),
+    effort: Number(effort),
+    utility: Number(utility),
+  }))
+
 export const plan = (tripId: string = TRIP_ID, overrides: Partial<Plan> = {}): Plan => ({
   id: '5d1c0e77-8a2b-4c3d-9e4f-60718293a4b6',
   trip_id: tripId,
@@ -445,8 +536,8 @@ export const plan = (tripId: string = TRIP_ID, overrides: Partial<Plan> = {}): P
   floors_missed: [],
   violation: 0,
   conflicts: [],
-  explain: [],
-  verdicts: null,
+  explain: explainCastle(),
+  verdicts: verdicts(),
   budget: withinBudget(),
   telemetry: { solver: 'stub', steps: 120, solo_runs: 5, elapsed_ms: 48 },
   ...overrides,
