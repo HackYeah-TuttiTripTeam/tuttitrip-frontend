@@ -1,5 +1,6 @@
 import { HeadContent, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { GuidedTour } from '@/components/help/guided-tour'
 import { AppShell } from '@/components/shared/app-shell'
 import { BootScreen } from '@/components/shared/boot-screen'
 import { DemoBanner } from '@/components/shared/demo-banner'
@@ -18,6 +19,7 @@ import { useTheme } from '@/hooks/use-theme'
 import { appEnv } from '@/lib/env'
 import { hasStoredSession } from '@/lib/session-hint'
 import { shellFor } from '@/lib/shell'
+import { useHelpStore } from '@/stores/help-store'
 import { useUiStore } from '@/stores/ui-store'
 
 // Dev-only: the import() calls are dropped from production bundles.
@@ -46,6 +48,9 @@ export function RootLayoutView() {
   const { locale, setLocale } = useLocale()
   const { theme, resolved, setTheme } = useTheme()
   const setCreateTripOpen = useUiStore((state) => state.setCreateTripOpen)
+  const helpTopic = useHelpStore((state) => state.topic)
+  const helpOpen = useHelpStore((state) => state.open)
+  const setHelpOpen = useHelpStore((state) => state.setOpen)
   const navigate = useNavigate()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   // Read once: a session stored while the page is open is Auth0's business, not a reason to blink.
@@ -101,6 +106,7 @@ export function RootLayoutView() {
           theme={{ theme, resolved, onChange: setTheme }}
           envLabel={envLabel}
           banner={banner}
+          onHelp={helpTopic ? () => setHelpOpen(true) : null}
           onCreateTrip={() => {
             // Creating a trip needs an account; ask guests to sign in first.
             if (session.status === 'anonymous') return session.login()
@@ -111,6 +117,7 @@ export function RootLayoutView() {
           <Outlet />
         </AppShell>
       )}
+      <GuidedTour topic={helpTopic} open={helpOpen} onOpenChange={setHelpOpen} />
       <Suspense>
         <Devtools />
       </Suspense>

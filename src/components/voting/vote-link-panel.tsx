@@ -2,6 +2,7 @@ import { Link as LinkIcon, QrCode as QrIcon, UserPlus } from '@keyline-icons/rea
 import type { VoteLink } from '@/api/queries/vote-links'
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/format'
+import { TOUR } from '@/lib/help'
 import { m } from '@/paraglide/messages'
 
 export interface OffAccountPerson {
@@ -50,7 +51,11 @@ export function VoteLinkPanel({
   onRetryLinks,
 }: VoteLinkPanelProps) {
   return (
-    <section aria-labelledby="vote-links-heading" className="flex flex-col gap-4 border-t py-6">
+    <section
+      aria-labelledby="vote-links-heading"
+      className="flex flex-col gap-4 border-t py-6"
+      data-tour={TOUR.voteLinks}
+    >
       <div className="flex flex-col gap-1">
         <h2 id="vote-links-heading" className="font-medium text-base">
           {m.vote_links_title()}
