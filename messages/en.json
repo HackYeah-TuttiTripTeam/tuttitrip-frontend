@@ -1089,5 +1089,10 @@
   "help_join_submit_title": "Join",
   "help_join_submit_body": "After joining you land on the People tab, where you fill in your preferences.",
   "help_people_vote_title": "Voting without an account",
-  "help_people_vote_body": "A person without an account gets a link with a QR code. They rate places and veto them through it, without installing anything."
+  "help_people_vote_body": "A person without an account gets a link with a QR code. They rate places and veto them through it, without installing anything.",
+  "help_trip_members_title": "Guide: trip members",
+  "help_members_membership_title": "Your participation",
+  "help_members_membership_body": "Confirm that you are going, or leave the trip. The host sees who has already confirmed.",
+  "help_members_list_title": "Members with an account",
+  "help_members_list_body": "People who accepted an invitation, with their status and role. The host changes roles, hands over hosting or removes someone from the trip."
 }

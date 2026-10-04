@@ -1103,5 +1103,10 @@
   "help_join_submit_title": "Dołącz",
   "help_join_submit_body": "Po dołączeniu trafisz do zakładki Osoby, gdzie uzupełnisz swoje preferencje.",
   "help_people_vote_title": "Głosowanie bez konta",
-  "help_people_vote_body": "Osoba bez konta dostaje link z kodem QR. Przez niego ocenia miejsca i zgłasza weto bez instalowania aplikacji."
+  "help_people_vote_body": "Osoba bez konta dostaje link z kodem QR. Przez niego ocenia miejsca i zgłasza weto bez instalowania aplikacji.",
+  "help_trip_members_title": "Przewodnik: członkowie wyjazdu",
+  "help_members_membership_title": "Twoje uczestnictwo",
+  "help_members_membership_body": "Potwierdź, że jedziesz, albo wycofaj się z wyjazdu. Organizator widzi, kto już potwierdził.",
+  "help_members_list_title": "Członkowie z kontem",
+  "help_members_list_body": "Osoby, które przyjęły zaproszenie, ze statusem i rolą. Organizator zmienia role, przekazuje organizację albo usuwa osobę z wyjazdu."
 }

@@ -88,6 +88,23 @@ const peopleSteps: TourStep[] = [
   },
 ]
 
+const membersSteps: TourStep[] = [
+  {
+    id: 'membership',
+    target: TOUR.membership,
+    optional: true,
+    title: m.help_members_membership_title,
+    body: m.help_members_membership_body,
+  },
+  {
+    id: 'list',
+    target: TOUR.membersList,
+    optional: true,
+    title: m.help_members_list_title,
+    body: m.help_members_list_body,
+  },
+]
+
 const planSteps: TourStep[] = [
   {
     id: 'empty',
@@ -129,12 +146,14 @@ const planSteps: TourStep[] = [
 const TAB_STEPS: Record<TripTab, TourStep[]> = {
   interview: [],
   people: peopleSteps,
+  members: membersSteps,
   plan: planSteps,
 }
 
 const tabTitle: Record<TripTab, () => string> = {
   interview: m.help_trip_title,
   people: m.help_trip_people_title,
+  members: m.help_trip_members_title,
   plan: m.help_trip_plan_title,
 }
 
@@ -145,6 +164,11 @@ export const tripTopics: Record<TripTab, TourTopic> = {
     id: 'trip-people',
     title: tabTitle.people,
     steps: [...tripHeaderSteps, ...TAB_STEPS.people],
+  },
+  members: {
+    id: 'trip-members',
+    title: tabTitle.members,
+    steps: [...tripHeaderSteps, ...TAB_STEPS.members],
   },
   plan: { id: 'trip-plan', title: tabTitle.plan, steps: [...tripHeaderSteps, ...TAB_STEPS.plan] },
 }

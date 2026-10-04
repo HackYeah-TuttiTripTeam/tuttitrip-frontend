@@ -11,6 +11,7 @@ import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
 import { useMemberActions } from '@/hooks/use-member-actions'
 import { useMembers } from '@/hooks/use-members'
 import { useSession } from '@/hooks/use-session'
+import { TOUR } from '@/lib/help'
 import { m } from '@/paraglide/messages'
 
 interface TripMembersViewProps {
@@ -92,28 +93,32 @@ export function TripMembersView({ tripId, tripName, myRole, myStatus }: TripMemb
 
   return (
     <div className="flex flex-col gap-6">
-      <MembershipCard
-        status={myStatus}
-        isHost={myRole === 'host'}
-        busy={actions.isPending}
-        error={error}
-        onConfirm={() => void run(() => actions.confirm(), setError)}
-        onLeave={() => setPending({ kind: 'leave' })}
-      />
+      <div data-tour={TOUR.membership}>
+        <MembershipCard
+          status={myStatus}
+          isHost={myRole === 'host'}
+          busy={actions.isPending}
+          error={error}
+          onConfirm={() => void run(() => actions.confirm(), setError)}
+          onLeave={() => setPending({ kind: 'leave' })}
+        />
+      </div>
 
       {members.length === 0 ? (
         <StatusMessage icon={<Users />} title={m.members_empty_title()}>
           {m.members_empty_body()}
         </StatusMessage>
       ) : (
-        <MembersList
-          members={members}
-          myRole={myRole}
-          busy={actions.isPending}
-          onSetRole={(member, role) => void run(() => actions.setRole(member, role), setError)}
-          onTransferHost={(member) => setPending({ kind: 'transfer', member })}
-          onRemove={(member) => setPending({ kind: 'remove', member })}
-        />
+        <div data-tour={TOUR.membersList}>
+          <MembersList
+            members={members}
+            myRole={myRole}
+            busy={actions.isPending}
+            onSetRole={(member, role) => void run(() => actions.setRole(member, role), setError)}
+            onTransferHost={(member) => setPending({ kind: 'transfer', member })}
+            onRemove={(member) => setPending({ kind: 'remove', member })}
+          />
+        </div>
       )}
 
       <ConfirmDialog
