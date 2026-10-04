@@ -407,7 +407,8 @@ is not production.
 - **Production (`main`):** navigations are `NetworkFirst` (3 s timeout,
   `app-shell` cache, one `/index.html` entry) so offline any deep link gets the
   shell; JS/CSS/icons and the fonts (`/assets/fonts/*.woff2`, about 85 KB)
-  are precached, so the offline shell keeps the design-system typefaces; photos are
+  are precached, so the offline shell keeps the design-system typefaces (they keep their
+  names, so `dontCacheBustURLsMatching` gives them a content revision and a deploy replaces them); photos are
   not (2.9 MB, public pages only), nor is the manifest (the Worker serves it per language). `/assets/*` and `/workbox-*` are
   immutable for a year; `sw.js`, `sw-activate.js`, `index.html` and the manifest
   are `no-cache`. Offline, the app shows `OfflineBanner` ("Brak połączenia", from

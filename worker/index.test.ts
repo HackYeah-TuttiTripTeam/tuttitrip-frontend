@@ -88,8 +88,18 @@ describe('missing files', () => {
   // Outside /assets/* the Worker runs only for the paths in run_worker_first (wrangler.jsonc);
   // anything else it sees is passed to the assets layer as it is.
   it('passes other paths to the assets layer unchanged', async () => {
-    const response = await worker.fetch(new Request('https://app.test/gone.js'), env(html))
-    expect(response.status).toBe(200)
+    const request = new Request('https://app.test/gone.js')
+    const seen: Request[] = []
+    const fallback = html()
+    const response = await worker.fetch(
+      request,
+      env((received) => {
+        seen.push(received)
+        return fallback
+      }),
+    )
+    expect(seen).toEqual([request])
+    expect(response).toBe(fallback)
   })
 
   it('leaves deep links, join, demo and public pages to the SPA fallback', async () => {

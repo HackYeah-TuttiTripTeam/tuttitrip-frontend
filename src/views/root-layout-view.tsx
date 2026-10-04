@@ -53,7 +53,7 @@ export function RootLayoutView() {
   const online = useOnline()
   const banner = (
     <>
-      {!online && <OfflineBanner />}
+      <OfflineBanner offline={!online} />
       {demo === 'active' && <DemoBanner />}
     </>
   )

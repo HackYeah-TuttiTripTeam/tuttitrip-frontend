@@ -731,5 +731,5 @@
   "trips_filter_city_all": "All cities",
   "trips_filter_start_from": "Starts from",
   "trips_filter_start_to": "Starts until",
-  "shell_offline_text": "No connection. You see what has already loaded; you can save changes once you are back online."
+  "shell_offline_text": "No connection. You can see what has already loaded; changes can be saved once you're back online."
 }

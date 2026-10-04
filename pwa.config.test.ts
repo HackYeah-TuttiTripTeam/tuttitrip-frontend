@@ -41,6 +41,13 @@ describe('workboxOptions', () => {
     expect(workboxOptions(true).globPatterns?.length).toBeGreaterThan(0)
   })
 
+  it('gives the unhashed fonts and photos a content revision, hashed assets none', () => {
+    const pattern = workboxOptions(true).dontCacheBustURLsMatching
+    expect(pattern?.test('assets/index-AbC123.js')).toBe(true)
+    expect(pattern?.test('assets/fonts/x.woff2')).toBe(false)
+    expect(pattern?.test('assets/photos/x.avif')).toBe(false)
+  })
+
   it('precaches scripts, styles and fonts, but not photos, in production', () => {
     const patterns = workboxOptions(true).globPatterns?.join() ?? ''
     for (const ext of ['js', 'css', 'woff2']) expect(patterns).toContain(ext)

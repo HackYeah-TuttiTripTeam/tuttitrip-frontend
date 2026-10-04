@@ -5,10 +5,14 @@ import { useScenario } from '@/mocks/node'
 import { renderApp } from '@/mocks/render-app'
 import { m } from '@/paraglide/messages'
 
-function goOffline(offline: boolean) {
-  vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(!offline)
+function mockOnline(online: boolean) {
+  vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(online)
+}
+
+function setOnline(online: boolean) {
+  mockOnline(online)
   act(() => {
-    window.dispatchEvent(new Event(offline ? 'offline' : 'online'))
+    window.dispatchEvent(new Event(online ? 'online' : 'offline'))
   })
 }
 
@@ -24,10 +28,17 @@ describe('offline banner', () => {
     await screen.findByText(m.trips_offline_title())
     expect(screen.queryByText(m.shell_offline_text())).toBeNull()
 
-    goOffline(true)
+    setOnline(false)
     expect(screen.getByText(m.shell_offline_text()).closest('[role="status"]')).not.toBeNull()
 
-    goOffline(false)
+    setOnline(true)
     expect(screen.queryByText(m.shell_offline_text())).toBeNull()
+  })
+
+  it('shows the message when the app starts offline', async () => {
+    useScenario('offline')
+    mockOnline(false)
+    renderApp('/trips')
+    expect(await screen.findByText(m.shell_offline_text())).toBeTruthy()
   })
 })
