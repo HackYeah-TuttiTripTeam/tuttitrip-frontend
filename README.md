@@ -37,50 +37,50 @@ Zrzuty działającego frontendu z gałęzi `develop`, uruchomionego przez `pnpm 
     <td width="50%">
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="docs/readme/desktop-pl-dark-05-wywiad-karty.webp">
-        <img src="docs/readme/desktop-pl-light-05-wywiad-karty.webp" alt="Wywiad po pierwszym zdaniu: odpowiedź asystenta, karta budżetu i panel „Co już wiem” z oznaczeniem „ustalił asystent”.">
+        <img width="100%" src="docs/readme/desktop-pl-light-05-wywiad-karty.webp" alt="Wywiad po pierwszym zdaniu: odpowiedź asystenta, karta budżetu i panel „Co już wiem” z oznaczeniem „ustalił asystent”.">
       </picture>
       <br><sub>Wywiad AG-UI: karta budżetu i panel „Co już wiem”.</sub>
     </td>
     <td width="50%">
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="docs/readme/desktop-pl-dark-08-plan.webp">
-        <img src="docs/readme/desktop-pl-light-08-plan.webp" alt="Plan dnia w Warszawie z godzinami, kosztem planu, noclegiem i znacznikami „Cena zweryfikowana” ze źródłem.">
+        <img width="100%" src="docs/readme/desktop-pl-light-08-plan.webp" alt="Plan dnia w Warszawie z godzinami, kosztem planu, noclegiem i znacznikami „Cena zweryfikowana” ze źródłem.">
       </picture>
       <br><sub>Plan ze skrótem wersji, kosztem dla grupy i znacznikami weryfikacji cen i godzin.</sub>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <img src="docs/readme/desktop-pl-light-09-plan-zgoda-budzet.webp" alt="Plan z prośbą o zgodę na przekroczenie budżetu.">
+      <img width="100%" src="docs/readme/desktop-pl-light-09-plan-zgoda-budzet.webp" alt="Plan z prośbą o zgodę na przekroczenie budżetu.">
       <br><sub>Zgoda na przekroczenie budżetu, zanim plan zostanie zapisany.</sub>
     </td>
     <td width="50%">
-      <img src="docs/readme/desktop-pl-light-03-utworz-glosowo.webp" alt="Zakładanie nowego wyjazdu głosem.">
+      <img width="100%" src="docs/readme/desktop-pl-light-03-utworz-glosowo.webp" alt="Zakładanie nowego wyjazdu głosem.">
       <br><sub>Nowy wyjazd zakładany głosem.</sub>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <img src="docs/readme/desktop-pl-light-10-wydatki.webp" alt="Lista wydatków wyjazdu z kwotami i osobami, które płaciły.">
+      <img width="100%" src="docs/readme/desktop-pl-light-10-wydatki.webp" alt="Lista wydatków wyjazdu z kwotami i osobami, które płaciły.">
       <br><sub>Wydatki wyjazdu.</sub>
     </td>
     <td width="50%">
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="docs/readme/desktop-pl-dark-11-rozliczenie.webp">
-        <img src="docs/readme/desktop-pl-light-11-rozliczenie.webp" alt="Rozliczenie wyjazdu: saldo każdej osoby i lista przelewów.">
+        <img width="100%" src="docs/readme/desktop-pl-light-11-rozliczenie.webp" alt="Rozliczenie wyjazdu: saldo każdej osoby i lista przelewów.">
       </picture>
       <br><sub>Rozliczenie: saldo każdej osoby i najmniejsza liczba przelewów.</sub>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <img src="docs/readme/desktop-pl-light-07-czlonkowie.webp" alt="Członkowie wyjazdu z rolami i statusem udziału.">
+      <img width="100%" src="docs/readme/desktop-pl-light-07-czlonkowie.webp" alt="Członkowie wyjazdu z rolami i statusem udziału.">
       <br><sub>Członkowie z rolami i statusem udziału.</sub>
     </td>
     <td width="50%">
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="docs/readme/desktop-pl-dark-12-glosowanie-z-linku.webp">
-        <img src="docs/readme/desktop-pl-light-12-glosowanie-z-linku.webp" alt="Strona głosowania dla osoby bez konta, otwarta z linku, z ocenami miejsc i wetem.">
+        <img width="100%" src="docs/readme/desktop-pl-light-12-glosowanie-z-linku.webp" alt="Strona głosowania dla osoby bez konta, otwarta z linku, z ocenami miejsc i wetem.">
       </picture>
       <br><sub>Strona `/glos`: głosowanie z linku bez konta, z wetem.</sub>
     </td>
@@ -91,10 +91,10 @@ Ta sama aplikacja na telefonie:
 
 <table>
   <tr>
-    <td width="25%"><img src="docs/readme/telefon-pl-light-05-wywiad-karty.webp" alt="Wywiad na telefonie."></td>
-    <td width="25%"><img src="docs/readme/telefon-pl-light-08-plan.webp" alt="Plan na telefonie."></td>
-    <td width="25%"><img src="docs/readme/telefon-pl-light-11-rozliczenie.webp" alt="Rozliczenie na telefonie."></td>
-    <td width="25%"><img src="docs/readme/telefon-pl-light-12-glosowanie-z-linku.webp" alt="Głosowanie z linku na telefonie."></td>
+    <td width="25%"><img width="100%" src="docs/readme/telefon-pl-light-05-wywiad-karty.webp" alt="Wywiad na telefonie."></td>
+    <td width="25%"><img width="100%" src="docs/readme/telefon-pl-light-08-plan.webp" alt="Plan na telefonie."></td>
+    <td width="25%"><img width="100%" src="docs/readme/telefon-pl-light-11-rozliczenie.webp" alt="Rozliczenie na telefonie."></td>
+    <td width="25%"><img width="100%" src="docs/readme/telefon-pl-light-12-glosowanie-z-linku.webp" alt="Głosowanie z linku na telefonie."></td>
   </tr>
 </table>
 
