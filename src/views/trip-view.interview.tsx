@@ -387,6 +387,7 @@ function InterviewWorkspace({
             key={`${lines.length}:${interview.card.kind}:${interview.card.question}`}
             card={interview.card}
             disabled={interview.running}
+            citySearch={citySearch}
             onAnswer={(answer) => void interview.answerCard(answer)}
           />
         )}

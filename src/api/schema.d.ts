@@ -2310,6 +2310,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/interview/voice/{call_id}/card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Voice Card
+         * @description The card of a live call, for the client to show next to the captions.
+         *
+         *     A voice call has no AG-UI stream, so the client polls this while the call
+         *     runs (the panel is polled the same way). The kind and options are the ones
+         *     the server fixed, not the model's.
+         *
+         *     Args:
+         *         call_id: The id from the offer's answer.
+         *         membership: The caller's membership (co-host or above).
+         *
+         *     Returns:
+         *         The card the assistant last showed, or null.
+         *
+         *     Wymagane uprawnienie: `interview:READ`.
+         */
+        get: operations["voice_card_api_v1_trips__trip_id__interview_voice__call_id__card_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/interview/voice/release": {
         parameters: {
             query?: never;
@@ -4291,7 +4324,7 @@ export interface components {
          * @description UI card the web client renders for a question (the cards of plan.md).
          * @enum {string}
          */
-        CardKind: "family_builder" | "slider" | "requirement_toggles" | "swipe" | "dot_pool" | "budget_range" | "choice" | "confirm";
+        CardKind: "family_builder" | "slider" | "requirement_toggles" | "swipe" | "dot_pool" | "budget_range" | "choice" | "confirm" | "city" | "date_range";
         /**
          * CheckinRead
          * @description One check-in as the trip's members see it.
@@ -9127,6 +9160,14 @@ export interface components {
             call_id: string;
         };
         /**
+         * VoiceCardRead
+         * @description The card of a live call; a call has no stream, so the client polls for it.
+         */
+        VoiceCardRead: {
+            /** @description The card the assistant put on screen last, with the kind and options the server fixed; null before the first one. */
+            card?: components["schemas"]["ShownCard"] | null;
+        };
+        /**
          * VoiceOffer
          * @description The browser's WebRTC offer.
          */
@@ -13530,6 +13571,59 @@ export interface operations {
                 content?: never;
             };
             /** @description No such call on this trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    voice_card_api_v1_trips__trip_id__interview_voice__call_id__card_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceCardRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `interview:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such live call on this trip. */
             404: {
                 headers: {
                     [name: string]: unknown;

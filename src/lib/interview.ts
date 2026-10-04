@@ -12,6 +12,8 @@ export const CARD_KINDS = [
   'requirement_toggles',
   'swipe',
   'budget_range',
+  'city',
+  'date_range',
 ] as const
 
 export type CardKind = (typeof CARD_KINDS)[number]
@@ -47,7 +49,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const isCardKind = (value: unknown): value is CardKind => CARD_KINDS.some((kind) => kind === value)
 
-function parseCard(raw: unknown): InterviewCard | null {
+/** Reads a card of the shared state or of `GET .../voice/{call_id}/card`; anything else is no card. */
+export function parseCard(raw: unknown): InterviewCard | null {
   if (!isRecord(raw) || !isCardKind(raw.kind) || typeof raw.question !== 'string') return null
   const options = Array.isArray(raw.options)
     ? raw.options.filter((option): option is string => typeof option === 'string')
