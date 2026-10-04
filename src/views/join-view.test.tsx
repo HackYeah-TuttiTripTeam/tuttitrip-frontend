@@ -5,7 +5,7 @@ import { HttpResponse, http } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 import type { Session } from '@/hooks/use-session'
 import { clearJoinToken, peekJoinToken, stashJoinToken } from '@/lib/invite-link'
-import { MOCK_USER_NAME, TRIP_ID } from '@/mocks/fixtures'
+import { MOCK_USER_NAME, PROFILE_IDS, TRIP_ID } from '@/mocks/fixtures'
 import { server, useScenario } from '@/mocks/node'
 import { renderApp } from '@/mocks/render-app'
 import { m } from '@/paraglide/messages'
@@ -168,6 +168,195 @@ describe('JoinView, signed in', () => {
     openInvite('')
     expect(await screen.findByText(m.join_missing_title())).toBeTruthy()
     expect(seen).toHaveLength(0)
+  })
+})
+
+describe('JoinView, claiming a profile', () => {
+  const optionOf = (name: string) => screen.findByRole('radio', { name: new RegExp(name) })
+  const submitButton = () =>
+    screen.getByRole('button', { name: m.join_submit() }) as HTMLButtonElement
+
+  it('offers the profiles, then claims the chosen one without sending a name', async () => {
+    useScenario('join-claimable')
+    session.current = sessionOf()
+    const seen = recordRequests()
+    const { router } = openInvite()
+    const user = userEvent.setup()
+
+    expect(await screen.findByText(m.join_claim_legend())).toBeTruthy()
+    // Nothing is chosen yet: no name field, and the button says why it is off.
+    expect(submitButton().disabled).toBe(true)
+    expect(submitButton().getAttribute('aria-describedby')).toBe('join-submit-hint')
+    expect(document.getElementById('join-submit-hint')?.textContent).toBe(m.join_claim_choose())
+    expect(screen.queryByLabelText(m.join_name_label())).toBeNull()
+
+    await user.click(await optionOf('Zosia'))
+    expect(screen.getByRole('radio', { name: /Zosia/ }).getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByRole('radio', { name: /Antek/ }).getAttribute('aria-checked')).toBe('false')
+    expect(submitButton().disabled).toBe(false)
+    await user.click(submitButton())
+
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/trips/${TRIP_ID}`))
+    expect(bodyOf(seen, '/invitations/accept')).toEqual({
+      token: TOKEN,
+      profile_id: PROFILE_IDS.zosia,
+    })
+    expect(everywhere()).not.toContain(TOKEN)
+  })
+
+  it('names the group and works from the keyboard', async () => {
+    useScenario('join-claimable')
+    session.current = sessionOf()
+    openInvite()
+    const user = userEvent.setup()
+
+    const group = await screen.findByRole('radiogroup', { name: m.join_claim_legend() })
+    expect(group.getAttribute('aria-describedby')).toBe('join-claim-hint')
+    expect(document.getElementById('join-claim-hint')?.textContent).toBe(m.join_claim_hint())
+
+    await user.tab()
+    // Header links come first; tab on until the group has focus.
+    for (let i = 0; i < 20 && !group.contains(document.activeElement); i++) await user.tab()
+    expect(group.contains(document.activeElement)).toBe(true)
+    const checked = (name: RegExp | string) =>
+      screen.getByRole('radio', { name }).getAttribute('aria-checked')
+    await user.keyboard('[Space]')
+    await waitFor(() => expect(checked(/Zosia/)).toBe('true'))
+    // Arrows move focus along the group; Space picks the focused radio.
+    const focused = () => document.activeElement?.getAttribute('aria-checked') !== undefined
+    await user.keyboard('{ArrowDown}')
+    expect(focused()).toBe(true)
+    expect(document.activeElement).toBe(screen.getByRole('radio', { name: /Antek/ }))
+    await user.keyboard('[Space]')
+    await waitFor(() => expect(checked(/Antek/)).toBe('true'))
+    await user.keyboard('{ArrowDown}[Space]')
+    await waitFor(() => expect(checked(m.join_claim_new())).toBe('true'))
+    expect(await screen.findByLabelText(m.join_name_label())).toBeTruthy()
+    await user.keyboard('{ArrowUp}{ArrowUp}[Space]')
+    await waitFor(() => expect(checked(/Zosia/)).toBe('true'))
+    expect(checked(/Antek/)).toBe('false')
+  })
+
+  it('"none of these" asks for a name and joins as a new person', async () => {
+    useScenario('join-claimable')
+    session.current = sessionOf()
+    const seen = recordRequests()
+    const { router } = openInvite()
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByRole('radio', { name: m.join_claim_new() }))
+    const name = await screen.findByLabelText(m.join_name_label())
+    await user.clear(name)
+    await user.type(name, 'Ola')
+    await user.click(submitButton())
+
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/trips/${TRIP_ID}`))
+    expect(bodyOf(seen, '/invitations/accept')).toEqual({ token: TOKEN, display_name: 'Ola' })
+  })
+
+  it('shows no step when nobody can be claimed', async () => {
+    session.current = sessionOf()
+    openInvite()
+    await screen.findByLabelText(m.join_name_label())
+    expect(screen.queryByText(m.join_claim_legend())).toBeNull()
+  })
+
+  it('shows no step to someone who is on the trip already, even if profiles are listed', async () => {
+    session.current = sessionOf()
+    const seen = recordRequests()
+    server.use(
+      http.post('*/api/v1/invitations/preview', () =>
+        HttpResponse.json({
+          trip_name: 'Warszawa z rodziną',
+          destination: null,
+          already_member: true,
+          claimable_profiles: [
+            { profile_id: PROFILE_IDS.zosia, display_name: 'Zosia', age_group: 'child' },
+          ],
+          named_profile_id: null,
+        }),
+      ),
+    )
+    const user = userEvent.setup()
+    openInvite()
+
+    expect(await screen.findByText(m.join_already_member())).toBeTruthy()
+    expect(screen.queryByRole('radio')).toBeNull()
+    expect(screen.queryByLabelText(m.join_name_label())).toBeNull()
+    await user.click(screen.getByRole('button', { name: m.join_open() }))
+    await waitFor(() => expect(bodyOf(seen, '/invitations/accept')).toBeTruthy())
+    expect(bodyOf(seen, '/invitations/accept')).toEqual({ token: TOKEN, display_name: null })
+  })
+
+  it('explains a lost race and lets the user choose again from the refreshed list', async () => {
+    useScenario('join-claim-taken')
+    session.current = sessionOf()
+    const seen = recordRequests()
+    const user = userEvent.setup()
+    openInvite()
+
+    await user.click(await optionOf('Zosia'))
+    await user.click(submitButton())
+
+    expect((await screen.findByRole('alert')).textContent).toBe(m.join_claim_taken())
+    // The list was loaded again: the lost profile is gone, the other one stays, nothing is chosen.
+    await waitFor(() => expect(screen.queryByRole('radio', { name: /Zosia/ })).toBeNull())
+    expect(screen.getByRole('radio', { name: /Antek/ })).toBeTruthy()
+    expect(seen.filter((call) => call.path.endsWith('/invitations/preview'))).toHaveLength(2)
+    expect(submitButton().disabled).toBe(true)
+    expect(everywhere()).not.toContain(TOKEN)
+  })
+
+  it('a named invitation says whom it is for and joins with that profile, no choice and no name', async () => {
+    useScenario('join-named')
+    session.current = sessionOf()
+    const seen = recordRequests()
+    const { router } = openInvite()
+    const user = userEvent.setup()
+
+    expect(await screen.findByText(m.join_claim_named({ name: 'Zosia' }))).toBeTruthy()
+    expect(screen.queryByRole('radio')).toBeNull()
+    expect(screen.queryByLabelText(m.join_name_label())).toBeNull()
+    expect(submitButton().disabled).toBe(false)
+    await user.click(submitButton())
+
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/trips/${TRIP_ID}`))
+    expect(bodyOf(seen, '/invitations/accept')).toEqual({
+      token: TOKEN,
+      profile_id: PROFILE_IDS.zosia,
+    })
+  })
+
+  it('a named invitation whose profile is gone says so and offers no way to continue', async () => {
+    useScenario('join-named-taken')
+    session.current = sessionOf()
+    const user = userEvent.setup()
+    openInvite()
+
+    await user.click(await screen.findByRole('button', { name: m.join_submit() }))
+    // The 409 gets its own message, not the "someone took it, choose again" one.
+    expect((await screen.findByText(m.join_claim_named_failed())).getAttribute('role')).toBe(
+      'alert',
+    )
+    expect(screen.queryByText(m.join_claim_taken())).toBeNull()
+    expect(await screen.findByText(m.join_claim_named_unavailable())).toBeTruthy()
+    expect(screen.queryByRole('button', { name: m.join_submit() })).toBeNull()
+  })
+
+  it('a 409 on a named invitation uses the named message', async () => {
+    useScenario('join-named')
+    session.current = sessionOf()
+    server.use(
+      http.post('*/api/v1/invitations/accept', () =>
+        HttpResponse.json({ detail: 'Invitation is for another profile' }, { status: 409 }),
+      ),
+    )
+    const user = userEvent.setup()
+    openInvite()
+
+    await user.click(await screen.findByRole('button', { name: m.join_submit() }))
+    expect(await screen.findByText(m.join_claim_named_failed())).toBeTruthy()
+    expect(screen.queryByText(m.join_claim_taken())).toBeNull()
   })
 })
 

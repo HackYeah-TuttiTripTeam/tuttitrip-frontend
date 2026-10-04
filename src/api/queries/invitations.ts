@@ -4,6 +4,7 @@ import { $api, fetchClient, type Schemas } from '@/api/client'
 export type Invitation = Schemas['InvitationRead']
 export type InvitationCreated = Schemas['InvitationCreated']
 export type InvitationPreview = Schemas['InvitationPreview']
+export type ClaimableProfile = Schemas['ClaimableProfile']
 export type JoinResult = Schemas['JoinResult']
 
 export const invitationsQueryOptions = (tripId: string) =>

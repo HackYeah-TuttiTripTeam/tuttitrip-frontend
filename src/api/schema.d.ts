@@ -409,6 +409,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Auth0 Users
+         * @description Search Auth0 accounts (e-mail, name, provider, last login, blocked).
+         *
+         *     Auth0 search reaches only the first 1000 matches; narrow with `q`.
+         *
+         *     Args:
+         *         query: Page, sort and filters.
+         *         client: Management API client.
+         *
+         *     Returns:
+         *         One page of accounts.
+         *
+         *     Raises:
+         *         HTTPException: 503 when unconfigured, 502 when Auth0 fails.
+         *
+         *     Wymagane uprawnienie: `admin.users:READ`.
+         */
+        get: operations["list_auth0_users_api_v1_admin_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/ping": {
         parameters: {
             query?: never;
@@ -893,6 +927,117 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/vote-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Vote Links
+         * @description List the trip's voting links without secrets, newest first by default.
+         *
+         *     Args:
+         *         membership: The caller's (co-host) membership of ``{trip_id}``.
+         *         session: Database session.
+         *         query: Page, sort and filters (person, state).
+         *
+         *     Returns:
+         *         One page of links.
+         *
+         *     Wymagane uprawnienie: `trips.vote_links:READ`.
+         */
+        get: operations["list_vote_links_api_v1_trips__trip_id__vote_links_get"];
+        put?: never;
+        /**
+         * Create Vote Link
+         * @description Create the voting link of a person without an account (co-host or host).
+         *
+         *     The person has one working link: a new one revokes the previous. The token
+         *     is visible only in this response; build the QR code from `url`.
+         *
+         *     Args:
+         *         data: Person and lifetime.
+         *         membership: The caller's (co-host) membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The link and its token.
+         *
+         *     Wymagane uprawnienie: `trips.vote_links:WRITE`.
+         */
+        post: operations["create_vote_link_api_v1_trips__trip_id__vote_links_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/vote-links/{link_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Vote Link
+         * @description Revoke a voting link (idempotent); the votes already cast stay.
+         *
+         *     Args:
+         *         link_id: Link id from creation or the list.
+         *         membership: The caller's (co-host) membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The link with `revoked_at`.
+         *
+         *     Wymagane uprawnienie: `trips.vote_links:WRITE`.
+         */
+        delete: operations["revoke_vote_link_api_v1_trips__trip_id__vote_links__link_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/vote-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Vote Summary
+         * @description Per place: who is for, who is against and why, and who vetoed.
+         *
+         *     Each entry says where the vote came from: `app` (the person themselves),
+         *     `link` (a voting link) or `host` (a co-host acting on their behalf). Only
+         *     places somebody voted on or vetoed are listed. Counts are unweighted.
+         *
+         *     Args:
+         *         membership: The caller's (co-host) membership of ``{trip_id}``.
+         *         session: Database session.
+         *         query: Page, sort and filters (veto, source).
+         *
+         *     Returns:
+         *         One page of places, most vetoed first by default.
+         *
+         *     Wymagane uprawnienie: `trips.vote_links:READ`.
+         */
+        get: operations["read_vote_summary_api_v1_trips__trip_id__vote_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/profiles": {
         parameters: {
             query?: never;
@@ -1304,6 +1449,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/interview/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Session
+         * @description Start the trip's interview, or resume the open one.
+         *
+         *     The session id is the AG-UI `threadId`. A second call returns the same
+         *     session with 200; the first creates it with 201.
+         *
+         *     Args:
+         *         membership: The caller's membership (co-host or above).
+         *         session: Database session.
+         *         response: To set 200 when the session already existed.
+         *
+         *     Returns:
+         *         The open session.
+         *
+         *     Wymagane uprawnienie: `interview:WRITE`.
+         */
+        post: operations["start_session_api_v1_trips__trip_id__interview_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/interview/sessions/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Current Session
+         * @description Read the open session with a page of the conversation to display.
+         *
+         *     Only the questions and answers are listed; tool calls stay in the history.
+         *     Use `dir=desc` to get the newest messages first (chat UI). 409 when the
+         *     stored history cannot be read any more.
+         *
+         *     Args:
+         *         membership: The caller's membership (co-host or above).
+         *         session: Database session.
+         *         query: Page, size, direction and speaker filter of the messages.
+         *
+         *     Returns:
+         *         The session and its messages.
+         *
+         *     Wymagane uprawnienie: `interview:READ`.
+         */
+        get: operations["get_current_session_api_v1_trips__trip_id__interview_sessions_current_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/interview/knowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Knowledge
+         * @description Read the "What we already know" panel: trip, people, budget, preferences.
+         *
+         *     Read from the trips and profiles services, so a value the host fixed
+         *     through their endpoints shows here at once. `sources` says whether the
+         *     assistant or the host set each value; `missing` is what is left to ask.
+         *
+         *     Args:
+         *         membership: The caller's membership (co-host or above).
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The knowledge view.
+         *
+         *     Wymagane uprawnienie: `interview:READ`.
+         */
+        get: operations["get_knowledge_api_v1_trips__trip_id__interview_knowledge_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/planning/jobs": {
         parameters: {
             query?: never;
@@ -1427,7 +1672,7 @@ export interface paths {
          * @description Lint a plan.
          *
          *     Args:
-         *         request: Plan and budget.
+         *         request: Plan and context.
          *
          *     Returns:
          *         All violations.
@@ -1815,6 +2060,47 @@ export interface components {
             last_used_at: string | null;
         };
         /**
+         * AccessTokenSort
+         * @description Sort keys of a trip's token list.
+         * @enum {string}
+         */
+        AccessTokenSort: "created_at" | "expires_at" | "last_used_at";
+        /**
+         * AccessTokenState
+         * @description Whether a token still works.
+         * @enum {string}
+         */
+        AccessTokenState: "active" | "expired" | "revoked";
+        /**
+         * AdminUserRead
+         * @description One Auth0 account, reduced to what an administrator needs.
+         */
+        AdminUserRead: {
+            /**
+             * Sub
+             * @description Auth0 user id, the `sub` of the user's tokens.
+             */
+            sub: string;
+            /** Email */
+            email?: string | null;
+            /** Name */
+            name?: string | null;
+            /**
+             * Provider
+             * @description Login provider, e.g. google-oauth2, discord, auth0.
+             */
+            provider?: string | null;
+            /** Last Login */
+            last_login?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /**
+             * Blocked
+             * @default false
+             */
+            blocked: boolean;
+        };
+        /**
          * AgeGroup
          * @description Age group that drives default constraints (distance, naps, pace).
          * @enum {string}
@@ -2038,6 +2324,25 @@ export interface components {
             level: components["schemas"]["Access"];
         };
         /**
+         * DisplayMessage
+         * @description One message of the conversation as the host sees it.
+         *
+         *     Tool calls, tool results and system prompts are stored in the history but
+         *     never shown.
+         */
+        DisplayMessage: {
+            /**
+             * Position
+             * @description Order in the whole conversation, stable across filters.
+             */
+            position: number;
+            role: components["schemas"]["MessageRole"];
+            /** Text */
+            text: string;
+            /** Timestamp */
+            timestamp?: string | null;
+        };
+        /**
          * DocumentCreate
          * @description Text pasted by the host (stored as typed, deleted with the trip).
          */
@@ -2177,7 +2482,7 @@ export interface components {
          * @description A node of the feature tree. The value is its dotted code.
          * @enum {string}
          */
-        Feature: "*" | "accounts" | "accounts.profile" | "admin" | "admin.permissions" | "admin.users" | "admin.planning_weights" | "trips" | "trips.core" | "trips.members" | "trips.invitations" | "profiles" | "profiles.core" | "profiles.preferences" | "profiles.feedback" | "interview" | "planning" | "planning.proposals" | "planning.plans" | "planning.fairness" | "planning.linter" | "accommodation" | "search" | "expenses" | "expenses.core" | "expenses.settlement" | "jobs" | "places" | "places.catalog";
+        Feature: "*" | "accounts" | "accounts.profile" | "admin" | "admin.permissions" | "admin.users" | "admin.planning_weights" | "trips" | "trips.core" | "trips.members" | "trips.invitations" | "trips.vote_links" | "profiles" | "profiles.core" | "profiles.preferences" | "profiles.feedback" | "interview" | "planning" | "planning.proposals" | "planning.plans" | "planning.fairness" | "planning.linter" | "accommodation" | "search" | "expenses" | "expenses.core" | "expenses.settlement" | "jobs" | "places" | "places.catalog" | "mcp";
         /**
          * FeatureGrant
          * @description ``level`` on ``feature`` and everything below it.
@@ -2196,6 +2501,58 @@ export interface components {
             description: string;
             /** Children */
             children?: components["schemas"]["FeatureNode"][];
+        };
+        /**
+         * FieldRef
+         * @description Points at one value: a trip field, or a person's profile or preferences.
+         */
+        FieldRef: {
+            field: components["schemas"]["KnowledgeField"];
+            /**
+             * Profile Id
+             * @description Set for `people` and `preferences` of one person. For `people` it is empty only in `missing`: the group needs more members.
+             */
+            profile_id?: string | null;
+        };
+        /**
+         * FieldSource
+         * @description A filled value with the party that set it.
+         */
+        FieldSource: {
+            field: components["schemas"]["KnowledgeField"];
+            /**
+             * Profile Id
+             * @description Set for `people` and `preferences` of one person. For `people` it is empty only in `missing`: the group needs more members.
+             */
+            profile_id?: string | null;
+            source: components["schemas"]["ValueSource"];
+        };
+        /**
+         * Finding
+         * @description One violation or warning of a rule, with its position in the plan.
+         */
+        Finding: {
+            /** Rule */
+            rule: string;
+            severity: components["schemas"]["Severity"];
+            /** Message */
+            message: string;
+            /** Day */
+            day?: string | null;
+            /**
+             * Position
+             * @description Index of the stop in the day as sent.
+             */
+            position?: number | null;
+            /** Place Name */
+            place_name?: string | null;
+            /**
+             * Person Id
+             * @description Set when one person is to blame.
+             */
+            person_id?: string | null;
+            /** Person Name */
+            person_name?: string | null;
         };
         /**
          * FloorMiss
@@ -2285,6 +2642,45 @@ export interface components {
             pace: number;
             /** Cost */
             cost: number;
+        };
+        /**
+         * InterviewSessionRead
+         * @description A session with one page of its conversation.
+         */
+        InterviewSessionRead: {
+            /**
+             * Id
+             * Format: uuid
+             * @description The AG-UI `threadId` of this interview.
+             */
+            id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            status: components["schemas"]["SessionStatus"];
+            /**
+             * Created By
+             * @description Auth0 subject of the host who started it.
+             */
+            created_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Message Count
+             * @description Messages the host can see (their questions and answers).
+             */
+            message_count: number;
+            messages: components["schemas"]["Page_DisplayMessage_"];
         };
         /**
          * InvitationAccept
@@ -2393,6 +2789,11 @@ export interface components {
              * @description People on the trip without an account that you may take over: id, name and age group only. For a named invitation only its profile. Empty when you are on the trip already.
              */
             claimable_profiles: components["schemas"]["ClaimableProfile"][];
+            /**
+             * Named Profile Id
+             * @description The profile this invitation is made for, or null for an open invitation. Set also when that profile is no longer free (`claimable_profiles` is then empty) and when you are on the trip already.
+             */
+            named_profile_id: string | null;
         };
         /**
          * InvitationRead
@@ -2460,9 +2861,9 @@ export interface components {
          *     CANCELLED or MAX_RECOVERY_ATTEMPTS_EXCEEDED. Contract-version rejections
          *     by the worker show up as ERROR with the worker's message in ``error``.
          *     ``error_code`` is the worker's machine code (``invalid_payload``,
-         *     ``unsupported_contract_version`` or ``not_implemented``); a job that fails
-         *     with ``not_implemented`` is not retried and ``error`` says it is not
-         *     available yet.
+         *     ``unsupported_contract_version``, ``not_implemented``, ``document_not_found``,
+         *     ``model_output_invalid``, ``city_not_found`` or ``rate_limited``); such a job
+         *     is not retried by the backend and ``error`` carries a readable message.
          */
         JobState: {
             /** Workflow Id */
@@ -2481,7 +2882,7 @@ export interface components {
             error?: string | null;
             /**
              * Error Code
-             * @description Machine code of a worker error: `unsupported_contract_version`, `invalid_payload` or `not_implemented` (not retried). Clients branch on this, never on the text of `error`.
+             * @description Machine code of a worker error: `unsupported_contract_version`, `invalid_payload`, `not_implemented`, `document_not_found`, `model_output_invalid`, `city_not_found` or `rate_limited`. Clients branch on this, never on the text of `error`.
              */
             error_code?: string | null;
             progress?: components["schemas"]["Progress"] | null;
@@ -2516,22 +2917,224 @@ export interface components {
             profile_claimed: boolean;
         };
         /**
+         * KnowledgeField
+         * @description A thing the assistant wants to know about the trip.
+         * @enum {string}
+         */
+        KnowledgeField: "destination" | "dates" | "budget" | "people" | "preferences";
+        /**
+         * KnowledgeRead
+         * @description The "What we already know" panel: the trip data read from `trips` and `profiles`.
+         *
+         *     This is not a copy. The host fixes values through the trips and profiles
+         *     endpoints; this view always shows what they store now.
+         */
+        KnowledgeRead: {
+            /** @description Destination, dates, day window and budget. */
+            trip: components["schemas"]["TripRead"];
+            /** People */
+            people: components["schemas"]["ProfileRead"][];
+            /**
+             * Preferences
+             * @description One entry per person.
+             */
+            preferences: components["schemas"]["PreferencesRead"][];
+            /**
+             * Missing
+             * @description What the assistant still has to ask.
+             */
+            missing: components["schemas"]["FieldRef"][];
+            /**
+             * Sources
+             * @description Who set each filled value; a value the host changed is `host`.
+             */
+            sources: components["schemas"]["FieldSource"][];
+        };
+        /**
+         * LintContext
+         * @description What the rules compare a plan with.
+         */
+        LintContext: {
+            /**
+             * Places
+             * @description Catalog places the plan may use.
+             */
+            places: components["schemas"]["PlaceRead"][];
+            /**
+             * People
+             * @description Participants; person rules need them.
+             */
+            people?: components["schemas"]["LintPerson"][];
+            /** @description Lunch window; null disables the lunch check. */
+            lunch?: components["schemas"]["LintLunch"] | null;
+            /**
+             * Timezone
+             * @description IANA zone of the city; hours are local.
+             */
+            timezone: string;
+            /**
+             * Budget
+             * @description B_do.
+             */
+            budget: number | string;
+            /**
+             * Flex Pct
+             * @description Margin of B_max.
+             * @default 0
+             */
+            flex_pct: number;
+        };
+        /**
+         * LintDay
+         * @description The stops of one local date.
+         */
+        LintDay: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Items */
+            items: components["schemas"]["LintItem"][];
+        };
+        /**
+         * LintItem
+         * @description One stop of a day: a catalog place or an unrecognised name.
+         */
+        LintItem: {
+            /** Name */
+            name: string;
+            /**
+             * Place Id
+             * @description Null when the stop was not recognised.
+             */
+            place_id?: string | null;
+            /**
+             * Start
+             * Format: time
+             * @description Local arrival time.
+             */
+            start: string;
+            /**
+             * End
+             * @description Local end; null means start + the typical visit.
+             */
+            end?: string | null;
+            /**
+             * Cost
+             * @description Total for the group, as in the plan.
+             * @default 0
+             */
+            cost: number | string;
+            /**
+             * Price Verified
+             * @description False inflates the cost by delta (E6). Pasted plans: true.
+             * @default true
+             */
+            price_verified: boolean;
+        };
+        /**
+         * LintLunch
+         * @description Lunch the group needs: a free gap that starts in ``[earliest, latest]``.
+         */
+        LintLunch: {
+            /**
+             * Earliest
+             * Format: time
+             */
+            earliest: string;
+            /**
+             * Latest
+             * Format: time
+             */
+            latest: string;
+            /** Minutes */
+            minutes: number;
+        };
+        /**
+         * LintPerson
+         * @description One participant as the person rules see them (profile plus preferences).
+         *
+         *     Everybody takes part in every stop (docs/algorytm.md, section 9).
+         */
+        LintPerson: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Segment Km
+             * @description s_i: longest walk in one go.
+             */
+            segment_km: number;
+            /**
+             * Daily Km
+             * @description D_i: daily walking distance.
+             */
+            daily_km: number;
+            /**
+             * Nap Start
+             * @description Local start of the nap.
+             */
+            nap_start?: string | null;
+            /**
+             * Nap Minutes
+             * @default 0
+             */
+            nap_minutes: number;
+            /**
+             * Stairs Sensitivity
+             * @description Effective sensitivity: 1 with the stairs or wheelchair limit.
+             * @default 0
+             */
+            stairs_sensitivity: number;
+            /**
+             * Wheelchair
+             * @default false
+             */
+            wheelchair: boolean;
+        };
+        /**
+         * LintPlan
+         * @description A plan to check: days with stops, as typed or pasted.
+         */
+        LintPlan: {
+            /** Days */
+            days: components["schemas"]["LintDay"][];
+        };
+        /**
          * LintReport
-         * @description All violations found in a plan.
+         * @description Every rule in a fixed order, the weighted score and a stable digest.
          */
         LintReport: {
-            /** Violations */
-            violations: components["schemas"]["Violation"][];
+            /** Results */
+            results: components["schemas"]["RuleResult"][];
+            /**
+             * Count
+             * @description Violations of all rules.
+             */
+            count: number;
+            /**
+             * Score
+             * @description Sum of weight * count; 0 means a clean plan.
+             */
+            score: number;
+            /**
+             * Digest
+             * @description First 12 hex of the SHA-256 of the results.
+             */
+            digest: string;
         };
         /**
          * LintRequest
-         * @description A plan to check plus the group budget.
+         * @description A plan and its context.
          */
         LintRequest: {
-            /** Items */
-            items: components["schemas"]["PlanItem"][];
-            /** Budget */
-            budget: number | string;
+            plan: components["schemas"]["LintPlan"];
+            context: components["schemas"]["LintContext"];
         };
         /**
          * LiveResponse
@@ -2614,6 +3217,18 @@ export interface components {
             role: "member" | "co_host";
         };
         /**
+         * MessageRole
+         * @description Who said a displayed message.
+         * @enum {string}
+         */
+        MessageRole: "user" | "assistant";
+        /**
+         * MessageSort
+         * @description Sort keys of the displayed messages.
+         * @enum {string}
+         */
+        MessageSort: "position";
+        /**
          * MinTag
          * @description A tag the person wants at least once, e.g. food ``indian``.
          *
@@ -2685,10 +3300,86 @@ export interface components {
          * @enum {string}
          */
         OsmType: "node" | "way" | "relation";
+        /** Page[AdminUserRead] */
+        Page_AdminUserRead_: {
+            /** Items */
+            items: components["schemas"]["AdminUserRead"][];
+            /**
+             * Total
+             * @description Rows matching the filters.
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /**
+             * Pages
+             * @description Pages in total; 0 when empty.
+             */
+            pages: number;
+        };
+        /** Page[DisplayMessage] */
+        Page_DisplayMessage_: {
+            /** Items */
+            items: components["schemas"]["DisplayMessage"][];
+            /**
+             * Total
+             * @description Rows matching the filters.
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /**
+             * Pages
+             * @description Pages in total; 0 when empty.
+             */
+            pages: number;
+        };
+        /** Page[PlaceVoteSummary] */
+        Page_PlaceVoteSummary_: {
+            /** Items */
+            items: components["schemas"]["PlaceVoteSummary"][];
+            /**
+             * Total
+             * @description Rows matching the filters.
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /**
+             * Pages
+             * @description Pages in total; 0 when empty.
+             */
+            pages: number;
+        };
         /** Page[SearchOpeningRead] */
         Page_SearchOpeningRead_: {
             /** Items */
             items: components["schemas"]["SearchOpeningRead"][];
+            /**
+             * Total
+             * @description Rows matching the filters.
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /**
+             * Pages
+             * @description Pages in total; 0 when empty.
+             */
+            pages: number;
+        };
+        /** Page[VoteLinkRead] */
+        Page_VoteLinkRead_: {
+            /** Items */
+            items: components["schemas"]["VoteLinkRead"][];
             /**
              * Total
              * @description Rows matching the filters.
@@ -2783,6 +3474,51 @@ export interface components {
              * @default 1
              */
             weight: number;
+        };
+        /**
+         * PersonVeto
+         * @description One person's active veto of a place.
+         */
+        PersonVeto: {
+            /**
+             * Veto Id
+             * Format: uuid
+             */
+            veto_id: string;
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Display Name */
+            display_name: string;
+            source: components["schemas"]["VoteSource"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * PersonVote
+         * @description One person's rating of a place.
+         */
+        PersonVote: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Display Name */
+            display_name: string;
+            value: components["schemas"]["RatingValue"];
+            reason_code: components["schemas"]["ReasonCode"] | null;
+            source: components["schemas"]["VoteSource"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /**
          * PlaceCategory
@@ -2948,6 +3684,37 @@ export interface components {
          */
         PlaceTag: "history" | "architecture" | "art" | "museums" | "science" | "religion" | "music" | "nature" | "parks" | "views" | "beaches" | "sport" | "adventure" | "family" | "kids" | "nightlife" | "shopping" | "markets" | "local_food" | "street_food" | "relaxation" | "animals" | "playground" | "water" | "cycling" | "wellness";
         /**
+         * PlaceVoteSummary
+         * @description What the group said about one place.
+         */
+        PlaceVoteSummary: {
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            /** Place Name */
+            place_name: string;
+            /** Want */
+            want: number;
+            /** Dont Want */
+            dont_want: number;
+            /** Neutral */
+            neutral: number;
+            /** Veto Count */
+            veto_count: number;
+            /**
+             * Votes
+             * @description Ratings with the people behind them.
+             */
+            votes: components["schemas"]["PersonVote"][];
+            /**
+             * Vetoes
+             * @description Active vetoes with the people behind them.
+             */
+            vetoes: components["schemas"]["PersonVeto"][];
+        };
+        /**
          * PlanBudget
          * @description Plan cost against the budget and the approval (E6); money in ``currency``.
          */
@@ -3096,19 +3863,6 @@ export interface components {
             min_r: number;
             /** Per Person */
             per_person: components["schemas"]["PersonFairness"][];
-        };
-        /**
-         * PlanItem
-         * @description One stop in a plan.
-         */
-        PlanItem: {
-            /** Name */
-            name: string;
-            /**
-             * Cost
-             * @default 0
-             */
-            cost: number | string;
         };
         /**
          * PlanJobRequest
@@ -3724,6 +4478,22 @@ export interface components {
             grants: components["schemas"]["FeatureGrant"][];
         };
         /**
+         * RuleResult
+         * @description The outcome of one rule; present even with zero violations.
+         */
+        RuleResult: {
+            /** Rule */
+            rule: string;
+            /** Weight */
+            weight: number;
+            /** Count */
+            count: number;
+            /** Violations */
+            violations: components["schemas"]["Finding"][];
+            /** Warnings */
+            warnings: components["schemas"]["Finding"][];
+        };
+        /**
          * SearchLinkParam
          * @description One query parameter of a search link.
          */
@@ -3831,6 +4601,56 @@ export interface components {
              */
             opened_at: string;
         };
+        /**
+         * SessionRead
+         * @description An interview session of one trip.
+         */
+        SessionRead: {
+            /**
+             * Id
+             * Format: uuid
+             * @description The AG-UI `threadId` of this interview.
+             */
+            id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            status: components["schemas"]["SessionStatus"];
+            /**
+             * Created By
+             * @description Auth0 subject of the host who started it.
+             */
+            created_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Message Count
+             * @description Messages the host can see (their questions and answers).
+             */
+            message_count: number;
+        };
+        /**
+         * SessionStatus
+         * @description State of an interview session.
+         * @enum {string}
+         */
+        SessionStatus: "open";
+        /**
+         * Severity
+         * @description A violation counts in the score; a warning only informs.
+         * @enum {string}
+         */
+        Severity: "violation" | "warning";
         /**
          * SortDir
          * @description Sort direction.
@@ -4131,6 +4951,12 @@ export interface components {
                 [key: string]: components["schemas"]["Access"];
             };
         };
+        /**
+         * UserSort
+         * @description Sortable fields (the ones Auth0 user search v3 can sort by).
+         * @enum {string}
+         */
+        UserSort: "created_at" | "last_login" | "email";
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -4144,6 +4970,12 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /**
+         * ValueSource
+         * @description Who set the value that is stored now.
+         * @enum {string}
+         */
+        ValueSource: "assistant" | "host";
         /**
          * VerdictKind
          * @description Verdict on one candidate place (HackYeah-TuttiTripTeam/tuttitrip-backend#51).
@@ -4206,14 +5038,104 @@ export interface components {
             revoked_by_sub: string | null;
         };
         /**
-         * Violation
-         * @description A single broken rule.
+         * VoteLinkCreate
+         * @description Payload for a new voting link.
          */
-        Violation: {
-            /** Rule */
-            rule: string;
-            /** Message */
-            message: string;
+        VoteLinkCreate: {
+            /**
+             * Profile Id
+             * Format: uuid
+             * @description Person without an account the link is for (on this trip).
+             */
+            profile_id: string;
+            /**
+             * Expires In Days
+             * @description Days until the link stops working.
+             * @default 14
+             */
+            expires_in_days: number;
+        };
+        /**
+         * VoteLinkCreated
+         * @description Response of creation: the only time the token is shown.
+         */
+        VoteLinkCreated: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /**
+             * Profile Name
+             * @description Display name of the person; null if the profile is gone.
+             */
+            profile_name: string | null;
+            state: components["schemas"]["AccessTokenState"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Last Used At */
+            last_used_at: string | null;
+            /**
+             * Token
+             * @description The secret. Shown once and not recoverable. Never put it in a path or query: it only travels in the `#t=` fragment of `url` and, from the voting page, in the `X-Access-Token` header.
+             */
+            token: string;
+            /**
+             * Url
+             * @description `/glos#t=<token>`: prefix it with the frontend origin to get the link (and the QR code). The fragment is never sent to a server.
+             */
+            url: string;
+        };
+        /**
+         * VoteLinkRead
+         * @description A stored voting link (the token itself is never stored).
+         */
+        VoteLinkRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /**
+             * Profile Name
+             * @description Display name of the person; null if the profile is gone.
+             */
+            profile_name: string | null;
+            state: components["schemas"]["AccessTokenState"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Last Used At */
+            last_used_at: string | null;
         };
         /**
          * VoteReason
@@ -4227,6 +5149,18 @@ export interface components {
             profile_id: string;
             reason_code?: components["schemas"]["ReasonCode"] | null;
         };
+        /**
+         * VoteSource
+         * @description Where a vote came from.
+         * @enum {string}
+         */
+        VoteSource: "app" | "link" | "host";
+        /**
+         * VoteSummarySort
+         * @description Sort keys of the vote summary.
+         * @enum {string}
+         */
+        VoteSummarySort: "name" | "want" | "dont_want" | "veto";
         /**
          * Weekday
          * @description Day of the week, as a key of the weekly opening hours.
@@ -4916,6 +5850,75 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    list_auth0_users_api_v1_admin_users_get: {
+        parameters: {
+            query?: {
+                /** @description Text found in the e-mail or name (case-insensitive). */
+                q?: string | null;
+                /** @description Only blocked (true) or active (false). */
+                blocked?: boolean | null;
+                /** @description Page number, from 1. */
+                page?: number;
+                /** @description Items per page (max 100). */
+                size?: number;
+                /** @description Sort direction. */
+                dir?: components["schemas"]["SortDir"];
+                sort?: components["schemas"]["UserSort"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_AdminUserRead_"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.users:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Auth0 did not answer correctly. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Management API credentials are not configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -5733,6 +6736,234 @@ export interface operations {
             };
         };
     };
+    list_vote_links_api_v1_trips__trip_id__vote_links_get: {
+        parameters: {
+            query?: {
+                /** @description Only this profile's. */
+                profile_id?: string | null;
+                /** @description Only active, expired or revoked tokens. */
+                state?: components["schemas"]["AccessTokenState"] | null;
+                /** @description Page number, from 1. */
+                page?: number;
+                /** @description Items per page (max 100). */
+                size?: number;
+                dir?: components["schemas"]["SortDir"];
+                sort?: components["schemas"]["AccessTokenSort"];
+            };
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_VoteLinkRead_"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.vote_links:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_vote_link_api_v1_trips__trip_id__vote_links_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoteLinkCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoteLinkCreated"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.vote_links:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `profile_id` is not a profile of this trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The person has an account (they log in to vote), or has too many working tokens. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_vote_link_api_v1_trips__trip_id__vote_links__link_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoteLinkRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.vote_links:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such voting link on this trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_vote_summary_api_v1_trips__trip_id__vote_summary_get: {
+        parameters: {
+            query?: {
+                /** @description Only places with (or without) an active veto. */
+                has_veto?: boolean | null;
+                /** @description Only places with a vote or veto from this source. */
+                source?: components["schemas"]["VoteSource"] | null;
+                /** @description Page number, from 1. */
+                page?: number;
+                /** @description Items per page (max 100). */
+                size?: number;
+                dir?: components["schemas"]["SortDir"];
+                sort?: components["schemas"]["VoteSummarySort"];
+            };
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_PlaceVoteSummary_"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.vote_links:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_profiles_api_v1_trips__trip_id__profiles_get: {
         parameters: {
             query?: never;
@@ -6471,6 +7702,160 @@ export interface operations {
                 content?: never;
             };
             /** @description Brak uprawnienia `profiles.preferences:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_session_api_v1_trips__trip_id__interview_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionRead"];
+                };
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `interview:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_current_session_api_v1_trips__trip_id__interview_sessions_current_get: {
+        parameters: {
+            query?: {
+                /** @description Only this speaker. */
+                role?: components["schemas"]["MessageRole"] | null;
+                /** @description Page number, from 1. */
+                page?: number;
+                /** @description Items per page (max 100). */
+                size?: number;
+                /** @description Sort direction. */
+                dir?: components["schemas"]["SortDir"];
+                sort?: components["schemas"]["MessageSort"];
+            };
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewSessionRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `interview:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_knowledge_api_v1_trips__trip_id__interview_knowledge_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `interview:READ` */
             403: {
                 headers: {
                     [name: string]: unknown;

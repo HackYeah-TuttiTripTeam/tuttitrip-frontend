@@ -1,18 +1,16 @@
 import { Pen } from '@keyline-icons/react'
-import type { AgeGroup } from '@/api/queries/profiles'
 import { Button } from '@/components/ui/button'
 import { formatNumber, formatTime, lowerCase } from '@/lib/format'
-import { COMFORT_FIELDS, type ComfortField, hasAccount, type Person, shortTime } from '@/lib/people'
+import {
+  COMFORT_FIELDS,
+  type ComfortField,
+  GROUP_LABELS,
+  hasAccount,
+  type Person,
+  shortTime,
+} from '@/lib/people'
 import { m } from '@/paraglide/messages'
 import { PersonAvatar } from './person-avatar'
-
-export const GROUP_LABELS: Record<AgeGroup, () => string> = {
-  toddler: m.people_group_toddler,
-  child: m.people_group_child,
-  teen: m.people_group_teen,
-  adult: m.people_group_adult,
-  senior: m.people_group_senior,
-}
 
 export const ROLE_LABELS = {
   host: m.trip_role_host,

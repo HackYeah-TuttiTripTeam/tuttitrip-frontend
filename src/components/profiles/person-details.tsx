@@ -1,14 +1,14 @@
 import { ArrowLeft } from '@keyline-icons/react'
 import type { Diet, Preferences } from '@/api/queries/preferences'
 import { Button } from '@/components/ui/button'
-import { hasAccount, type Person, type SaveResult } from '@/lib/people'
+import { GROUP_LABELS, hasAccount, type Person, type SaveResult } from '@/lib/people'
 import type { ConstraintsValues } from '@/lib/preferences'
 import { m } from '@/paraglide/messages'
 import { ConstraintsForm, ConstraintsSummary } from './constraints-form'
 import { DietPicker } from './diet-picker'
 import { InterestsPicker } from './interests-picker'
 import { PersonAvatar } from './person-avatar'
-import { GROUP_LABELS, ROLE_LABELS } from './person-row'
+import { ROLE_LABELS } from './person-row'
 
 interface PersonDetailsProps {
   person: Person

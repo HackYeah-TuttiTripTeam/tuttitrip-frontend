@@ -185,6 +185,36 @@ describe('join scenarios', () => {
     expect(await statusOf(accept)).toBe(404)
   })
 
+  it('join-claimable offers the profiles without an account and accepts a claim', async () => {
+    useScenario('join-claimable')
+    const { data } = await preview()
+    expect(data?.claimable_profiles.map((p) => p.display_name)).toEqual(['Zosia', 'Antek'])
+    const claimed = await fetchClient.POST('/api/v1/invitations/accept', {
+      body: { token: 't', profile_id: PROFILE_IDS.zosia },
+    })
+    expect(claimed.data).toMatchObject({ profile_id: PROFILE_IDS.zosia, profile_claimed: true })
+  })
+
+  it('join-claim-taken answers 409 for the lost profile and drops it from the list', async () => {
+    useScenario('join-claim-taken')
+    const claim = () =>
+      fetchClient.POST('/api/v1/invitations/accept', {
+        body: { token: 't', profile_id: PROFILE_IDS.zosia },
+      })
+    expect(await statusOf(claim)).toBe(409)
+    expect((await preview()).data?.claimable_profiles.map((p) => p.display_name)).toEqual(['Antek'])
+  })
+
+  it('join-named lists one profile and refuses any other with 409', async () => {
+    useScenario('join-named')
+    expect((await preview()).data?.claimable_profiles.map((p) => p.display_name)).toEqual(['Zosia'])
+    const other = () =>
+      fetchClient.POST('/api/v1/invitations/accept', {
+        body: { token: 't', profile_id: PROFILE_IDS.antek },
+      })
+    expect(await statusOf(other)).toBe(409)
+  })
+
   it('serves the invitation list, a token only on creation, and a revoke', async () => {
     const path = { params: { path: { trip_id: TRIP_ID } } }
     const list = await fetchClient.GET('/api/v1/trips/{trip_id}/invitations', path)
