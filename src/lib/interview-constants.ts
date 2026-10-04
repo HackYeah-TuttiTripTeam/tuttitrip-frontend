@@ -73,3 +73,7 @@ export const VOICE_MODE_KEY = 'tt.voice.mode'
 
 /** Keys that press the hold-to-talk button from the keyboard. */
 export const PTT_PRESS_KEYS = [' ', 'Spacebar']
+
+/** Size of the FFT window of the microphone level meter, and the silence value of a byte sample. */
+export const LEVEL_FFT_SIZE = 256
+export const LEVEL_MIDPOINT = 128

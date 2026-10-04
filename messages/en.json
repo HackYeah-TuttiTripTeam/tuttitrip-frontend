@@ -1332,10 +1332,8 @@
   "voice_mic_muted": "Microphone muted while the assistant answers",
   "voice_mic_muted_ptt": "Microphone off; it listens while you hold the button",
   "voice_mic_override": "Speak anyway",
-  "voice_ptt_toggle": "Hold a button to talk",
-  "voice_ptt_toggle_hint": "The microphone listens only while you hold the button. Letting go does not end the call.",
   "voice_ptt_button": "Hold to talk",
-  "voice_ptt_held": "Talking… let go to send",
+  "voice_ptt_held": "Talking…",
   "voice_elsewhere_voice": "A voice call is running on another device or in another tab.",
   "voice_elsewhere_text": "The assistant is still answering a message. Try again in a moment.",
   "voice_elsewhere_end": "End that call",
@@ -1768,5 +1766,10 @@
   "expense_error_currency_unsupported": "This currency is not supported. Choose another.",
   "expense_error_rate_not_found": "There is no exchange rate for that day (it may be a weekend or a holiday). Pick another date or the trip's currency.",
   "expense_error_rate_unavailable": "Could not fetch the exchange rate. Try again in a moment.",
-  "help_trip_expenses_title": "Guide: expenses"
+  "help_trip_expenses_title": "Guide: expenses",
+  "voice_ptt_hint": "Let go to send. The call goes on; the square ends it.",
+  "voice_ptt_level": "Your voice level",
+  "voice_advanced": "Advanced",
+  "voice_always_listen": "Always listen",
+  "voice_always_listen_hint": "The microphone listens all the time and picks up background sounds too. By default it listens only while the button is held."
 }
