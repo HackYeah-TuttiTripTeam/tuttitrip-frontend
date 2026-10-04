@@ -22,6 +22,7 @@ const filled = { ...EMPTY_TRIP_FORM, name: 'Majówka' }
 const trip = (over: Partial<Trip> = {}): Trip => ({
   id: 'x',
   name: 'Majówka',
+  is_sample: false,
   destination: null,
   created_at: '2026-10-01T10:00:00Z',
   start_date: null,

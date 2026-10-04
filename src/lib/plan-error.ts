@@ -1,7 +1,7 @@
 import { ApiError } from '@/api/errors'
 
 export type PlanFailure =
-  | { kind: 'catalog_missing'; jobId: string }
+  | { kind: 'catalog_missing'; jobId: string | null }
   | { kind: 'city_missing' }
   | { kind: 'forbidden' }
   | { kind: 'message'; text: string }
@@ -23,8 +23,8 @@ export function classifyPlanFailure(error: unknown): PlanFailure {
   if (!(error instanceof ApiError)) return { kind: 'generic' }
   if (error.status === 403) return { kind: 'forbidden' }
   const { code, message, jobId } = readDetail(error.detail)
-  if (error.status === 409 && code === 'catalog_missing' && jobId) {
-    return { kind: 'catalog_missing', jobId }
+  if (error.status === 409 && code === 'catalog_missing') {
+    return { kind: 'catalog_missing', jobId: jobId ?? null }
   }
   if (code === 'city_missing') return { kind: 'city_missing' }
   if (error.status === 422 && message) {

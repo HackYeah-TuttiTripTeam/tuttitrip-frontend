@@ -4,7 +4,12 @@ import { classifyPlanFailure } from './plan-error'
 
 describe('classifyPlanFailure', () => {
   it('knows the missing catalog and its job', () => {
-    const error = new ApiError(409, { code: 'catalog_missing', job_id: 'wf-1' })
+    const error = new ApiError(409, {
+      code: 'catalog_missing',
+      message: 'x',
+      city_slug: 'gdynia',
+      job_id: 'wf-1',
+    })
     expect(classifyPlanFailure(error)).toEqual({ kind: 'catalog_missing', jobId: 'wf-1' })
   })
 

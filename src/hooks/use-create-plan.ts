@@ -50,26 +50,36 @@ export function useCreatePlan(tripId: string) {
   const request = (body: PlanCreate | null) => ({ params: { path: { trip_id: tripId } }, body })
 
   // The city has no places yet: the API started a candidate fetch. Wait for the job, then retry.
-  const awaitCatalog = async (jobId: string, body: PlanCreate | null) => {
+  const awaitCatalog = async (jobId: string | null, body: PlanCreate | null) => {
     const started = Date.now()
     setFetching({ percent: null })
     while (alive.current && Date.now() - started < GIVE_UP_MS) {
       await new Promise((resolve) => setTimeout(resolve, POLL_MS))
-      const job = await queryClient
+      const status = await queryClient
         .fetchQuery({
-          ...$api.queryOptions('get', '/api/v1/jobs/{workflow_id}', {
-            params: { path: { workflow_id: jobId } },
+          ...$api.queryOptions('get', '/api/v1/trips/{trip_id}/places/candidates/status', {
+            params: { path: { trip_id: tripId }, query: { job_id: jobId } },
           }),
           staleTime: 0,
         })
         .catch(() => null)
       if (!alive.current) return
-      if (job?.status === 'SUCCESS') {
+      if (status?.state === 'ready') {
         setFetching(null)
         mutation.mutate(request(body))
         return
       }
-      if (job && (job.status === 'ERROR' || job.status === 'CANCELLED')) break
+      if (status?.state === 'failed') break
+      const job = jobId
+        ? await queryClient
+            .fetchQuery({
+              ...$api.queryOptions('get', '/api/v1/jobs/{workflow_id}', {
+                params: { path: { workflow_id: jobId } },
+              }),
+              staleTime: 0,
+            })
+            .catch(() => null)
+        : null
       if (job?.progress) setFetching({ percent: Math.round(job.progress.percent) })
     }
     if (alive.current) setFetching({ failed: true })

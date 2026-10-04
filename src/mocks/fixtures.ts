@@ -59,6 +59,7 @@ const PLACE_IDS = {
 export const trip = (overrides: Partial<Trip> = {}): Trip => ({
   id: TRIP_ID,
   name: 'Warszawa z rodziną',
+  is_sample: false,
   destination: 'Warszawa',
   created_at: '2026-10-01T10:00:00Z',
   start_date: '2026-10-10',

@@ -741,10 +741,15 @@ export interface paths {
          *     the trips still ahead (or without dates). `status=pending` finds the trips
          *     the caller was added to and has not confirmed yet.
          *
+         *     The first call of a new account also creates its sample trip ("Przykład: ...",
+         *     `is_sample`), in Polish or English by `Accept-Language`; it comes back in this
+         *     very list, the host can delete it and it is never created twice.
+         *
          *     Args:
          *         query: Paging, sort and filters.
          *         user: The authenticated caller.
          *         session: Database session.
+         *         accept_language: Language of the sample trip for a new account.
          *
          *     Returns:
          *         The page of trips.
@@ -2481,7 +2486,7 @@ export interface paths {
         put?: never;
         /**
          * Generate a plan with the fairness measure
-         * @description Runs the algorithm of `docs/algorytm.md` (one solo run per person, then the group plan) and stores a new version. The same input (trip, people, preferences, ratings, vetoes, catalog, `alpha`, preset) returns the latest version with 200 and the same `plan_hash`; an input that went back to an older state gets a new version. Any member may ask (a member's veto triggers the recompute): the input is read with a host-level view, so the result does not depend on who asks. `explain` is limited to the caller's own cards below the co-host role, because the effort of a person depends on their health limits; the ledger (`u`, `r`, domains) is visible to all. The examples show the response shape.
+         * @description Runs the algorithm of `docs/algorytm.md` (one solo run per person, then the group plan) and stores a new version. The same input (trip, people, preferences, ratings, vetoes, catalog, `alpha`, preset) returns the latest version with 200 and the same `plan_hash`; an input that went back to an older state gets a new version. Any member may ask (a member's veto triggers the recompute): the input is read with a host-level view, so the result does not depend on who asks. `explain` is limited to the caller's own cards below the co-host role, because the effort of a person depends on their health limits; the ledger (`u`, `r`, domains) is visible to all. A new version asks the worker for the justifications of the verdicts; they carry a template until the model text is ready. A city without places answers 409 `catalog_missing` with the job that fetches candidates. The examples show the response shape.
          *
          *     Wymagane uprawnienie: `planning.plans:WRITE`.
          */
@@ -2527,8 +2532,10 @@ export interface paths {
          *
          *     Args:
          *         session: Database session.
+         *         queue: Job queue (justifications).
          *         membership: The caller's membership of ``{trip_id}``.
          *         plan_id: Version id.
+         *         locale: Language of the justifications.
          *
          *     Returns:
          *         The version.
@@ -2563,6 +2570,28 @@ export interface paths {
         get: operations["get_plan_calendar_api_v1_trips__trip_id__plans__plan_id__calendar_ics_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/plans/{plan_id}/replan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replan the rest of a day (rain), from a moment on
+         * @description Extension outside v1.0: replaces the rest of a day with the best plan under rain (`u_ip` times `0.3 + 0.7 * [indoor]`), by the same goal `J` and the same hard rules, penalising the number of changes and the shift of kept visits. Stops that started before `as_of` stay. Nothing is stored. A co-host's or host's replan is `active`; a member's that touches other people is `pending_host`. Weather is not fetched: rain is a person's decision.
+         *
+         *     Wymagane uprawnienie: `planning.plans:WRITE`.
+         */
+        post: operations["replan_day_api_v1_trips__trip_id__plans__plan_id__replan_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2903,6 +2932,94 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/linter/plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lint a version of our plan
+         * @description Synchronous, no worker: the stored version goes through every rule. `count` is the number of violations, each rule appears with its count (zeros too). The solver's plan of the demo family has 0.
+         *
+         *     Wymagane uprawnienie: `planning.linter:READ`.
+         */
+        post: operations["lint_plan_api_v1_trips__trip_id__linter_plans__plan_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/linter/pastes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a plan pasted from another tool
+         * @description Stores the text, then queues the worker's parse. 202 with the `paste_id` to poll. A missing worker answers 503 and the text stays stored.
+         *
+         *     Wymagane uprawnienie: `planning.linter:WRITE`.
+         */
+        post: operations["create_paste_api_v1_trips__trip_id__linter_pastes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/linter/pastes/{paste_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Report of a pasted plan
+         * @description `pending` while the worker parses; then `done` with the number of violations, every rule with its count and the items that were not recognised, or `failed` with the worker's `error_code`. The report is stored at the first read after the job and stays the same until a pick.
+         *
+         *     Wymagane uprawnienie: `planning.linter:READ`.
+         */
+        get: operations["get_paste_api_v1_trips__trip_id__linter_pastes__paste_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/linter/pastes/{paste_id}/items/{index}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Pick the catalog place of an unsure item
+         * @description The host chooses one of the item's `candidates`; the report is recomputed with that place checked by every rule.
+         *
+         *     Wymagane uprawnienie: `planning.linter:WRITE`.
+         */
+        patch: operations["pick_item_api_v1_trips__trip_id__linter_pastes__paste_id__items__index__patch"];
         trace?: never;
     };
     "/api/v1/trips/{trip_id}/accommodation/requirements": {
@@ -3810,6 +3927,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/places/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fetch candidate places for the trip's city
+         * @description Asks the worker to fetch places of the trip's city from OpenStreetMap into the catalog. 202 with the job to poll; asking again for the same city returns the same job. A city that already has places (the demo cities) answers 200 with `state: ready` and starts nothing. 422 when the trip has no city; 503 while the worker is missing. Candidates have few hours and prices, so their plan items stay unverified.
+         *
+         *     Wymagane uprawnienie: `places.candidates:WRITE`.
+         */
+        post: operations["request_candidates_api_v1_trips__trip_id__places_candidates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/places/candidates/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * State of the candidate fetch and size of the city's catalog
+         * @description Catalog size and, with `job_id`, the state of the job.
+         *
+         *     Args:
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *         queue: Job queue.
+         *         job_id: The job to report on.
+         *
+         *     Returns:
+         *         The status.
+         *
+         *     Raises:
+         *         HTTPException: 422 for a job of another city, 503 when the queue is down.
+         *
+         *     Wymagane uprawnienie: `places.catalog:READ`.
+         */
+        get: operations["candidates_status_api_v1_trips__trip_id__places_candidates_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/places/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import a Google Maps list (Takeout CSV)
+         * @description Multipart form: `file` is the CSV of a saved list from Google Takeout (`Saved/<list>.csv`, at most 500 places and 1 MB), `profile_id` is the person whose list it is. Titles are matched to the catalog of the trip's city by name; matched places become `want` for that person (a vote they already cast stays). Unmatched places come back with a reason. No Google Places data is used.
+         *
+         *     Wymagane uprawnienie: `profiles.feedback:WRITE`.
+         */
+        post: operations["import_takeout_api_v1_trips__trip_id__places_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4070,6 +4265,20 @@ export interface components {
              */
             amount: string;
         };
+        /** Body_import_takeout_api_v1_trips__trip_id__places_import_post */
+        Body_import_takeout_api_v1_trips__trip_id__places_import_post: {
+            /**
+             * File
+             * @description The Takeout CSV.
+             */
+            file: string;
+            /**
+             * Profile Id
+             * Format: uuid
+             * @description Whose list it is.
+             */
+            profile_id: string;
+        };
         /** Body_upload_photo_api_v1_trips__trip_id__photos_post */
         Body_upload_photo_api_v1_trips__trip_id__photos_post: {
             /**
@@ -4319,6 +4528,47 @@ export interface components {
          * @enum {string}
          */
         BudgetZone: "below_b_from" | "up_to_b_to" | "in_margin";
+        /**
+         * CandidatesRequest
+         * @description Optional name for a city the catalog does not know yet.
+         */
+        CandidatesRequest: {
+            /**
+             * City Query
+             * @description City name for the geocoder, e.g. `Gdańsk, Polska`. Needed only for a city that was never fetched; it must give the trip's `city_slug` (lowercase, no diacritics, `-` between words). Omitted: the slug's words.
+             */
+            city_query?: string | null;
+        };
+        /**
+         * CandidatesState
+         * @description Where the catalog of the trip's city stands.
+         * @enum {string}
+         */
+        CandidatesState: "ready" | "running" | "failed" | "empty";
+        /**
+         * CandidatesStatus
+         * @description The catalog of the trip's city and the state of its fetch.
+         */
+        CandidatesStatus: {
+            /** City Slug */
+            city_slug: string;
+            /**
+             * Place Count
+             * @description Places in the catalog of the city.
+             */
+            place_count: number;
+            /** @description `ready`: the city has places (the demo cities never need a job). `running`: the job is queued or running. `failed`: it ended with `error_code`. `empty`: no places and no job. */
+            state: components["schemas"]["CandidatesState"];
+            /** Job Id */
+            job_id?: string | null;
+            /**
+             * Error Code
+             * @description Worker code: `city_not_found`, `rate_limited`...
+             */
+            error_code?: string | null;
+            /** Error */
+            error?: string | null;
+        };
         /**
          * CardKind
          * @description UI card the web client renders for a question (the cards of plan.md).
@@ -4881,6 +5131,24 @@ export interface components {
          */
         ExampleVerdict: "like" | "dislike";
         /**
+         * ExceptionalNight
+         * @description A night spent in another base than the rest (backend#71, an extension).
+         */
+        ExceptionalNight: {
+            /**
+             * Night
+             * @description 1-based night.
+             */
+            night: number;
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            /** Name */
+            name: string;
+        };
+        /**
          * ExchangeRateRead
          * @description The rate an expense in a foreign currency was converted at (never changes).
          */
@@ -5201,11 +5469,27 @@ export interface components {
             score: number;
         };
         /**
+         * FamilyTicket
+         * @description A family ticket that is cheaper than the single tickets of the group.
+         */
+        FamilyTicket: {
+            /**
+             * Total
+             * @description The whole group's price with the family ticket.
+             */
+            total: string;
+            /**
+             * Singles Total
+             * @description What the same group pays with single tickets.
+             */
+            singles_total: string;
+        };
+        /**
          * Feature
          * @description A node of the feature tree. The value is its dotted code.
          * @enum {string}
          */
-        Feature: "*" | "accounts" | "accounts.profile" | "admin" | "admin.permissions" | "admin.users" | "admin.planning_weights" | "trips" | "trips.core" | "trips.members" | "trips.invitations" | "trips.vote_links" | "profiles" | "profiles.core" | "profiles.preferences" | "profiles.feedback" | "interview" | "planning" | "planning.proposals" | "planning.plans" | "planning.fairness" | "planning.linter" | "accommodation" | "search" | "expenses" | "expenses.core" | "expenses.settlement" | "jobs" | "places" | "places.catalog" | "mcp" | "notifications";
+        Feature: "*" | "accounts" | "accounts.profile" | "admin" | "admin.permissions" | "admin.users" | "admin.planning_weights" | "trips" | "trips.core" | "trips.members" | "trips.invitations" | "trips.vote_links" | "profiles" | "profiles.core" | "profiles.preferences" | "profiles.feedback" | "interview" | "planning" | "planning.proposals" | "planning.plans" | "planning.fairness" | "planning.linter" | "accommodation" | "search" | "expenses" | "expenses.core" | "expenses.settlement" | "jobs" | "places" | "places.catalog" | "places.candidates" | "mcp" | "notifications";
         /**
          * FeatureGrant
          * @description ``level`` on ``feature`` and everything below it.
@@ -5587,6 +5871,18 @@ export interface components {
              * @description Token read from the `#t=` fragment of the link.
              */
             token: string;
+        };
+        /**
+         * ItemPick
+         * @description The host's choice for an item the worker was unsure about.
+         */
+        ItemPick: {
+            /**
+             * Place Id
+             * Format: uuid
+             * @description One of the item's `candidates` (or its `suggested_place_id`).
+             */
+            place_id: string;
         };
         /**
          * JobAccepted
@@ -5975,6 +6271,22 @@ export interface components {
         MarkResult: {
             /** Updated */
             updated: number;
+        };
+        /**
+         * MatchCandidate
+         * @description A catalog place proposed for a pasted item (pure code ranks them).
+         */
+        MatchCandidate: {
+            /** Place Id */
+            place_id: string;
+            /** Name */
+            name: string;
+            /** Address */
+            address?: string | null;
+            /** Category */
+            category?: string | null;
+            /** Score */
+            score: number;
         };
         /**
          * MeResponse
@@ -6802,6 +7114,121 @@ export interface components {
             amount: string;
         };
         /**
+         * PasteAccepted
+         * @description The text is stored and the parse is queued.
+         */
+        PasteAccepted: {
+            /** Workflow Id */
+            workflow_id: string;
+            /**
+             * Paste Id
+             * Format: uuid
+             * @description Poll `GET .../linter/pastes/{paste_id}`.
+             */
+            paste_id: string;
+        };
+        /**
+         * PasteCheckRead
+         * @description The check of a pasted plan: state, items and, when done, the report.
+         */
+        PasteCheckRead: {
+            /**
+             * Paste Id
+             * Format: uuid
+             */
+            paste_id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            state: components["schemas"]["PasteState"];
+            /** Job Id */
+            job_id: string;
+            /**
+             * Error Code
+             * @description Worker code on failure.
+             */
+            error_code?: string | null;
+            /**
+             * Violations
+             * @description Violations of all rules (`report.count`); null until done.
+             */
+            violations: number | null;
+            /** @description Every rule with its count, also zeros; null until done. */
+            report: components["schemas"]["LintReport"] | null;
+            /** Items */
+            items?: components["schemas"]["PasteItemRead"][];
+            /**
+             * Unread
+             * @description Text the parser could not turn into items.
+             */
+            unread?: components["schemas"]["UnreadItem"][];
+        };
+        /**
+         * PasteCreate
+         * @description A plan pasted from another tool (stored as typed, deleted with the trip).
+         */
+        PasteCreate: {
+            /** Text */
+            text: string;
+            /**
+             * Provider
+             * @default openrouter
+             * @enum {string}
+             */
+            provider: "openrouter" | "local";
+        };
+        /**
+         * PasteItemRead
+         * @description One item read from the pasted text and the catalog place it was matched to.
+         */
+        PasteItemRead: {
+            /** Index */
+            index: number;
+            /**
+             * Day
+             * @description Day number in the text; null when absent.
+             */
+            day: number | null;
+            /** Place Name */
+            place_name: string;
+            /**
+             * Quote
+             * @description The verbatim words of the pasted text.
+             */
+            quote: string;
+            /**
+             * Status
+             * @description `matched` also after the host picked a candidate (`chosen_by_host`). Anything else counts as an unknown place in the report.
+             * @enum {string}
+             */
+            status: "matched" | "needs_confirmation" | "unrecognized";
+            /**
+             * Place Id
+             * @description The place the rules were applied to; null when none.
+             */
+            place_id: string | null;
+            /**
+             * Suggested Place Id
+             * @description The worker's unconfirmed pick of a `needs_confirmation` item.
+             */
+            suggested_place_id?: string | null;
+            /**
+             * Chosen By Host
+             * @default false
+             */
+            chosen_by_host: boolean;
+            /** Candidates */
+            candidates?: components["schemas"]["MatchCandidate"][];
+        };
+        /**
+         * PasteState
+         * @description Where the check of a pasted plan stands.
+         * @enum {string}
+         */
+        PasteState: "pending" | "done" | "failed";
+        /**
          * PaymentCreate
          * @description POST payload: a transfer (or a part of it) that has been paid.
          */
@@ -6968,6 +7395,19 @@ export interface components {
             own_place_days: number;
             /** @description The applicable domain with the lowest q; null if none applies. */
             weakest_domain: components["schemas"]["PlanDomainCode"] | null;
+        };
+        /**
+         * PersonPoints
+         * @description Points of one person.
+         */
+        PersonPoints: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Points */
+            points: number;
         };
         /**
          * PersonUtility
@@ -7201,9 +7641,9 @@ export interface components {
             queue_min: number;
             /**
              * Stairs
-             * @description Stairs burden, 0 to 1.
+             * @description Stairs burden, 0 to 1. Null when unknown (not the same as 0).
              */
-            stairs: number;
+            stairs: number | null;
             /** Wheelchair */
             wheelchair: boolean | null;
             /**
@@ -7340,6 +7780,27 @@ export interface components {
             approval_status: components["schemas"]["ApprovalStatus"];
         };
         /**
+         * PlanCatalogMissing
+         * @description 409: the trip's city has no places in the catalog, so no plan is computed.
+         */
+        PlanCatalogMissing: {
+            /**
+             * Code
+             * @default catalog_missing
+             * @constant
+             */
+            code: "catalog_missing";
+            /** Message */
+            message: string;
+            /** City Slug */
+            city_slug: string;
+            /**
+             * Job Id
+             * @description The fetch of candidates for the city, started or found; poll `GET /trips/{id}/places/candidates/status?job_id=...`. Null when no worker could take it (ask `POST /trips/{id}/places/candidates`).
+             */
+            job_id?: string | null;
+        };
+        /**
          * PlanConflict
          * @description A conflict between people or constraints; always with a reason code.
          */
@@ -7365,10 +7826,23 @@ export interface components {
              */
             alpha?: number | null;
             /**
+             * Exceptional Nights
+             * @description Extension (backend#71), outside v1.0: how many nights may be spent in another lodging than the base. 0 gives one base for all nights.
+             * @default 0
+             */
+            exceptional_nights: number;
+            /**
              * @description Recorded with the plan and part of its input hash, but it has no effect on the computation yet: the weights come from the profiles (`PUT /trips/{id}/profiles/weights`).
              * @default default
              */
             weight_preset: components["schemas"]["WeightPreset"];
+            /**
+             * Locale
+             * @description Language of the verdict justifications the worker writes for this version (read them with the same `locale`).
+             * @default pl
+             * @enum {string}
+             */
+            locale: "pl" | "en";
         };
         /**
          * PlanDay
@@ -7451,9 +7925,28 @@ export interface components {
         };
         /**
          * PlanLodging
-         * @description The lodging base (one for all nights).
+         * @description The lodging base (one for all nights, section 9; exceptional nights apart).
          */
         PlanLodging: {
+            /**
+             * Place Id
+             * @description Catalog place of the base; null if unknown.
+             */
+            place_id?: string | null;
+            /** @description Null for a plan without visits. */
+            search_area?: components["schemas"]["SearchArea"] | null;
+            /** Exceptional */
+            exceptional?: components["schemas"]["ExceptionalNight"][];
+            /**
+             * Extra Cost
+             * @description What the exceptional nights add to c(P).
+             */
+            extra_cost?: string | null;
+            /**
+             * Extra Points
+             * @description u_i with the exceptional nights minus without, per person.
+             */
+            extra_points?: components["schemas"]["PersonPoints"][];
             /** Name */
             name: string;
             /** Lat */
@@ -7554,6 +8047,13 @@ export interface components {
              */
             verdicts?: components["schemas"]["PlanVerdict"][] | null;
             budget: components["schemas"]["PlanBudget"];
+            /** @description Ticket costs for getting around, for information only. */
+            transit?: components["schemas"]["PlanTransit"] | null;
+            /**
+             * Transit Tickets
+             * @description The tickets by day (information; empty without a tariff).
+             */
+            transit_tickets?: components["schemas"]["TransitTicket"][];
             /**
              * Upgrades
              * @description Upgrades for a plan that costs less than B_od, best first; empty when there is no real one.
@@ -7625,6 +8125,13 @@ export interface components {
             /** Hours Verified At */
             hours_verified_at?: string | null;
             /**
+             * Price Lines
+             * @description Each person's price with the discount; null: no price data.
+             */
+            price_lines?: components["schemas"]["PriceLine"][] | null;
+            /** @description Set when a family ticket is cheaper than singles. */
+            family_ticket?: components["schemas"]["FamilyTicket"] | null;
+            /**
              * Google Place Id
              * @description For the Places UI Kit card; no Places data is returned.
              */
@@ -7651,6 +8158,35 @@ export interface components {
             solo_runs: number;
             /** Elapsed Ms */
             elapsed_ms: number;
+        };
+        /**
+         * PlanTransit
+         * @description What getting around costs: information, never part of `c(P)` or the budget.
+         *
+         *     Tickets are chosen per kind of passenger from the city's tariff (a single per
+         *     ride, a 24-hour ticket per day, 72-hour or weekly tickets over the span of
+         *     the rides). A city without a tariff has `total` null and `verified` false.
+         */
+        PlanTransit: {
+            /**
+             * Total
+             * @description Null when the tariff is unknown.
+             */
+            total: string | null;
+            /**
+             * Verified
+             * @description Every fare used comes from a source.
+             */
+            verified: boolean;
+            /** Source Url */
+            source_url?: string | null;
+            /**
+             * Rides Per Day
+             * @description Rides between the stops of each day (stops minus one).
+             */
+            rides_per_day: number[];
+            /** By Category */
+            by_category?: components["schemas"]["TransitCategoryTicket"][];
         };
         /**
          * PlanUpgrade
@@ -7727,10 +8263,16 @@ export interface components {
             /** Substitute Place Id */
             substitute_place_id?: string | null;
             /**
-             * Explanation
-             * @description Written later by a model.
+             * Justification
+             * @description Why this verdict, one or two sentences in the requested `locale`. A template from the verdict data until the worker's model text is ready.
              */
-            explanation?: string | null;
+            justification: string;
+            /**
+             * Justification Source
+             * @description `template`: written by code. `model`: written by the worker.
+             * @enum {string}
+             */
+            justification_source: "template" | "model";
         };
         /**
          * Platform
@@ -7824,6 +8366,29 @@ export interface components {
         };
         /** @enum {string} */
         PriceBasis: "budget_day_max" | "budget_total_max_per_night";
+        /**
+         * PriceDiscount
+         * @description Why one person pays what they pay: the discount their price carries.
+         * @enum {string}
+         */
+        PriceDiscount: "none" | "child" | "senior" | "student" | "free" | "family";
+        /**
+         * PriceLine
+         * @description One person's entry price at a stop (backend#54).
+         */
+        PriceLine: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /**
+             * Price
+             * @description After the unverified-price markup (delta).
+             */
+            price: string;
+            discount: components["schemas"]["PriceDiscount"];
+        };
         /**
          * PriceUnit
          * @description What a price is charged for: E6 multiplies ``night`` prices by the nights.
@@ -8246,6 +8811,96 @@ export interface components {
             detail: components["schemas"]["ReceiptValidationError"][];
         };
         /**
+         * ReplanChange
+         * @description One change in the rest of the day.
+         */
+        ReplanChange: {
+            kind: components["schemas"]["ReplanChangeKind"];
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Shift Min
+             * @description For `moved`: minutes later (+) or earlier (-).
+             */
+            shift_min?: number | null;
+        };
+        /**
+         * ReplanChangeKind
+         * @description What happened to a stop.
+         * @enum {string}
+         */
+        ReplanChangeKind: "removed" | "added" | "moved";
+        /**
+         * ReplanContext
+         * @description Why the rest of a day is replanned (backend#74; an extension).
+         * @enum {string}
+         */
+        ReplanContext: "rain";
+        /**
+         * ReplanRead
+         * @description The rest of a day, replanned. Nothing is stored; applying it is up to the client.
+         *
+         *     A host's replan is `active`; a member's replan that touches other people
+         *     waits for the host (`pending_host`). Extension outside v1.0.
+         */
+        ReplanRead: {
+            context: components["schemas"]["ReplanContext"];
+            /** Day */
+            day: number;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            status: components["schemas"]["ReplanStatus"];
+            /**
+             * Stops
+             * @description The whole day after the replan.
+             */
+            stops: components["schemas"]["PlanStop"][];
+            /** Changes */
+            changes: components["schemas"]["ReplanChange"][];
+            /**
+             * Affected
+             * @description People whose welfare changes by half a point or more.
+             */
+            affected: string[];
+            /** J Replan */
+            j_replan: number;
+            /** Elapsed Ms */
+            elapsed_ms: number;
+        };
+        /**
+         * ReplanRequest
+         * @description Replan the rest of a day, from a moment on.
+         */
+        ReplanRequest: {
+            /** @default rain */
+            context: components["schemas"]["ReplanContext"];
+            /**
+             * Day
+             * @description 1-based day of the plan.
+             */
+            day: number;
+            /**
+             * As Of
+             * Format: date-time
+             * @description The moment of the replan; stops that started before it stay.
+             */
+            as_of: string;
+        };
+        /**
+         * ReplanStatus
+         * @description Whether a replan is in force.
+         * @enum {string}
+         */
+        ReplanStatus: "active" | "pending_host";
+        /**
          * RequirementCheck
          * @description Result for one requirement: ``met`` and ``unmet`` come with a quote.
          *
@@ -8437,6 +9092,21 @@ export interface components {
             violations: components["schemas"]["Finding"][];
             /** Warnings */
             warnings: components["schemas"]["Finding"][];
+        };
+        /**
+         * SearchArea
+         * @description Where to look for lodging: the centre of the stay's attractions and a radius.
+         *
+         *     Computed from the chosen plan (the visit time ``tau_p`` weights the centre),
+         *     not part of ``J``; it feeds the search link and the map.
+         */
+        SearchArea: {
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Radius M */
+            radius_m: number;
         };
         /**
          * SearchLinkParam
@@ -8692,6 +9362,83 @@ export interface components {
             cost?: string | null;
         };
         /**
+         * TakeoutImportRead
+         * @description Result of an import: what matched and what did not.
+         */
+        TakeoutImportRead: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** City Slug */
+            city_slug: string;
+            /**
+             * Total
+             * @description Saved places in the file.
+             */
+            total: number;
+            /**
+             * Liked
+             * @description Places now rated `want` by the person.
+             */
+            liked: number;
+            /**
+             * Kept
+             * @description Matched places the person had already rated, unchanged.
+             */
+            kept: number;
+            /** Matched */
+            matched: components["schemas"]["TakeoutMatched"][];
+            /** Unmatched */
+            unmatched: components["schemas"]["TakeoutUnmatched"][];
+        };
+        /**
+         * TakeoutMatched
+         * @description A saved place found in the catalog.
+         */
+        TakeoutMatched: {
+            /**
+             * Line
+             * @description Line of the file (the header is line 1).
+             */
+            line: number;
+            /** Title */
+            title: string;
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            /** Place Name */
+            place_name: string;
+            /**
+             * Liked
+             * @description False when the person had already rated the place (kept).
+             */
+            liked: boolean;
+        };
+        /**
+         * TakeoutSkipReason
+         * @description Why a saved place was not imported; the client writes the text.
+         * @enum {string}
+         */
+        TakeoutSkipReason: "missing_title" | "duplicate" | "not_in_catalog" | "ambiguous";
+        /**
+         * TakeoutUnmatched
+         * @description A saved place that was not imported, with the reason.
+         */
+        TakeoutUnmatched: {
+            /**
+             * Line
+             * @description Line of the file (the header is line 1).
+             */
+            line: number;
+            /** Title */
+            title: string;
+            reason: components["schemas"]["TakeoutSkipReason"];
+        };
+        /**
          * TicketCategory
          * @description Who a ticket price is for.
          * @enum {string}
@@ -8765,6 +9512,64 @@ export interface components {
              */
             amount: string;
         };
+        /**
+         * TransitCategoryTicket
+         * @description What one kind of passenger buys for the rides of the trip.
+         */
+        TransitCategoryTicket: {
+            /**
+             * Category
+             * @description adult, child or senior (by age).
+             */
+            category: string;
+            /**
+             * Ticket Type
+             * @description single, 24h, 72h or weekly.
+             */
+            ticket_type: string;
+            /**
+             * Count
+             * @description Tickets per person.
+             */
+            count: number;
+            /** People */
+            people: number;
+            /**
+             * Cost
+             * @description For all people of the category.
+             */
+            cost: string;
+        };
+        /**
+         * TransitTicket
+         * @description A transport ticket bought on a day; information only, never in `c(P)`.
+         *
+         *     A ticket that covers several days (72 hours, a week) appears on the first
+         *     day it is used.
+         */
+        TransitTicket: {
+            /**
+             * Day
+             * @description 1-based day of the plan.
+             */
+            day: number;
+            ticket: components["schemas"]["TransitTicketKind"];
+            /**
+             * Cost
+             * @description For the whole group.
+             */
+            cost: string;
+            /** Verified */
+            verified: boolean;
+            /** Source Url */
+            source_url?: string | null;
+        };
+        /**
+         * TransitTicketKind
+         * @description A public transport ticket.
+         * @enum {string}
+         */
+        TransitTicketKind: "single" | "day" | "h72" | "week" | "family";
         /**
          * TripCreate
          * @description POST payload: a whole trip in one request.
@@ -8894,7 +9699,7 @@ export interface components {
              * @description The sample trip a new account gets (named `Przykład: ...`); the host can delete it like any trip.
              * @default false
              */
-            is_sample?: boolean;
+            is_sample: boolean;
             /**
              * Kind
              * @description ``outing`` for a single day without a stay, otherwise ``trip``.
@@ -9026,6 +9831,19 @@ export interface components {
         UnreadCount: {
             /** Count */
             count: number;
+        };
+        /**
+         * UnreadItem
+         * @description Text the parser could not turn into a valid item (no verbatim quote).
+         */
+        UnreadItem: {
+            /** Quote */
+            quote: string;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "quote_not_in_text" | "invalid_item";
         };
         /**
          * UpgradeKind
@@ -10647,7 +11465,9 @@ export interface operations {
                 dir?: components["schemas"]["SortDir"];
                 sort?: components["schemas"]["TripSort"];
             };
-            header?: never;
+            header?: {
+                "accept-language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -13888,6 +14708,15 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The trip's city has no places (`detail.code` is `catalog_missing`, `detail.job_id` the candidate fetch). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanCatalogMissing"];
+                };
+            };
             /** @description The trip lacks dates, a city or people. */
             422: {
                 headers: {
@@ -13899,7 +14728,10 @@ export interface operations {
     };
     get_latest_plan_api_v1_trips__trip_id__plans_latest_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Language of the verdict justifications. */
+                locale?: "pl" | "en";
+            };
             header?: never;
             path: {
                 trip_id: string;
@@ -13951,7 +14783,10 @@ export interface operations {
     };
     get_plan_api_v1_trips__trip_id__plans__plan_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Language of the verdict justifications. */
+                locale?: "pl" | "en";
+            };
             header?: never;
             path: {
                 plan_id: string;
@@ -14061,6 +14896,61 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    replan_day_api_v1_trips__trip_id__plans__plan_id__replan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplanRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The day is not in the plan, or the trip cannot be planned. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -14851,6 +15741,263 @@ export interface operations {
             };
             /** @description Empty text or longer than 20 000 characters. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    lint_plan_api_v1_trips__trip_id__linter_plans__plan_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LintReport"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.linter:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip or check not found, or the caller is not on the trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The trip's city has no places in the catalog. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The trip lacks dates, a city or people. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    create_paste_api_v1_trips__trip_id__linter_pastes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasteAccepted"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.linter:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip or check not found, or the caller is not on the trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Empty or too long text, or the trip has no city/dates. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The worker or the job queue is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_paste_api_v1_trips__trip_id__linter_pastes__paste_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The id returned by the 202. */
+                paste_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasteCheckRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.linter:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip or check not found, or the caller is not on the trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The trip's city has no places in the catalog. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The trip lacks dates, a city or people. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The worker or the job queue is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    pick_item_api_v1_trips__trip_id__linter_pastes__paste_id__items__index__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The id returned by the 202. */
+                paste_id: string;
+                /** @description Item index in the text. */
+                index: number;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ItemPick"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasteCheckRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.linter:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip or check not found, or the caller is not on the trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The text is not parsed yet, or the city has no places. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The place is not a candidate of the item. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The worker or the job queue is unavailable. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -16514,6 +17661,190 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    request_candidates_api_v1_trips__trip_id__places_candidates_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CandidatesRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description The city has places. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidatesStatus"];
+                };
+            };
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"] | components["schemas"]["CandidatesStatus"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `places.candidates:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The trip has no city, or `city_query` is for another. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The worker or the job queue is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    candidates_status_api_v1_trips__trip_id__places_candidates_status_get: {
+        parameters: {
+            query?: {
+                /** @description The job id from the 202 (or the 409). */
+                job_id?: string | null;
+            };
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidatesStatus"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `places.catalog:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No city, or a foreign job. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The worker or the job queue is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    import_takeout_api_v1_trips__trip_id__places_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_takeout_api_v1_trips__trip_id__places_import_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeoutImportRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.feedback:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip or profile not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a Takeout list, too big, or the trip has no city. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

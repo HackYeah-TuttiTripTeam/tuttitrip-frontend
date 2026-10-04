@@ -41,10 +41,7 @@ export interface TransitTicket {
   source_url?: string | null
 }
 
-export type PlanStop = Schemas['PlanStop'] & {
-  price_lines?: PriceLine[]
-  family_ticket?: FamilyTicket | null
-}
+export type PlanStop = Schemas['PlanStop']
 export type PlanDay = Omit<Schemas['PlanDay'], 'items'> & { items: PlanStop[] }
 export type Plan = Omit<Schemas['PlanRead'], 'days'> & {
   days: PlanDay[]
