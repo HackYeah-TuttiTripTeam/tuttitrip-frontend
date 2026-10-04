@@ -2,6 +2,8 @@ import { z } from 'zod'
 import { canCallProtectedApi } from '@/api/client'
 import { tripQueryOptions } from '@/api/queries/trips'
 import type { VoteSummarySort } from '@/api/queries/vote-links'
+import { PAGE_SIZES } from '@/lib/pagination'
+import { ANSWER_FILTERS, ANSWER_SORTS } from '@/lib/proposals'
 import { TRIP_TABS, type TripTab } from '@/lib/trip-tabs'
 import { VOTE_SOURCES, VOTE_SUMMARY_SORTS } from '@/lib/vote-constants'
 import type { RouterContext } from './router-context'
@@ -26,6 +28,15 @@ export const tripSearchSchema = z.object({
     .catch(tripSearchDefaults.vsort),
   vsource: z.enum(VOTE_SOURCES).optional().catch(undefined),
   vveto: z.literal(true).optional().catch(undefined),
+  /**
+   * The list of answers to the plan proposal (Plan tab): page, size, sort, direction and the
+   * decision filter. A value equal to its default is left out of the URL, so these are optional.
+   */
+  answers_page: z.number().int().min(1).optional().catch(undefined),
+  answers_size: z.literal(PAGE_SIZES).optional().catch(undefined),
+  answers_sort: z.enum(ANSWER_SORTS).optional().catch(undefined),
+  answers_dir: z.enum(['asc', 'desc']).optional().catch(undefined),
+  answers_filter: z.enum(ANSWER_FILTERS).optional().catch(undefined),
 })
 
 export type TripSearch = z.output<typeof tripSearchSchema>

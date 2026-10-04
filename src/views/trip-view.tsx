@@ -154,6 +154,7 @@ export function TripView() {
               onOpenPerson={(id) =>
                 void navigate({ search: (prev) => ({ ...prev, tab: 'people', person: id }) })
               }
+              onPlanBuilt={() => setTab('plan')}
             />
           </Suspense>
         }

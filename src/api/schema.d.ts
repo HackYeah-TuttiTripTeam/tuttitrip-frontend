@@ -1762,11 +1762,15 @@ export interface paths {
          * Start Session
          * @description Start the trip's interview, or resume the open one.
          *
+         *     The role picks whose interview it is. A co-host or host gets the trip's
+         *     interview. A member gets their own, about their interests, with a session
+         *     that only they can read; the assistant has tools for their own profile only.
          *     The session id is the AG-UI `threadId`. A second call returns the same
-         *     session with 200; the first creates it with 201.
+         *     session with 200; the first creates it with 201. 404 for a member without a
+         *     profile on the trip.
          *
          *     Args:
-         *         membership: The caller's membership (co-host or above).
+         *         membership: The caller's membership (any role).
          *         session: Database session.
          *         response: To set 200 when the session already existed.
          *
@@ -1795,10 +1799,10 @@ export interface paths {
          *
          *     Only the questions and answers are listed; tool calls stay in the history.
          *     Use `dir=desc` to get the newest messages first (chat UI). 409 when the
-         *     stored history cannot be read any more.
+         *     stored history cannot be read any more. A member reads only their own session.
          *
          *     Args:
-         *         membership: The caller's membership (co-host or above).
+         *         membership: The caller's membership (any role).
          *         session: Database session.
          *         query: Page, size, direction and speaker filter of the messages.
          *
@@ -1830,9 +1834,10 @@ export interface paths {
          *     Read from the trips and profiles services, so a value the host fixed
          *     through their endpoints shows here at once. `sources` says whether the
          *     assistant or the host set each value; `missing` is what is left to ask.
+         *     A member sees only themselves: no budget and nobody else's data.
          *
          *     Args:
-         *         membership: The caller's membership (co-host or above).
+         *         membership: The caller's membership (any role).
          *         session: Database session.
          *
          *     Returns:
@@ -1870,11 +1875,13 @@ export interface paths {
          *     `TOOL_CALL_*`, `STATE_SNAPSHOT` (`InterviewState`) after every tool that
          *     changes the panel or the card, and `RUN_FINISHED` or `RUN_ERROR` (Polish
          *     `message`, `code`: `spend_limit`, `timeout`, `unavailable`, `error`). One
-         *     turn per session at a time.
+         *     turn per session at a time. The role picks the tools: a co-host or host
+         *     interviews about the trip; a member talks about their own interests, with
+         *     tools that write only to their own profile and a session of their own.
          *
          *     Args:
          *         request: The AG-UI request.
-         *         membership: The caller's membership (co-host or above).
+         *         membership: The caller's membership (any role).
          *         session: Database session (history is read before the stream starts).
          *
          *     Returns:
@@ -1944,6 +1951,42 @@ export interface paths {
          *     Wymagane uprawnienie: `interview:WRITE`.
          */
         post: operations["voice_hangup_api_v1_trips__trip_id__interview_voice__call_id__hangup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/interview/draft-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Build Draft Plan
+         * @description Build a preliminary plan now ("Zbuduj plan teraz") at any point.
+         *
+         *     Needs only the city. What the trip lacks is assumed in memory (two adults,
+         *     one day, no budget limit, default preferences) and listed in `assumptions`;
+         *     nothing is stored on the trip. The plan is a new version marked `draft` in
+         *     its `params`; read it with `GET /trips/{id}/plans/{plan_id}`. The same data
+         *     gives the same `plan_hash`. The agent's `build_plan_now` tool calls the same
+         *     code.
+         *
+         *     Args:
+         *         membership: The caller's membership (co-host or above).
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The plan version and the assumptions made.
+         *
+         *     Wymagane uprawnienie: `interview:WRITE`.
+         */
+        post: operations["build_draft_plan_api_v1_trips__trip_id__interview_draft_plan_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2506,6 +2549,263 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Notifications
+         * @description List the caller's notifications, newest first by default.
+         *
+         *     Only the caller's own notifications exist for this endpoint; there is no
+         *     403 for someone else's. `type` can be repeated (`?type=a&type=b`).
+         *
+         *     Args:
+         *         user: The signed-in user.
+         *         session: Database session.
+         *         query: Paging, sorting (`created_at` or `type`) and filters.
+         *
+         *     Returns:
+         *         One page with the total of matching notifications.
+         *
+         *     Wymagane uprawnienie: `notifications:READ`.
+         */
+        get: operations["list_notifications_api_v1_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Unread Count
+         * @description Count the caller's unread notifications (for the badge).
+         *
+         *     Args:
+         *         user: The signed-in user.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The number of unread notifications.
+         *
+         *     Wymagane uprawnienie: `notifications:READ`.
+         */
+        get: operations["unread_count_api_v1_notifications_unread_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/mark": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Notifications
+         * @description Mark notifications read or unread, selected by ids or by filters.
+         *
+         *     One `UPDATE`, idempotent. Ids that are not the caller's are skipped without
+         *     a trace (no difference between missing and foreign). A filter selection
+         *     covers everything matching now, including notifications that arrived after
+         *     the list was last refreshed.
+         *
+         *     Args:
+         *         body: `read` plus exactly one of `ids` (max 100) and `filters`.
+         *         user: The signed-in user.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         How many notifications actually changed state.
+         *
+         *     Wymagane uprawnienie: `notifications:WRITE`.
+         */
+        post: operations["mark_notifications_api_v1_notifications_mark_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream Notifications
+         * @description Live stream (Server-Sent Events) of the caller's new notifications.
+         *
+         *     Authorized by the usual `Authorization: Bearer` header, so read it with
+         *     `fetch`, not `EventSource`. Events: `ready` (`{"unread": n}`),
+         *     `notification` (id = notification id, data = a notification) and `resync`
+         *     (reload the list and the counter). A comment `ping` arrives every 15 s. The
+         *     stream ends at the token's expiry and after 30 minutes at the latest;
+         *     reconnect with `Last-Event-ID` (or `since`) to get what was missed.
+         *
+         *     Args:
+         *         user: The signed-in user.
+         *         session: Database session (released at once: a stream holds none).
+         *         hub: Source of live notifications.
+         *         last_event_id: Id of the last notification the client has.
+         *         since: Alternative to `last_event_id`.
+         *
+         *     Yields:
+         *         The events.
+         *
+         *     Wymagane uprawnienie: `notifications:READ`.
+         */
+        get: operations["stream_notifications_api_v1_notifications_stream_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{notification_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Notification
+         * @description Read one of the caller's notifications, however old.
+         *
+         *     Args:
+         *         notification_id: The notification.
+         *         user: The signed-in user.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The notification.
+         *
+         *     Raises:
+         *         HTTPException: 404 when it does not exist or belongs to someone else.
+         *
+         *     Wymagane uprawnienie: `notifications:READ`.
+         */
+        get: operations["get_notification_api_v1_notifications__notification_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/plans/{plan_id}/calendar.ics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Approved plan as an iCalendar file
+         * @description One event per stop, in the local time of the city (`TZID` and `VTIMEZONE`). Only a version that every member with an account approved (`PUT .../proposals/{id}/response`) can be exported. The same version gives the same bytes: `UID` is a UUIDv5 of the version and the stop, `DTSTAMP` the time the version was stored and `SEQUENCE` its number. The file does not sync; download a new one after the plan changes.
+         *
+         *     Wymagane uprawnienie: `planning.plans:READ`.
+         */
+        get: operations["get_plan_calendar_api_v1_trips__trip_id__plans__plan_id__calendar_ics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a plan version to the members
+         * @description The host proposes the latest stored plan (or a given version that still is the latest). Every member with an account gets a notification and approves, rejects or comments. Sending again replaces the open proposal. A person without an account is listed apart: their opinion comes from a voting link.
+         *
+         *     Wymagane uprawnienie: `planning.proposals:WRITE`.
+         */
+        post: operations["send_proposal_api_v1_trips__trip_id__proposals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/proposals/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The proposal sent last, with its status
+         * @description `status` is `approved` when every member with an account approved, `rejected` when somebody rejects, `outdated` when the plan changed after it was sent, else `pending`. The tally counts approvals, rejections and comments.
+         *
+         *     Wymagane uprawnienie: `planning.proposals:READ`.
+         */
+        get: operations["get_current_proposal_api_v1_trips__trip_id__proposals_current_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/proposals/{proposal_id}/response": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Approve, reject or comment on a proposal
+         * @description Any member with an account answers; a new answer replaces the earlier one. 409 `proposal.outdated` when the plan changed after it was sent. A comment needs a remark.
+         *
+         *     Wymagane uprawnienie: `planning.proposals:WRITE`.
+         */
+        put: operations["respond_to_proposal_api_v1_trips__trip_id__proposals__proposal_id__response_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2697,6 +2997,31 @@ export interface components {
          * @enum {string}
          */
         ApprovalStatus: "not_needed" | "pending" | "approved" | "rejected";
+        /**
+         * Assumption
+         * @description One thing the preliminary plan assumed instead of data the host did not give.
+         */
+        Assumption: {
+            code: components["schemas"]["AssumptionCode"];
+            /**
+             * Params
+             * @description Values for the UI's own wording.
+             */
+            params?: {
+                [key: string]: string | number;
+            };
+            /**
+             * Text
+             * @description The assumption in Polish.
+             */
+            text: string;
+        };
+        /**
+         * AssumptionCode
+         * @description What a preliminary plan had to assume; the UI may write its own text.
+         * @enum {string}
+         */
+        AssumptionCode: "dates" | "people" | "budget" | "preferences";
         /**
          * AuditEntryRead
          * @description One recorded change of roles or grants.
@@ -3016,6 +3341,30 @@ export interface components {
             created_at: string;
         };
         /**
+         * DraftPlanRead
+         * @description The preliminary plan built during the interview.
+         */
+        DraftPlanRead: {
+            /**
+             * Plan Id
+             * Format: uuid
+             * @description Read it with `GET /trips/{id}/plans/{plan_id}`.
+             */
+            plan_id: string;
+            /** Version */
+            version: number;
+            /**
+             * Plan Hash
+             * @description Same data and assumptions give the same hash.
+             */
+            plan_hash: string;
+            /**
+             * Assumptions
+             * @description What was assumed, so the host can correct it.
+             */
+            assumptions: components["schemas"]["Assumption"][];
+        };
+        /**
          * ExamplePlace
          * @description A place the person likes or dislikes; ``place_id`` is set for catalog places.
          */
@@ -3243,7 +3592,7 @@ export interface components {
          * @description A node of the feature tree. The value is its dotted code.
          * @enum {string}
          */
-        Feature: "*" | "accounts" | "accounts.profile" | "admin" | "admin.permissions" | "admin.users" | "admin.planning_weights" | "trips" | "trips.core" | "trips.members" | "trips.invitations" | "trips.vote_links" | "profiles" | "profiles.core" | "profiles.preferences" | "profiles.feedback" | "interview" | "planning" | "planning.proposals" | "planning.plans" | "planning.fairness" | "planning.linter" | "accommodation" | "search" | "expenses" | "expenses.core" | "expenses.settlement" | "jobs" | "places" | "places.catalog" | "mcp";
+        Feature: "*" | "accounts" | "accounts.profile" | "admin" | "admin.permissions" | "admin.users" | "admin.planning_weights" | "trips" | "trips.core" | "trips.members" | "trips.invitations" | "trips.vote_links" | "profiles" | "profiles.core" | "profiles.preferences" | "profiles.feedback" | "interview" | "planning" | "planning.proposals" | "planning.plans" | "planning.fairness" | "planning.linter" | "accommodation" | "search" | "expenses" | "expenses.core" | "expenses.settlement" | "jobs" | "places" | "places.catalog" | "mcp" | "notifications";
         /**
          * FeatureGrant
          * @description ``level`` on ``feature`` and everything below it.
@@ -3455,6 +3804,8 @@ export interface components {
             knowledge?: components["schemas"]["KnowledgeRead"] | null;
             /** @description The card to render. */
             card?: components["schemas"]["ShownCard"] | null;
+            /** @description The preliminary plan built this turn by `build_plan_now`. */
+            draft_plan?: components["schemas"]["DraftPlanRead"] | null;
         };
         /**
          * InvitationAccept
@@ -3961,6 +4312,14 @@ export interface components {
             status: "ok";
         };
         /**
+         * MarkResult
+         * @description How many notifications actually changed state.
+         */
+        MarkResult: {
+            /** Updated */
+            updated: number;
+        };
+        /**
          * MeResponse
          * @description Response of ``GET /me``.
          */
@@ -4094,6 +4453,114 @@ export interface components {
             /** @description `budget_day_max`: the trip's daily limit. `budget_total_max_per_night`: the total limit divided by the nights. Both are the group's whole budget for everything, used only as a ceiling for the search, never as the price of a night. */
             basis: components["schemas"]["PriceBasis"];
         };
+        /**
+         * NotificationAction
+         * @description One button on a notification.
+         */
+        NotificationAction: {
+            code: components["schemas"]["NotificationActionCode"];
+            /**
+             * Params
+             * @description Small values the action needs, e.g. ids.
+             */
+            params?: {
+                [key: string]: string;
+            };
+        };
+        /**
+         * NotificationActionCode
+         * @description What the user can do from a notification (the frontend maps it).
+         * @enum {string}
+         */
+        NotificationActionCode: "open_trip" | "open_people" | "open_plan" | "approve_proposal" | "reject_proposal" | "approve_budget" | "reject_budget";
+        /**
+         * NotificationFilter
+         * @description Which of the caller's notifications; shared by the list and bulk marking.
+         *
+         *     Dates are ISO 8601 in UTC (a value without an offset is read as UTC); the
+         *     frontend turns the user's local days into this range.
+         */
+        NotificationFilter: {
+            /**
+             * Read
+             * @description true: read, false: unread, absent: all.
+             */
+            read?: boolean | null;
+            /**
+             * Type
+             * @description Repeatable: any of these types.
+             */
+            type?: string[] | null;
+            /** Trip Id */
+            trip_id?: string | null;
+            /**
+             * Created From
+             * @description Created at or after this moment (inclusive).
+             */
+            created_from?: string | null;
+            /**
+             * Created To
+             * @description Created before this moment (exclusive).
+             */
+            created_to?: string | null;
+        };
+        /**
+         * NotificationMark
+         * @description Mark notifications read or unread: by `ids` (max 100) or by `filters`.
+         *
+         *     Exactly one of `ids` and `filters`; `filters: {}` means every notification of
+         *     the caller. The filter is the one the list takes (without paging and sort).
+         */
+        NotificationMark: {
+            /** Ids */
+            ids?: string[] | null;
+            filters?: components["schemas"]["NotificationFilter"] | null;
+            /**
+             * Read
+             * @description true marks as read, false as unread.
+             */
+            read: boolean;
+        };
+        /**
+         * NotificationRead
+         * @description A notification as the owner sees it.
+         */
+        NotificationRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Type
+             * @description A `NotificationType` value; open for new types.
+             */
+            type: string;
+            /** Trip Id */
+            trip_id: string | null;
+            /**
+             * Params
+             * @description Small values for the text: names, ids, amounts as strings.
+             */
+            params: {
+                [key: string]: string;
+            };
+            /** Actions */
+            actions: components["schemas"]["NotificationAction"][];
+            /** Read At */
+            read_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * NotificationSort
+         * @description What the list can be sorted by (mapped to columns in ``db.py``).
+         * @enum {string}
+         */
+        NotificationSort: "created_at" | "type";
         /**
          * OfferCheckState
          * @description Where the check of an offer is.
@@ -4294,6 +4761,25 @@ export interface components {
         Page_ExpenseRead_: {
             /** Items */
             items: components["schemas"]["ExpenseRead"][];
+            /**
+             * Total
+             * @description Rows matching the filters.
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /**
+             * Pages
+             * @description Pages in total; 0 when empty.
+             */
+            pages: number;
+        };
+        /** Page[NotificationRead] */
+        Page_NotificationRead_: {
+            /** Items */
+            items: components["schemas"]["NotificationRead"][];
             /**
              * Total
              * @description Rows matching the filters.
@@ -4946,6 +5432,12 @@ export interface components {
              */
             alpha: number;
             weight_preset: components["schemas"]["WeightPreset"];
+            /**
+             * Draft
+             * @description A preliminary plan made with assumptions during the interview.
+             * @default false
+             */
+            draft: boolean;
         };
         /**
          * PlanRead
@@ -6097,6 +6589,14 @@ export interface components {
          */
         UnconfirmedReason: "no_mention" | "low_confidence" | "not_assessed" | "conflicting" | "no_link" | "not_checked" | "pending" | "check_failed" | "no_offer";
         /**
+         * UnreadCount
+         * @description How many notifications the caller has not read.
+         */
+        UnreadCount: {
+            /** Count */
+            count: number;
+        };
+        /**
          * UserPermissionsRead
          * @description A user's assignments as stored in the database.
          */
@@ -6405,6 +6905,195 @@ export interface components {
              */
             weights?: components["schemas"]["WeightItem"][] | null;
         };
+        /**
+         * NotApprovedError
+         * @description 409 body: no approved proposal for this plan version.
+         */
+        NotApprovedError: {
+            detail: components["schemas"]["NotApprovedDetail"];
+        };
+        /**
+         * ProposalRead
+         * @description A proposal with the status, the counts and the answers.
+         */
+        ProposalRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /**
+             * Plan Id
+             * Format: uuid
+             */
+            plan_id: string;
+            /** Plan Hash */
+            plan_hash: string;
+            /** Plan Version */
+            plan_version: number;
+            /** Sent By Name */
+            sent_by_name: string;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+            status: components["schemas"]["ProposalStatus"];
+            tally: components["schemas"]["ProposalTally"];
+            /** Responses */
+            responses: components["schemas"]["ResponseRead"][];
+            /** Profiles Without Account */
+            profiles_without_account: components["schemas"]["ProfileWithoutAccount"][];
+        };
+        /**
+         * ProfileWithoutAccount
+         * @description A person with no account: their opinion comes from a voting link.
+         */
+        ProfileWithoutAccount: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Display Name */
+            display_name: string;
+        };
+        /**
+         * OutdatedError
+         * @description 409 body: the proposal is about an older plan version.
+         */
+        OutdatedError: {
+            detail: components["schemas"]["OutdatedDetail"];
+        };
+        /**
+         * ResponseCreate
+         * @description A member's answer.
+         */
+        ResponseCreate: {
+            decision: components["schemas"]["ProposalDecision"];
+            /**
+             * Remark
+             * @description Required for `comment`, optional otherwise.
+             */
+            remark?: string | null;
+        };
+        /**
+         * NotApprovedDetail
+         * @description Why the plan cannot be exported; clients map by ``code``.
+         */
+        NotApprovedDetail: {
+            /**
+             * Code
+             * @default plan.not_approved
+             * @constant
+             */
+            code: "plan.not_approved";
+            /**
+             * Message
+             * @description For developers; clients map by code.
+             */
+            message: string;
+        };
+        /**
+         * ProposalStatus
+         * @description The proposal as a whole.
+         *
+         *     ``outdated`` wins (the plan changed after it was sent), then ``approved``
+         *     (every member with an account approved), then ``rejected`` (somebody
+         *     rejects) and else ``pending``.
+         * @enum {string}
+         */
+        ProposalStatus: "pending" | "approved" | "rejected" | "outdated";
+        /**
+         * ProposalCreate
+         * @description Which plan to send; the latest version by default.
+         */
+        ProposalCreate: {
+            /**
+             * Plan Id
+             * @description A stored version; it must still be the latest one (else 409).
+             */
+            plan_id?: string | null;
+        };
+        /**
+         * ProposalTally
+         * @description Counts over the members with an account.
+         */
+        ProposalTally: {
+            /**
+             * Members
+             * @description Everybody with an account on the trip.
+             */
+            members: number;
+            /** Approvals */
+            approvals: number;
+            /** Rejections */
+            rejections: number;
+            /** Comments */
+            comments: number;
+            /**
+             * Waiting
+             * @description Members who have not answered yet.
+             */
+            waiting: number;
+        };
+        /**
+         * OutdatedDetail
+         * @description Why a proposal cannot be answered; clients map by ``code``.
+         */
+        OutdatedDetail: {
+            /**
+             * Code
+             * @default proposal.outdated
+             * @constant
+             */
+            code: "proposal.outdated";
+            /**
+             * Message
+             * @description For developers; clients map by code.
+             */
+            message: string;
+            /**
+             * Latest Plan Id
+             * Format: uuid
+             * @description The version the proposal is behind.
+             */
+            latest_plan_id: string;
+        };
+        /**
+         * ResponseRead
+         * @description One member's answer with their name.
+         */
+        ResponseRead: {
+            /**
+             * Profile Id
+             * @description The member's profile; null when it was removed.
+             */
+            profile_id: string | null;
+            /** Display Name */
+            display_name: string;
+            decision: components["schemas"]["ProposalDecision"];
+            /** Remark */
+            remark: string | null;
+            /**
+             * Responded At
+             * Format: date-time
+             */
+            responded_at: string;
+            /** Is Me */
+            is_me: boolean;
+        };
+        /**
+         * ProposalDecision
+         * @description What a member does with a proposal.
+         * @enum {string}
+         */
+        ProposalDecision: "approve" | "reject" | "comment";
     };
     responses: never;
     parameters: never;
@@ -9879,6 +10568,49 @@ export interface operations {
             };
         };
     };
+    build_draft_plan_api_v1_trips__trip_id__interview_draft_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftPlanRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `interview:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No city yet (`Podaj miasto`), or an unplannable trip. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     start_plan_job_api_v1_planning_jobs_post: {
         parameters: {
             query?: never;
@@ -11007,6 +11739,486 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notifications_api_v1_notifications_get: {
+        parameters: {
+            query?: {
+                /** @description true: read, false: unread, absent: all. */
+                read?: boolean | null;
+                /** @description Repeatable: any of these types. */
+                type?: string[] | null;
+                trip_id?: string | null;
+                /** @description Created at or after this moment (inclusive). */
+                created_from?: string | null;
+                /** @description Created before this moment (exclusive). */
+                created_to?: string | null;
+                /** @description Page number, from 1. */
+                page?: number;
+                /** @description Items per page (max 100). */
+                size?: number;
+                /** @description Sort direction. */
+                dir?: components["schemas"]["SortDir"];
+                sort?: components["schemas"]["NotificationSort"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_NotificationRead_"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `notifications:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unread_count_api_v1_notifications_unread_count_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadCount"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `notifications:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    mark_notifications_api_v1_notifications_mark_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationMark"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkResult"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `notifications:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_notifications_api_v1_notifications_stream_get: {
+        parameters: {
+            query?: {
+                /** @description Alternative to Last-Event-ID: send what was created since. */
+                since?: string | null;
+            };
+            header?: {
+                /** @description Id of the last notification the client received (sent by EventSource itself; fetch clients set it by hand). */
+                "last-event-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `notifications:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_notification_api_v1_notifications__notification_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `notifications:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_plan_calendar_api_v1_trips__trip_id__plans__plan_id__calendar_ics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The .ics file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/calendar": unknown;
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan, trip not found or caller not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The version has no approved proposal. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotApprovedError"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_proposal_api_v1_trips__trip_id__proposals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ProposalCreate"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.proposals:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip, proposal or plan not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The proposal is about an older plan version. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutdatedError"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_current_proposal_api_v1_trips__trip_id__proposals_current_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.proposals:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Nothing was sent, or no such trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    respond_to_proposal_api_v1_trips__trip_id__proposals__proposal_id__response_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResponseCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.proposals:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip, proposal or plan not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The proposal is about an older plan version. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutdatedError"];
+                };
             };
             /** @description Validation Error */
             422: {

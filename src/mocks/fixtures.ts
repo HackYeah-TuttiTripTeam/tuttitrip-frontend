@@ -402,6 +402,7 @@ const withinBudget = (): PlanBudget => ({
   b_from: '1200.00',
   b_to: '1600.00',
   b_max: '1760.00',
+  unlimited: false,
   zone: 'up_to_b_to',
   over_budget: '0.00',
   needs_approval: false,
@@ -446,7 +447,7 @@ export const plan = (tripId: string = TRIP_ID, overrides: Partial<Plan> = {}): P
   input_hash: 'a'.repeat(64),
   plan_hash: 'a1b2c3d4e5f6',
   created_at: '2026-10-02T12:00:00Z',
-  params: { alpha: 1, weight_preset: 'default' },
+  params: { alpha: 1, weight_preset: 'default', draft: false },
   days: days(),
   lodging: lodging(),
   fairness: {
