@@ -30,6 +30,8 @@ export const scenarioNames = [
   'join-dead',
   'join-already-member',
   'join-accept-dead',
+  'demo-disabled',
+  'demo-rate-limited',
 ] as const
 
 export type ScenarioName = (typeof scenarioNames)[number]
@@ -69,6 +71,10 @@ export interface World {
   plan: Plan | null
   /** Invitations of the main trip, newest first (the host's list). */
   invitations: Invitation[]
+  /** Whether POST /auth/demo accepts the invitation token (false: switched off, answers 404). */
+  demoEnabled: boolean
+  /** POST /auth/demo answers 429: too many attempts from this address. */
+  demoRateLimited: boolean
   /** What a person opening an invitation link meets (/invitations/preview and /accept). */
   join: {
     /** "ok": a working token. "dead": expired, revoked or full, which the API answers with 404. */
@@ -92,6 +98,8 @@ export function createWorld(name: ScenarioName): World {
     preferencesSaveFails: false,
     plan: plan(main.id),
     invitations: [invitation()],
+    demoEnabled: true,
+    demoRateLimited: false,
     join: { preview: 'ok', alreadyMember: false, accept: 'ok' },
   }
   switch (name) {
@@ -121,5 +129,9 @@ export function createWorld(name: ScenarioName): World {
       return { ...base, join: { ...base.join, alreadyMember: true } }
     case 'join-accept-dead':
       return { ...base, join: { ...base.join, accept: 'dead' } }
+    case 'demo-disabled':
+      return { ...base, demoEnabled: false }
+    case 'demo-rate-limited':
+      return { ...base, demoRateLimited: true }
   }
 }

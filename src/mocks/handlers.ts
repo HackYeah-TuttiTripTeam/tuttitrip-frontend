@@ -3,6 +3,7 @@ import type { Schemas } from '@/api/client'
 import {
   INVITATION_TOKEN,
   invitation,
+  MOCK_DEMO_TOKEN,
   MOCK_USER_SUB,
   me,
   type Plan,
@@ -77,6 +78,23 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
   const canWrite = (id: unknown) => findTrip(id)?.my_role !== 'member'
 
   return [
+    // The jury's one-link entry. Like the real API: no-store, and 404 for every bad or disabled token.
+    http.post(`${API}/auth/demo`, async ({ request }) => {
+      await latency()
+      if (world.demoRateLimited) {
+        return HttpResponse.json(
+          { detail: 'Too many requests' },
+          { status: 429, headers: NO_STORE },
+        )
+      }
+      const body = (await request.json().catch(() => null)) as { token?: unknown } | null
+      if (!world.demoEnabled || body?.token !== MOCK_DEMO_TOKEN) return notFound('Not found')
+      return HttpResponse.json(
+        { access_token: 'mock-demo-access-token', expires_in: 3600 },
+        { headers: NO_STORE },
+      )
+    }),
+
     http.get(`${API}/me`, async () => {
       await latency()
       return HttpResponse.json(me())

@@ -3,6 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { captureDemoFragment } from '@/lib/demo-session'
 import { authConfig } from '@/lib/env'
 import { getLocale, syncDocumentLanguage } from '@/lib/i18n'
 import { registerServiceWorker } from '@/lib/pwa'
@@ -12,6 +13,9 @@ import { initTheme } from '@/lib/theme'
 import type * as MockEntry from '@/mocks/entry'
 import { router } from './router'
 import '@/styles/index.css'
+
+// First of all: /demo#t=<token> must lose its fragment before anything can read or send it.
+captureDemoFragment()
 
 syncDocumentLanguage()
 initTheme()

@@ -599,5 +599,22 @@
   "prefs_interest_cycling": "Rower",
   "prefs_interest_wellness": "Spa i wellness",
   "prefs_interests_hint_autosave": "Co ta osoba lubi zwiedzać i robić. Zmiany w tej sekcji zapisują się od razu.",
-  "prefs_error_partial": "Ograniczenia zapisane, dystans i drzemka jeszcze nie."
+  "prefs_error_partial": "Ograniczenia zapisane, dystans i drzemka jeszcze nie.",
+  "demo_account_name": "Konto demo",
+  "demo_banner_label": "Konto demonstracyjne",
+  "demo_banner_text": "Konto demonstracyjne jury: zmiany widzą inni jurorzy, dane wracają codziennie.",
+  "demo_banner_admin_link": "Poproś o konto administratora",
+  "demo_entering_title": "Wchodzimy do wersji demo",
+  "demo_entering_body": "Chwila, przygotowujemy wyjazd do Warszawy.",
+  "demo_invalid_title": "Ten link demo nie działa",
+  "demo_invalid_body": "Link jest błędny albo wyłączony. Poproś zespół o aktualny link.",
+  "demo_unavailable_title": "Nie udało się wejść do wersji demo",
+  "demo_unavailable_body": "Serwer nie odpowiada. Sprawdź połączenie i otwórz link jeszcze raz.",
+  "demo_expired_title": "Sesja demo wygasła",
+  "demo_expired_body": "Otwórz jeszcze raz link, który dostałeś od zespołu, a wrócisz do wyjazdu demo.",
+  "demo_missing_title": "Brakuje tokenu w linku",
+  "demo_missing_body": "Wejście do wersji demo działa tylko z pełnego linku od zespołu. Otwórz go jeszcze raz.",
+  "demo_back_home": "Wróć na stronę główną",
+  "demo_rate_limited_title": "Za dużo prób",
+  "demo_rate_limited_body": "Za dużo prób, odczekaj minutę i otwórz link ponownie."
 }

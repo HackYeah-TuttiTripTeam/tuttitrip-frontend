@@ -17,6 +17,8 @@ interface AppShellProps {
   /** Deployment name; shown as a badge everywhere except production. */
   envLabel: string | null
   onCreateTrip: () => void
+  /** Notice above the header bar, e.g. the demo account banner. */
+  banner?: ReactNode
   children: ReactNode
 }
 
@@ -30,6 +32,7 @@ export function AppShell({
   theme,
   envLabel,
   onCreateTrip,
+  banner,
   children,
 }: AppShellProps) {
   return (
@@ -41,6 +44,8 @@ export function AppShell({
         {m.shell_skip_to_content()}
       </a>
 
+      {/* Above the sticky header, not in it: it scrolls away and never grows the header on a phone. */}
+      {banner}
       <header className="sticky top-0 z-40 border-b bg-background pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-6 px-4 md:px-6">
           <Link

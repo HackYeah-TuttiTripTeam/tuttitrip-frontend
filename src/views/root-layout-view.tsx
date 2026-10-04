@@ -1,10 +1,12 @@
 import { HeadContent, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { AppShell } from '@/components/shared/app-shell'
 import { BootScreen } from '@/components/shared/boot-screen'
+import { DemoBanner } from '@/components/shared/demo-banner'
 import { PublicShell } from '@/components/shared/public-shell'
 import { useApiAuthBridge } from '@/hooks/use-api-auth-bridge'
 import { useCleanServerHead } from '@/hooks/use-clean-server-head'
+import { useDemoStatus } from '@/hooks/use-demo-session'
 import { useHomeRedirect } from '@/hooks/use-home-redirect'
 import { useLocale } from '@/hooks/use-locale'
 import { useSession } from '@/hooks/use-session'
@@ -45,6 +47,12 @@ export function RootLayoutView() {
   const [storedSession] = useState(hasStoredSession)
   const shell = shellFor(pathname, session.status, storedSession)
   useHomeRedirect(pathname, session.status, storedSession)
+  const demo = useDemoStatus()
+  const banner = demo === 'active' ? <DemoBanner /> : undefined
+  // The demo token ran out: say so on /demo, where the jury can enter again from the link.
+  useEffect(() => {
+    if (demo === 'expired' && pathname !== '/demo') void navigate({ to: '/demo', replace: true })
+  }, [demo, pathname, navigate])
   const language = { locale, onChange: setLocale }
   const envLabel = appEnv === 'main' ? null : appEnv
 
@@ -52,6 +60,7 @@ export function RootLayoutView() {
     <>
       <HeadContent />
       {shell === 'bare' && <BootScreen />}
+      {shell === 'standalone' && <Outlet />}
       {shell === 'public' && (
         <PublicShell
           status={session.status}
@@ -60,6 +69,7 @@ export function RootLayoutView() {
           envLabel={envLabel}
           onLogin={session.login}
           onSignup={session.signup}
+          banner={banner}
         >
           <Outlet />
         </PublicShell>
@@ -76,6 +86,7 @@ export function RootLayoutView() {
           language={language}
           theme={{ theme, resolved, onChange: setTheme }}
           envLabel={envLabel}
+          banner={banner}
           onCreateTrip={() => {
             // Creating a trip needs an account; ask guests to sign in first.
             if (session.status === 'anonymous') return session.login()

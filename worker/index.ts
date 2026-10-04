@@ -133,6 +133,7 @@ async function publicPage(request: Request, env: Env, url: URL): Promise<Respons
   // The answer depends on ?lang and on Accept-Language.
   out.append('vary', 'Accept-Language')
   if (!isProduction(env)) out.set('x-robots-tag', 'noindex')
+  out.set('referrer-policy', 'same-origin')
   return new Response(page.body, { status: page.status, headers: out })
 }
 
