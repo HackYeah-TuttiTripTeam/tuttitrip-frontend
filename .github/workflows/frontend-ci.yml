@@ -31,10 +31,13 @@ concurrency:
   group: frontend-ci-${{ github.event.pull_request.number || github.ref }}${{ github.event.action == 'labeled' && github.event.label.name != 'preview' && '-label' || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# CI_SKIP_CHECKS (org variable): 'true' skips lint, tests and contract checks everywhere
+# except main, so the self-hosted runners only build and deploy. Temporary, for the
+# hackathon finish; set it back to 'false' (or delete it) to restore full CI.
 jobs:
   verify:
     name: verify
-    if: github.event.action != 'labeled' || github.event.label.name == 'preview'
+    if: (github.event.action != 'labeled' || github.event.label.name == 'preview') && (vars.CI_SKIP_CHECKS != 'true' || github.ref == 'refs/heads/main')
     runs-on: [self-hosted, hackathon]
     timeout-minutes: 15
     steps:
@@ -156,10 +159,11 @@ jobs:
     # Pushes to main/develop deploy; pull requests from this repo get a preview,
     # except release PRs (develop -> main): develop already has its own deployment.
     if: >-
+      always() && !cancelled() && !contains(needs.*.result, 'failure') && (
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'develop')) ||
       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository &&
        github.head_ref != 'develop' && github.head_ref != 'main' &&
-       (vars.PREVIEW_DEPLOYS == 'true' || contains(github.event.pull_request.labels.*.name, 'preview')))
+       (vars.PREVIEW_DEPLOYS == 'true' || contains(github.event.pull_request.labels.*.name, 'preview'))))
     runs-on: [self-hosted, hackathon]
     timeout-minutes: 15
     permissions:

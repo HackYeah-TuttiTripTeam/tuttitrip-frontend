@@ -23,7 +23,8 @@
     // the Worker can turn a chunk removed by a newer deploy into a 404 (worker/index.ts).
     // The manifest goes through it to get the user's language (worker/index.ts).
     // The public pages and the crawler files go through it for their per-page metadata and
-    // first screen. /demo (the jury's link, token in the fragment) stays off this list on purpose:
+    // first screen. /glos (voting link) is on it only to get Referrer-Policy: no-referrer. /demo (the jury's link,
+    // token in the fragment) stays off this list on purpose:
     // it is the SPA fallback like any other app route, with no Worker code in its path.
     // Every other navigation is the assets layer's SPA fallback, no script.
     "run_worker_first": [
@@ -37,6 +38,8 @@
       "/contact/",
       "/prywatnosc",
       "/prywatnosc/",
+      "/glos",
+      "/glos/",
       "/robots.txt",
       "/sitemap.xml"
     ]

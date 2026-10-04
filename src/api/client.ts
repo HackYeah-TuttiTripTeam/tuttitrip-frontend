@@ -61,6 +61,18 @@ export async function refreshAuthorization(): Promise<string | undefined> {
   return getAuthorization()
 }
 
+/**
+ * A fresh Bearer token for requests that bypass openapi-fetch (the AG-UI stream): the demo session
+ * first, then Auth0. Throws when Auth0 cannot refresh the token (expired session), so the caller
+ * can ask the user to sign in again instead of sending a request that is sure to fail.
+ */
+export async function currentAccessToken(): Promise<string | undefined> {
+  if (!getDemoToken() && getDemoInvitation()) await renewDemoSession()
+  const demoToken = getDemoToken()
+  if (demoToken) return demoToken
+  return getAccessToken ? getAccessToken() : undefined
+}
+
 const authMiddleware: Middleware = {
   async onRequest({ request }) {
     const authorization = await getAuthorization()
@@ -132,6 +144,17 @@ fetchClient.use(languageMiddleware)
 fetchClient.use(authMiddleware)
 fetchClient.use(errorMiddleware)
 fetchClient.use(demoMiddleware)
+
+/**
+ * A client for pages without any session (the voting page): no Authorization, no demo token, no
+ * retry. The caller passes its own token header. `P` is the contract of those routes.
+ */
+export function createPublicClient<P extends object>() {
+  const client = createFetchClient<P>()
+  client.use(languageMiddleware)
+  client.use(errorMiddleware)
+  return client
+}
 
 /** For the entry call only: no demo token, no retry, so a bad link never touches a session. */
 const bareClient = createFetchClient<paths>()

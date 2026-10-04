@@ -6,7 +6,6 @@ import {
   MOCK_DEMO_TOKEN,
   MOCK_USER_SUB,
   notification as makeNotification,
-  me,
   type Notification,
   type Plan,
   PROFILE_IDS,
@@ -17,10 +16,18 @@ import {
   TRIP_ID,
   type Trip,
   trip,
+  VOTE_TOKEN,
+  VOTE_TOKEN_OTHER,
+  voteLink,
+  votePlaces,
 } from './fixtures'
+import { interviewHandlers } from './interview'
+import { permissionHandlers } from './permissions'
 import { createWorld, type ScenarioName, type World } from './scenarios'
 
 const API = '*/api/v1'
+/** Pause between the events of a streamed answer in the browser, so the typing is visible. */
+const STREAM_GAP_MS = 60
 
 const notFound = (detail: string) => HttpResponse.json({ detail }, { status: 404 })
 const NO_STORE = { 'Cache-Control': 'no-store' }
@@ -29,6 +36,29 @@ const deadInvitation = () =>
   HttpResponse.json({ detail: 'Invitation not found' }, { status: 404, headers: NO_STORE })
 const forbidden = () =>
   HttpResponse.json({ detail: 'Brak uprawnienia do tej operacji' }, { status: 403 })
+
+const unauthorized = () => HttpResponse.json({ detail: 'Unauthorized' }, { status: 401 })
+const serverError = () => HttpResponse.json({ detail: 'Internal Server Error' }, { status: 500 })
+
+/** The voting token of a request: sent in the header, and still working. */
+const liveToken = (request: Request, world: World) => {
+  const token = request.headers.get('X-Access-Token')
+  return (token === VOTE_TOKEN || token === VOTE_TOKEN_OTHER) && world.vote.link === 'ok'
+}
+
+/** Whose link it is: the second token belongs to Antek, who has rated nothing. */
+const profileNameFor = (request: Request, world: World) =>
+  request.headers.get('X-Access-Token') === VOTE_TOKEN_OTHER ? 'Antek' : world.vote.profileName
+
+function paged<T>(items: T[], page: number, size: number) {
+  return {
+    items: items.slice((page - 1) * size, page * size),
+    total: items.length,
+    page,
+    size,
+    pages: Math.ceil(items.length / size),
+  }
+}
 
 export interface HandlerOptions {
   /** Artificial latency so loading states are visible in the browser; 0 in tests. */
@@ -45,7 +75,7 @@ export function createHandlers(name: ScenarioName, { delayMs = 0, tweak }: Handl
     if (delayMs > 0) await delay(delayMs)
   }
   return world.behaviour === 'normal'
-    ? [...normalHandlers(world, latency), ...noRealApi]
+    ? [...normalHandlers(world, latency, delayMs > 0 ? STREAM_GAP_MS : 0), ...noRealApi]
     : brokenHandlers(world.behaviour, latency)
 }
 
@@ -78,6 +108,8 @@ function listTrips(all: Trip[], params: URLSearchParams) {
       (!q || t.name.toLowerCase().includes(q) || (t.destination ?? '').toLowerCase().includes(q)) &&
       (!params.get('city') || t.city_slug === params.get('city')) &&
       (!params.get('kind') || t.kind === params.get('kind')) &&
+      (!params.get('status') || t.my_status === params.get('status')) &&
+      matchesWhen(t, params.get('when')) &&
       (roles.length === 0 || roles.includes(t.my_role)) &&
       (!from || (t.start_date != null && t.start_date >= from)) &&
       (!to || (t.start_date != null && t.start_date <= to)),
@@ -101,6 +133,68 @@ function listTrips(all: Trip[], params: URLSearchParams) {
     size,
     pages: Math.ceil(matching.length / size),
   })
+}
+
+/** `past`: ended before today. `upcoming`: ends today or later, or has no dates (like the API). */
+function matchesWhen(t: Trip, when: string | null): boolean {
+  if (!when) return true
+  const today = new Date().toISOString().slice(0, 10)
+  const ended = t.end_date != null && t.end_date < today
+  return when === 'past' ? ended : !ended
+}
+
+type Level = 'NONE' | 'READ' | 'WRITE'
+
+const adminLevel = (world: World): Level =>
+  world.me.is_admin ? 'WRITE' : (world.me.access['admin.users'] ?? 'NONE')
+
+/** GET /admin/users like the API: search, blocked filter, sort and the page come from the query. */
+function listAdminUsers(all: Schemas['AdminUserRead'][], params: URLSearchParams) {
+  const q = params.get('q')?.toLowerCase()
+  const blocked = params.get('blocked')
+  const matching = all.filter(
+    (user) =>
+      (!q ||
+        (user.email ?? '').toLowerCase().includes(q) ||
+        (user.name ?? '').toLowerCase().includes(q)) &&
+      (blocked === null || user.blocked === (blocked === 'true')),
+  )
+  const sort = params.get('sort') ?? 'created_at'
+  const sign = params.get('dir') === 'asc' ? 1 : -1
+  const key = (user: Schemas['AdminUserRead']) =>
+    sort === 'email' ? user.email : sort === 'last_login' ? user.last_login : user.created_at
+  // An account that never logged in goes last in both directions.
+  matching.sort((a, b) => {
+    const [x, y] = [key(a), key(b)]
+    if (x == null || y == null) return x == null ? (y == null ? 0 : 1) : -1
+    return sign * x.localeCompare(y)
+  })
+  const size = Math.min(100, Math.max(1, Number(params.get('size')) || 20))
+  const page = Math.max(1, Number(params.get('page')) || 1)
+  return HttpResponse.json({
+    items: matching.slice((page - 1) * size, page * size),
+    total: matching.length,
+    page,
+    size,
+    pages: Math.ceil(matching.length / size),
+  })
+}
+
+/** Block, unblock and delete share the rules: WRITE only, no own account, 404 for a missing one. */
+function changeAccount(
+  world: World,
+  rawSub: string,
+  change: (user: Schemas['AdminUserRead']) => void,
+) {
+  if (adminLevel(world) !== 'WRITE') return forbidden()
+  const sub = decodeURIComponent(rawSub)
+  const user = world.adminUsers.find((candidate) => candidate.sub === sub)
+  if (!user) return notFound('Account not found')
+  if (sub === world.me.sub) {
+    return HttpResponse.json({ detail: 'You cannot change your own account' }, { status: 409 })
+  }
+  change(user)
+  return new HttpResponse(null, { status: 204 })
 }
 
 /** The filters shared by the list and by bulk marking, like the API reads them. */
@@ -204,11 +298,23 @@ function brokenHandlers(behaviour: 'server-error' | 'offline', latency: () => Pr
   ]
 }
 
-function normalHandlers(world: World, latency: () => Promise<void>): RequestHandler[] {
+function normalHandlers(
+  world: World,
+  latency: () => Promise<void>,
+  streamGapMs: number,
+): RequestHandler[] {
   const findTrip = (id: unknown) => world.trips.find((candidate) => candidate.id === id)
   const canWrite = (id: unknown) => findTrip(id)?.my_role !== 'member'
 
   return [
+    ...interviewHandlers({
+      api: API,
+      world,
+      latency,
+      gapMs: streamGapMs,
+      findTrip,
+      canWrite,
+    }),
     // The jury's one-link entry. Like the real API: no-store, and 404 for every bad or disabled token.
     http.post(`${API}/auth/demo`, async ({ request }) => {
       await latency()
@@ -226,9 +332,10 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       )
     }),
 
+    ...permissionHandlers(world.permissions, () => world.me, latency),
     http.get(`${API}/me`, async () => {
       await latency()
-      return HttpResponse.json(me())
+      return HttpResponse.json(world.me)
     }),
 
     http.get(`${API}/trips`, async ({ request }) => {
@@ -446,6 +553,88 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       return new HttpResponse(null, { status: 204 })
     }),
 
+    http.post(`${API}/trips/:tripId/membership/confirm`, async ({ params }) => {
+      await latency()
+      const found = findTrip(params.tripId)
+      const mine = world.members.find((member) => member.is_me)
+      if (!found || !mine) return notFound('Trip not found')
+      mine.status = 'confirmed'
+      found.my_status = 'confirmed'
+      return HttpResponse.json(mine)
+    }),
+
+    // The membership goes; the trip is a 404 for the caller from then on. The host must hand over first.
+    http.post(`${API}/trips/:tripId/membership/leave`, async ({ params }) => {
+      await latency()
+      const found = findTrip(params.tripId)
+      const mine = world.members.find((member) => member.is_me)
+      if (!found || !mine) return notFound('Trip not found')
+      if (mine.role === 'host') {
+        return HttpResponse.json({ detail: 'Transfer the host role first' }, { status: 409 })
+      }
+      world.members = world.members.filter((member) => !member.is_me)
+      world.trips = world.trips.filter((t) => t.id !== found.id)
+      return new HttpResponse(null, { status: 204 })
+    }),
+
+    // The host gives the role away and stays a co-host.
+    http.post(`${API}/trips/:tripId/members/:profileId/host`, async ({ params }) => {
+      await latency()
+      const found = findTrip(params.tripId)
+      if (!found) return notFound('Trip not found')
+      if (found.my_role !== 'host') return forbidden()
+      const target = world.members.find((member) => member.profile_id === params.profileId)
+      if (!target) return notFound('Member not found')
+      for (const member of world.members) if (member.role === 'host') member.role = 'co_host'
+      target.role = 'host'
+      found.my_role = 'co_host'
+      return HttpResponse.json(target)
+    }),
+
+    // Admin panel: accounts of the Auth0 tenant. READ lists; only WRITE blocks and deletes.
+    http.get(`${API}/admin/users`, async ({ request }) => {
+      await latency()
+      if (adminLevel(world) === 'NONE') return forbidden()
+      return listAdminUsers(world.adminUsers, new URL(request.url).searchParams)
+    }),
+
+    http.post(`${API}/admin/users/:sub/block`, async ({ params }) => {
+      await latency()
+      return changeAccount(world, String(params.sub), (user) => {
+        user.blocked = true
+      })
+    }),
+
+    http.delete(`${API}/admin/users/:sub/block`, async ({ params }) => {
+      await latency()
+      return changeAccount(world, String(params.sub), (user) => {
+        user.blocked = false
+      })
+    }),
+
+    http.delete(`${API}/admin/users/:sub`, async ({ params }) => {
+      await latency()
+      return changeAccount(world, String(params.sub), (user) => {
+        world.adminUsers = world.adminUsers.filter((candidate) => candidate.sub !== user.sub)
+      })
+    }),
+
+    // The caller's own name; Google and Discord own theirs.
+    http.patch(`${API}/me/account`, async ({ request }) => {
+      await latency()
+      const provider = world.me.sub.split('|')[0]
+      if (provider === 'google-oauth2' || provider === 'discord') {
+        return HttpResponse.json({ detail: 'The name comes from the provider' }, { status: 409 })
+      }
+      const body = (await request.json()) as Schemas['AccountUpdate']
+      world.accountName = body.name.trim()
+      return HttpResponse.json({
+        sub: world.me.sub,
+        name: world.accountName,
+        provider: provider ?? 'auth0',
+      })
+    }),
+
     // Preferences. Constraints are hidden from a plain member looking at someone else, like in the API.
     http.get(`${API}/trips/:tripId/preferences`, async ({ params }) => {
       await latency()
@@ -629,6 +818,137 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
         },
         { headers: NO_STORE },
       )
+    }),
+
+    // Voting links of the host. Like the real API the token is in the 201 answer only, and
+    // creating a link for a person with an account is a 409.
+    http.get(`${API}/trips/:tripId/vote-links`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!canWrite(params.tripId)) return forbidden()
+      return HttpResponse.json(paged(world.voteLinks, 1, 100))
+    }),
+
+    http.post(`${API}/trips/:tripId/vote-links`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!canWrite(params.tripId)) return forbidden()
+      const body = (await request.json()) as Schemas['VoteLinkCreate']
+      const profile = world.profiles.find((p) => p.id === body.profile_id)
+      if (!profile) return notFound('Profile not found')
+      if (profile.user_sub) return HttpResponse.json({ detail: 'Has an account' }, { status: 409 })
+      const created = voteLink({
+        id: crypto.randomUUID(),
+        profile_id: profile.id,
+        profile_name: profile.display_name,
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + body.expires_in_days * 86_400_000).toISOString(),
+      })
+      world.voteLinks.unshift(created)
+      return HttpResponse.json(
+        { ...created, token: VOTE_TOKEN, url: `/glos#t=${VOTE_TOKEN}` },
+        { status: 201, headers: NO_STORE },
+      )
+    }),
+
+    http.delete(`${API}/trips/:tripId/vote-links/:linkId`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!canWrite(params.tripId)) return forbidden()
+      const found = world.voteLinks.find((link) => link.id === params.linkId)
+      if (!found) return notFound('Voting link not found')
+      found.state = 'revoked'
+      found.revoked_at ??= new Date().toISOString()
+      return HttpResponse.json(found)
+    }),
+
+    // The group's answers; filtered, sorted and cut into pages like the API does.
+    http.get(`${API}/trips/:tripId/vote-summary`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!canWrite(params.tripId)) return forbidden()
+      const query = new URL(request.url).searchParams
+      const source = query.get('source')
+      const hasVeto = query.get('has_veto')
+      const sort = query.get('sort') ?? 'name'
+      const rows = world.voteSummary
+        .filter((row) => !source || [...row.votes, ...row.vetoes].some((v) => v.source === source))
+        .filter((row) => hasVeto === null || row.veto_count > 0 === (hasVeto === 'true'))
+      const key = { want: 'want', dont_want: 'dont_want', veto: 'veto_count' } as const
+      const sorted =
+        sort === 'name'
+          ? rows.toSorted((a, b) => a.place_name.localeCompare(b.place_name))
+          : rows.toSorted(
+              (a, b) => b[key[sort as keyof typeof key]] - a[key[sort as keyof typeof key]],
+            )
+      return HttpResponse.json(
+        paged(sorted, Number(query.get('page') ?? 1), Number(query.get('size') ?? 20)),
+      )
+    }),
+
+    // The voting page without an account (contract of backend#81): the token is the whole login.
+    http.get(`${API}/vote/session`, async ({ request }) => {
+      await latency()
+      if (!liveToken(request, world)) return unauthorized()
+      return HttpResponse.json({
+        trip_name: world.trips[0]?.name ?? '',
+        profile_name: profileNameFor(request, world),
+        places: profileNameFor(request, world) === 'Antek' ? votePlaces() : world.vote.places,
+      })
+    }),
+
+    http.put(`${API}/vote/ratings/:placeId`, async ({ params, request }) => {
+      await latency()
+      if (!liveToken(request, world)) return unauthorized()
+      if (world.vote.writeFails) return serverError()
+      const place = world.vote.places.find((p) => p.place_id === params.placeId)
+      if (!place) return notFound('Place not found')
+      const body = (await request.json()) as {
+        value: Schemas['RatingValue']
+        reason_code?: Schemas['ReasonCode'] | null
+      }
+      if (body.value === 'dont_want' && !body.reason_code) return unprocessable([])
+      place.rating = body.value
+      place.reason_code = body.value === 'dont_want' ? (body.reason_code ?? null) : null
+      return HttpResponse.json(place)
+    }),
+
+    http.post(`${API}/vote/vetoes`, async ({ request }) => {
+      await latency()
+      if (!liveToken(request, world)) return unauthorized()
+      if (world.vote.writeFails) return serverError()
+      const body = (await request.json()) as { place_id: string }
+      const place = world.vote.places.find((p) => p.place_id === body.place_id)
+      if (!place) return notFound('Place not found')
+      place.veto_id ??= crypto.randomUUID()
+      // The host sees it in the summary: the same veto, from the link.
+      const row = world.voteSummary.find((r) => r.place_id === place.place_id)
+      if (row && row.veto_count === 0) {
+        row.veto_count = 1
+        row.vetoes.push({
+          veto_id: place.veto_id,
+          profile_id: PROFILE_IDS.zosia,
+          display_name: world.vote.profileName,
+          source: 'link',
+          created_at: new Date().toISOString(),
+        })
+      }
+      return HttpResponse.json(place)
+    }),
+
+    http.delete(`${API}/vote/vetoes/:vetoId`, async ({ params, request }) => {
+      await latency()
+      if (!liveToken(request, world)) return unauthorized()
+      if (world.vote.writeFails) return serverError()
+      const place = world.vote.places.find((p) => p.veto_id === params.vetoId)
+      if (!place) return notFound('Veto not found')
+      place.veto_id = null
+      const row = world.voteSummary.find((r) => r.place_id === place.place_id)
+      if (row) {
+        row.vetoes = row.vetoes.filter((v) => v.veto_id !== params.vetoId)
+        row.veto_count = row.vetoes.length
+      }
+      return HttpResponse.json(place)
     }),
 
     http.get(`${API}/trips/:tripId/plans/latest`, async ({ params }) => {

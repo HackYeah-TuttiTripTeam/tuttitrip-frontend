@@ -2,9 +2,17 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { $api } from '@/api/client'
 import { classifyApiError } from '@/api/errors'
 import { invitationsQueryOptions } from '@/api/queries/invitations'
+import { NAMED_INVITATION_MAX_USES, NAMED_INVITATION_VALID_DAYS } from '@/lib/vote-constants'
 
 /** The API's own defaults (7 days, 10 people), sent explicitly because the generated type requires them. */
 const INVITATION_DEFAULTS = { expires_in_days: 7, max_uses: 10 } as const
+
+/** A named invitation (`profile_id`) is for one person and one use; the API enforces both. */
+const namedInvitation = (profileId: string) => ({
+  expires_in_days: NAMED_INVITATION_VALID_DAYS,
+  max_uses: NAMED_INVITATION_MAX_USES,
+  profile_id: profileId,
+})
 
 /** The trip's invitations without the secret (co-host and host only). */
 export function useInvitations(tripId: string) {
@@ -29,6 +37,11 @@ export function useCreateInvitation(tripId: string) {
   return {
     create: () =>
       mutation.mutate({ params: { path: { trip_id: tripId } }, body: INVITATION_DEFAULTS }),
+    /** An invitation that hands this profile to the one person who opens it. */
+    createNamed: (profileId: string) =>
+      mutation.mutate({ params: { path: { trip_id: tripId } }, body: namedInvitation(profileId) }),
+    /** Who the pending named invitation is for, to disable only that person's button. */
+    pendingProfileId: mutation.isPending ? mutation.variables.body.profile_id : undefined,
     created: mutation.data,
     isPending: mutation.isPending,
     error: mutation.error,

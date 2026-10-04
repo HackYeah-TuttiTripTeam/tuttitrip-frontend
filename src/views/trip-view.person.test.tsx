@@ -250,12 +250,16 @@ describe('Pula ważności', () => {
     expect(food.getAttribute('aria-valuetext')).toBe(
       m.prefs_pool_value({ domain: m.prefs_pool_domain_food(), points: 2, total: 10 }),
     )
-    expect(screen.getByRole('status').textContent).toBe(m.prefs_pool_complete())
+    expect(within(screen.getByRole('main')).getByRole('status').textContent).toBe(
+      m.prefs_pool_complete(),
+    )
 
     food.focus()
     await userEvent.keyboard('{ArrowDown}')
     expect(food.getAttribute('aria-valuenow')).toBe('1')
-    expect(screen.getByRole('status').textContent).toBe(m.prefs_pool_remaining({ count: 1 }))
+    expect(within(screen.getByRole('main')).getByRole('status').textContent).toBe(
+      m.prefs_pool_remaining({ count: 1 }),
+    )
     expect(screen.getByText(m.prefs_pool_need_all())).toBeTruthy()
     expect(screen.getByRole('button', { name: m.prefs_pool_save() }).hasAttribute('disabled')).toBe(
       true,

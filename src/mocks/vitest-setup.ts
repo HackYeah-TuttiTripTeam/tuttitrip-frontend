@@ -32,7 +32,7 @@ if (typeof window !== 'undefined' && !globalThis.ResizeObserver) {
   }
 }
 
-// vaul (the phone drawers) captures the pointer on press; jsdom has no pointer capture.
+// jsdom has no pointer capture; vaul's drawer and the swipe card call it on pointerdown.
 if (typeof Element !== 'undefined') {
   Element.prototype.setPointerCapture ??= () => undefined
   Element.prototype.releasePointerCapture ??= () => undefined

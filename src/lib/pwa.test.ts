@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('virtual:pwa-register', () => ({ registerSW: () => undefined }))
 
-import { reloadOnControllerUpdate } from './pwa'
+import { deleteUnusedCaches, reloadOnControllerUpdate } from './pwa'
 
 /** A stand-in for navigator.serviceWorker: an EventTarget with a settable controller. */
 class FakeContainer extends EventTarget {
@@ -52,5 +52,32 @@ describe('reloadOnControllerUpdate', () => {
     container.takeControl(worker('v2'))
     container.takeControl(worker('v3'))
     expect(reload).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('deleteUnusedCaches', () => {
+  const storage = (names: string[]) => {
+    const deleted: string[] = []
+    return {
+      deleted,
+      keys: async () => names,
+      delete: async (name: string) => {
+        deleted.push(name)
+        return true
+      },
+    }
+  }
+  const names = ['workbox-precache-v2-https://app.test/', 'app-shell', 'something-else']
+
+  it('deletes the precache and the app shell left by an older build outside production', async () => {
+    const caches = storage(names)
+    await deleteUnusedCaches(false, caches)
+    expect(caches.deleted).toEqual(['workbox-precache-v2-https://app.test/', 'app-shell'])
+  })
+
+  it('leaves the caches of the production service worker alone', async () => {
+    const caches = storage(names)
+    await deleteUnusedCaches(true, caches)
+    expect(caches.deleted).toEqual([])
   })
 })

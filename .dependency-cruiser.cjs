@@ -72,6 +72,22 @@ module.exports = {
       to: { path: '^src/(components|views|hooks|routes|loaders)/' },
     },
     {
+      name: 'ag-ui-only-in-hooks-and-api',
+      comment:
+        'Rule 9: the AG-UI client (@ag-ui/*) is used by hooks/ and api/ only; components, views, routes, loaders, lib and stores get its results as props and plain types. Decision of spike #24.',
+      severity: 'error',
+      from: { path: '^src/', pathNot: '^src/(hooks|api)/' },
+      to: { path: 'node_modules/@ag-ui/' },
+    },
+    {
+      name: 'no-copilotkit',
+      comment:
+        'Rule 9: CopilotKit was rejected in spike #24 (production needs a licence key, its runtime does not start in a Worker). @copilotkit/* is not allowed anywhere.',
+      severity: 'error',
+      from: {},
+      to: { path: 'node_modules/@copilotkit/' },
+    },
+    {
       name: 'no-circular',
       severity: 'error',
       from: {},

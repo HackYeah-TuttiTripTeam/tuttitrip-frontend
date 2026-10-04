@@ -1,27 +1,34 @@
 import {
   CloudOff,
   KeyRound,
+  Mic,
   PlaneTakeoff,
   Plus,
   SearchX,
   TriangleAlert,
 } from '@keyline-icons/react'
 import { getRouteApi } from '@tanstack/react-router'
+import { useState } from 'react'
 import { PaginationBar } from '@/components/shared/pagination-bar'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
 import { StatusMessage } from '@/components/shared/status-message'
 import { TripForm } from '@/components/trips/trip-form'
 import { TripsTable, TripsTableSkeleton } from '@/components/trips/trips-table'
 import { TripsToolbar } from '@/components/trips/trips-toolbar'
+import { VoiceTripForm } from '@/components/trips/voice-trip-form'
 import { Button } from '@/components/ui/button'
 import { useCities } from '@/hooks/use-cities'
+import { useCreateVoiceTrip } from '@/hooks/use-create-voice-trip'
 import { useDebouncedInput } from '@/hooks/use-debounced-input'
+import { useHelpTopic } from '@/hooks/use-help-topic'
 import { useClampPage, useListSearch } from '@/hooks/use-list-search'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
 import { useSaveTrip } from '@/hooks/use-save-trip'
 import { useSession } from '@/hooks/use-session'
 import { useTrips } from '@/hooks/use-trips'
 import { isDev } from '@/lib/env'
+import { TOUR } from '@/lib/help'
+import { tripsTopic } from '@/lib/help-topics'
 import { EMPTY_TRIP_FORM } from '@/lib/trip-form'
 import { tripFilterDefaults } from '@/loaders/trips'
 import { m } from '@/paraglide/messages'
@@ -31,6 +38,7 @@ const route = getRouteApi('/trips')
 
 export function TripsView() {
   const session = useSession()
+  useHelpTopic(tripsTopic)
   const { search, setPage, setSize, setSort, setFilters, reset } = useListSearch(route, {
     filterDefaults: tripFilterDefaults,
   })
@@ -44,16 +52,25 @@ export function TripsView() {
   const setCreateTripOpen = useUiStore((state) => state.setCreateTripOpen)
   const { cities } = useCities(session.status)
   const createTrip = useSaveTrip(null, cities)
+  const [voiceOpen, setVoiceOpen] = useState(false)
+  const voiceTrip = useCreateVoiceTrip(() => setVoiceOpen(false))
   const queryInput = useDebouncedInput(search.q, (q) => setFilters({ q }))
 
   const hasFilters =
     search.q.trim() !== '' ||
     search.role.length > 0 ||
-    [search.city, search.kind, search.start_from, search.start_to].some(Boolean)
+    [search.city, search.kind, search.when, search.status, search.start_from, search.start_to].some(
+      Boolean,
+    )
 
   const openCreate = () => {
     createTrip.reset()
     setCreateTripOpen(true)
+  }
+
+  const openVoice = () => {
+    voiceTrip.reset()
+    setVoiceOpen(true)
   }
 
   const needsLogin = session.status === 'anonymous' || problem === 'unauthorized'
@@ -63,30 +80,38 @@ export function TripsView() {
     !needsLogin && !problem && !isPending && !pastTheEnd && session.status !== 'loading'
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-1 flex-col gap-6">
       <div className="flex items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1" data-tour={TOUR.tripsHeader}>
           <h1 className="font-semibold text-2xl tracking-tight md:text-3xl">{m.trips_title()}</h1>
           <p className="text-muted-foreground text-sm" aria-live="polite">
             {showList && total > 0 ? m.trips_count({ count: total }) : m.trips_tagline()}
           </p>
         </div>
+        {!needsLogin && session.status !== 'loading' && (
+          <Button variant="outline" className="h-11 shrink-0 md:h-9" onClick={openVoice}>
+            <Mic aria-hidden="true" />
+            {m.trip_voice_action()}
+          </Button>
+        )}
       </div>
 
       {showList && (total > 0 || hasFilters) && (
-        <TripsToolbar
-          query={queryInput.draft}
-          onQueryChange={queryInput.setDraft}
-          onQueryClear={queryInput.clear}
-          sort={search.sort}
-          dir={search.dir}
-          onSortChange={setSort}
-          filters={search}
-          onFiltersChange={setFilters}
-          cities={cities}
-          hasFilters={hasFilters}
-          onReset={reset}
-        />
+        <div data-tour={TOUR.tripsToolbar}>
+          <TripsToolbar
+            query={queryInput.draft}
+            onQueryChange={queryInput.setDraft}
+            onQueryClear={queryInput.clear}
+            sort={search.sort}
+            dir={search.dir}
+            onSortChange={setSort}
+            filters={search}
+            onFiltersChange={setFilters}
+            cities={cities}
+            hasFilters={hasFilters}
+            onReset={reset}
+          />
+        </div>
       )}
 
       {session.status === 'loading' || isPending || pastTheEnd ? (
@@ -171,22 +196,39 @@ export function TripsView() {
         <div
           aria-busy={isPlaceholder}
           className={isPlaceholder ? 'opacity-60 transition-opacity' : undefined}
+          data-tour={TOUR.tripsList}
         >
           <TripsTable trips={trips} sort={search.sort} dir={search.dir} onSortChange={setSort} />
         </div>
       )}
 
       {showList && pages !== undefined && total > 0 && (
-        <PaginationBar
-          page={search.page}
-          pages={pages}
-          size={search.size}
-          total={total}
-          busy={isPlaceholder}
-          onPageChange={(page) => setPage(page)}
-          onSizeChange={setSize}
-        />
+        <div data-tour={TOUR.tripsPagination}>
+          <PaginationBar
+            page={search.page}
+            pages={pages}
+            size={search.size}
+            total={total}
+            busy={isPlaceholder}
+            onPageChange={(page) => setPage(page)}
+            onSizeChange={setSize}
+          />
+        </div>
       )}
+
+      <ResponsiveModal
+        open={voiceOpen}
+        onOpenChange={setVoiceOpen}
+        isDesktop={isDesktop}
+        title={m.trip_voice_title()}
+        description={m.trip_voice_description()}
+      >
+        <VoiceTripForm
+          isSubmitting={voiceTrip.isPending}
+          submitError={voiceTrip.submitError}
+          onSubmit={(name) => void voiceTrip.submit(name)}
+        />
+      </ResponsiveModal>
 
       <ResponsiveModal
         open={createTripOpen}

@@ -44,7 +44,8 @@ function recordRequests() {
   const seen: { method: string; path: string; href: string; body: unknown }[] = []
   server.events.on('request:start', async ({ request }) => {
     const { pathname } = new URL(request.url)
-    if (!pathname.startsWith('/api/v1/')) return
+    // GET /me is the app shell's own call (it decides whether to show the admin menu), not the page's.
+    if (!pathname.startsWith('/api/v1/') || pathname === '/api/v1/me') return
     // The bell of a signed-in user polls on its own; the join flow is what these tests watch.
     if (pathname.startsWith('/api/v1/notifications')) return
     seen.push({
@@ -375,7 +376,9 @@ describe('JoinView, signed out', () => {
     expect(peekJoinToken()).toBeNull()
 
     await user.click(
-      within(screen.getByRole('status')).getByRole('button', { name: m.account_login() }),
+      within(within(screen.getByRole('main')).getByRole('status')).getByRole('button', {
+        name: m.account_login(),
+      }),
     )
     // Stashed before login() left the page.
     expect(login).toHaveBeenCalledOnce()

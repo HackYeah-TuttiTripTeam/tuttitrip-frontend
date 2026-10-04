@@ -1,27 +1,39 @@
 import { CloudOff, KeyRound, SearchX, TriangleAlert } from '@keyline-icons/react'
 import { getRouteApi, Link } from '@tanstack/react-router'
+import { lazy, Suspense } from 'react'
 import { StatusMessage } from '@/components/shared/status-message'
 import { TripHeader, TripHeaderSkeleton } from '@/components/trips/trip-header'
 import { TripTabs } from '@/components/trips/trip-tabs'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useHelpTopic } from '@/hooks/use-help-topic'
 import { useSession } from '@/hooks/use-session'
 import { useTrip } from '@/hooks/use-trip'
 import { isDev } from '@/lib/env'
+import { TOUR } from '@/lib/help'
+import { tripTopics } from '@/lib/help-topics'
 import type { TripTab } from '@/lib/trip-tabs'
 import { m } from '@/paraglide/messages'
+import { TripMembersView } from './trip-view.members'
 import { TripPeopleView } from './trip-view.people'
 import { TripPlanView } from './trip-view.plan'
 import { TripSettings } from './trip-view.settings'
 
 const route = getRouteApi('/trips_/$tripId')
 
+// The interview brings the AG-UI client (about 280 KB), so it loads as a chunk of its own.
+const TripInterviewView = lazy(() =>
+  import('./trip-view.interview').then((module) => ({ default: module.TripInterviewView })),
+)
+
 export function TripView() {
   const { tripId } = route.useParams()
-  const { tab, person } = route.useSearch()
+  const { tab, person, voice } = route.useSearch()
   const navigate = route.useNavigate()
   const session = useSession()
   const { trip, isPending, problem, refetch } = useTrip(tripId, session.status)
+  // Only a loaded trip has the elements the steps point at.
+  useHelpTopic(trip && !problem ? tripTopics[tab] : null)
 
   // replace: switching tabs should not fill the back button.
   const setTab = (next: TripTab) =>
@@ -116,12 +128,39 @@ export function TripView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="print:hidden">
+      <div className="print:hidden" data-tour={TOUR.tripHeader}>
         <TripHeader trip={trip} actions={<TripSettings trip={trip} />} />
       </div>
+      {trip.my_status === 'pending' && tab !== 'members' && (
+        <div
+          role="status"
+          className="flex flex-col gap-2 rounded-lg border border-dashed p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p className="text-sm">{m.membership_pending_notice()}</p>
+          <Button variant="outline" onClick={() => setTab('members')} className="h-11 sm:h-9">
+            {m.membership_pending_open()}
+          </Button>
+        </div>
+      )}
       <TripTabs
         tab={tab}
         onTabChange={setTab}
+        interview={
+          <Suspense fallback={<Skeleton aria-hidden="true" className="h-40 w-full" />}>
+            <TripInterviewView
+              key={trip.id}
+              tripId={trip.id}
+              canManage={trip.my_role !== 'member'}
+              startVoice={voice !== undefined}
+              onVoiceHandled={() =>
+                void navigate({ search: (prev) => ({ ...prev, voice: undefined }), replace: true })
+              }
+              onOpenPerson={(id) =>
+                void navigate({ search: (prev) => ({ ...prev, tab: 'people', person: id }) })
+              }
+            />
+          </Suspense>
+        }
         people={
           <TripPeopleView
             key={trip.id}
@@ -131,6 +170,15 @@ export function TripView() {
             citySlug={trip.city_slug}
             personId={person}
             onPersonChange={setPerson}
+          />
+        }
+        members={
+          <TripMembersView
+            key={trip.id}
+            tripId={trip.id}
+            tripName={trip.name}
+            myRole={trip.my_role}
+            myStatus={trip.my_status}
           />
         }
         plan={<TripPlanView key={trip.id} trip={trip} />}

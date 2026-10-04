@@ -115,3 +115,37 @@ describe('trips list', () => {
     expect(await screen.findByText(m.list_range({ from: 41, to: 45, total: 45 }))).toBeTruthy()
   })
 })
+
+describe('trips list: history and participation filters', () => {
+  it('reads when and status from a pasted URL and sends them to the API', async () => {
+    useScenario('many-trips')
+    const queries: string[] = []
+    server.events.on('request:start', ({ request }) => {
+      const { pathname, search } = new URL(request.url)
+      if (pathname.endsWith('/api/v1/trips')) queries.push(search)
+    })
+    renderApp('/trips?when=past&status=pending')
+    await screen.findByRole('combobox', { name: m.trips_filter_when() })
+    await waitFor(() =>
+      expect(queries.some((q) => q.includes('when=past') && q.includes('status=pending'))).toBe(
+        true,
+      ),
+    )
+    expect(screen.getByRole('combobox', { name: m.trips_filter_when() }).textContent).toBe(
+      m.trips_filter_when_past(),
+    )
+  })
+
+  it('drops nonsense values of the new filters', async () => {
+    useScenario('many-trips')
+    const { router } = renderApp('/trips?when=someday&status=maybe')
+    await screen.findByText(m.list_range({ from: 1, to: 20, total: 45 }))
+    expect(router.state.location.search).toEqual({})
+  })
+
+  it('marks a trip waiting for the caller to confirm', async () => {
+    useScenario('member-pending')
+    renderApp('/trips')
+    expect(await screen.findByText(m.trip_status_pending())).toBeTruthy()
+  })
+})
