@@ -20,14 +20,34 @@
   "trips_title": "Trips",
   "trips_tagline": "Plans you put together as a group.",
   "trips_count": [
-    {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
-      "match": {
-        "countPlural=one": "{count} trip",
-        "countPlural=*": "{count} trips"
-      }
-    }
+    [
+      [
+        "declarations",
+        [
+          "input count",
+          "local countPlural = count: plural"
+        ]
+      ],
+      [
+        "selectors",
+        [
+          "countPlural"
+        ]
+      ],
+      [
+        "match",
+        [
+          [
+            "countPlural=one",
+            "{count} trip"
+          ],
+          [
+            "countPlural=*",
+            "{count} trips"
+          ]
+        ]
+      ]
+    ]
   ],
   "trips_login_failed_title": "Sign-in failed",
   "action_retry": "Try again",
@@ -169,26 +189,66 @@
   "plan_print_footer": "TuttiTrip plan, version {n}",
   "plan_total": "Plan cost for the whole group: {amount}",
   "plan_lodging": [
-    {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
-      "match": {
-        "countPlural=one": "Lodging: {name}, {count} night. {cost}",
-        "countPlural=*": "Lodging: {name}, {count} nights. {cost}"
-      }
-    }
+    [
+      [
+        "declarations",
+        [
+          "input count",
+          "local countPlural = count: plural"
+        ]
+      ],
+      [
+        "selectors",
+        [
+          "countPlural"
+        ]
+      ],
+      [
+        "match",
+        [
+          [
+            "countPlural=one",
+            "Lodging: {name}, {count} night. {cost}"
+          ],
+          [
+            "countPlural=*",
+            "Lodging: {name}, {count} nights. {cost}"
+          ]
+        ]
+      ]
+    ]
   ],
   "plan_lodging_cost": "{amount} for all nights",
   "plan_lodging_cost_none": "Lodging price: no data",
   "people_count": [
-    {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
-      "match": {
-        "countPlural=one": "{count} person",
-        "countPlural=*": "{count} people"
-      }
-    }
+    [
+      [
+        "declarations",
+        [
+          "input count",
+          "local countPlural = count: plural"
+        ]
+      ],
+      [
+        "selectors",
+        [
+          "countPlural"
+        ]
+      ],
+      [
+        "match",
+        [
+          [
+            "countPlural=one",
+            "{count} person"
+          ],
+          [
+            "countPlural=*",
+            "{count} people"
+          ]
+        ]
+      ]
+    ]
   ],
   "people_add": "Add person",
   "people_empty_title": "Nobody here yet",
@@ -197,14 +257,34 @@
   "people_load_failed_title": "Could not load the people",
   "people_list_label": "People on this trip",
   "people_age": [
-    {
-      "declarations": ["input age", "local agePlural = age: plural"],
-      "selectors": ["agePlural"],
-      "match": {
-        "agePlural=one": "{age} year old",
-        "agePlural=*": "{age} years old"
-      }
-    }
+    [
+      [
+        "declarations",
+        [
+          "input age",
+          "local agePlural = age: plural"
+        ]
+      ],
+      [
+        "selectors",
+        [
+          "agePlural"
+        ]
+      ],
+      [
+        "match",
+        [
+          [
+            "agePlural=one",
+            "{age} year old"
+          ],
+          [
+            "agePlural=*",
+            "{age} years old"
+          ]
+        ]
+      ]
+    ]
   ],
   "people_group_toddler": "Toddler",
   "people_group_child": "Child",
@@ -684,14 +764,34 @@
   "prefs_pool_more": "Add a point: {domain}",
   "prefs_pool_less": "Take a point: {domain}",
   "prefs_pool_remaining": [
-    {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
-      "match": {
-        "countPlural=one": "{count} dot left to give out",
-        "countPlural=*": "{count} dots left to give out"
-      }
-    }
+    [
+      [
+        "declarations",
+        [
+          "input count",
+          "local countPlural = count: plural"
+        ]
+      ],
+      [
+        "selectors",
+        [
+          "countPlural"
+        ]
+      ],
+      [
+        "match",
+        [
+          [
+            "countPlural=one",
+            "{count} dot left to give out"
+          ],
+          [
+            "countPlural=*",
+            "{count} dots left to give out"
+          ]
+        ]
+      ]
+    ]
   ],
   "prefs_pool_complete": "All dots given out.",
   "prefs_pool_need_all": "Give out all the dots to save.",
@@ -720,12 +820,5 @@
   "trips_filter_city": "City",
   "trips_filter_city_all": "All cities",
   "trips_filter_start_from": "Starts from",
-  "trips_filter_start_to": "Starts until",
-  "list_range": "{from} to {to} of {total}",
-  "list_page_of": "Page {page} of {pages}",
-  "list_pagination_label": "List pages",
-  "list_previous": "Previous page",
-  "list_next": "Next page",
-  "list_go_to_page": "Page {page}",
-  "list_per_page": "Per page"
+  "trips_filter_start_to": "Starts until"
 }
