@@ -359,8 +359,9 @@ describe('Cost per person', () => {
         .closest('li') as HTMLElement,
     )
     await userEvent.click(bar.getByText(m.cost_open({ name: 'Bar Mleczny Prasowy' })))
-    expect(bar.getAllByText(m.plan_price_unverified()).length).toBeGreaterThan(0)
-    expect(bar.getByText(m.cost_surcharge_note())).toBeTruthy()
+    // The chip and the link to the source sit with the price; the breakdown names the surcharge.
+    expect(bar.getByText(m.plan_price_unverified())).toBeTruthy()
     expect(bar.getAllByRole('link').length).toBeGreaterThan(0)
+    expect(bar.getByText(m.cost_surcharge_note())).toBeTruthy()
   })
 })

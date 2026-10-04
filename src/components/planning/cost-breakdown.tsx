@@ -3,7 +3,6 @@ import type { PlanStop, PriceDiscount, TransitTicket } from '@/api/queries/plans
 import { formatDecimal } from '@/lib/format'
 import { familySaving, sumDecimals } from '@/lib/plan-cost'
 import { m } from '@/paraglide/messages'
-import { VerificationChip } from './verification-chip'
 
 const DISCOUNT_LABELS: Record<PriceDiscount, () => string> = {
   none: m.cost_discount_none,
@@ -31,7 +30,7 @@ interface CostBreakdownProps {
 
 /**
  * What each person pays at a stop, with the discount and the source of the price. Opens under the
- * stop. Without per-person lines (the API does not send them yet) it falls back to the one price
+ * stop; the verification chip and the source of the price sit with the price above it. Without per-person lines (the API does not send them yet) it falls back to the one price
  * per person. The prices come from the API; this adds them up and nothing else.
  */
 export function CostBreakdown({ stop, currency, names }: CostBreakdownProps) {
@@ -84,14 +83,6 @@ export function CostBreakdown({ stop, currency, names }: CostBreakdownProps) {
             {m.cost_family_saving({ amount: formatDecimal(saving, currency) })}
           </p>
         )}
-        {hasPrice || stop.price_source_url ? (
-          <VerificationChip
-            kind="price"
-            verified={stop.price_verified}
-            verifiedAt={stop.price_verified_at}
-            sourceUrl={stop.price_source_url}
-          />
-        ) : null}
         {!stop.price_verified && hasPrice && (
           <p className="text-muted-foreground">{m.cost_surcharge_note()}</p>
         )}
