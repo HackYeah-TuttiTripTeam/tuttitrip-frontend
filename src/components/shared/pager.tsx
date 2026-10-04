@@ -3,20 +3,24 @@ import { Button } from '@/components/ui/button'
 import { m } from '@/paraglide/messages'
 
 interface PagerProps {
+  /** 1-based current page. */
   page: number
+  /** Pages in total; the pager is hidden for one page or none. */
   pages: number
   onPageChange: (page: number) => void
+  /** True while another page loads (the old rows stay on screen). */
+  disabled?: boolean
 }
 
 /** Previous, "page X of Y", next: for a list the server cuts into pages. Hidden for one page. */
-export function Pager({ page, pages, onPageChange }: PagerProps) {
+export function Pager({ page, pages, onPageChange, disabled = false }: PagerProps) {
   if (pages <= 1) return null
   return (
     <nav aria-label={m.pager_label()} className="flex items-center justify-between gap-3">
       <Button
         variant="outline"
         className="h-11 md:h-9"
-        disabled={page <= 1}
+        disabled={disabled || page <= 1}
         onClick={() => onPageChange(page - 1)}
       >
         <ChevronLeft aria-hidden="true" />
@@ -28,7 +32,7 @@ export function Pager({ page, pages, onPageChange }: PagerProps) {
       <Button
         variant="outline"
         className="h-11 md:h-9"
-        disabled={page >= pages}
+        disabled={disabled || page >= pages}
         onClick={() => onPageChange(page + 1)}
       >
         {m.pager_next()}

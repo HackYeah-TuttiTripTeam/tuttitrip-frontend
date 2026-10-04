@@ -96,7 +96,7 @@ hand-written shapes: after `pnpm api:sync` a contract change breaks `tsc`, not t
 silently). Amounts are decimal strings. MSW 3 keeps the 2.x API (`http`, `HttpResponse`,
 `setupServer`, `setupWorker`); the one rename to know is `onUnhandledRequest` -> `onUnhandledFrame`
 (in `listen()` and `start()`). Profiles carry `customized_fields`; members (host, co-host, member,
-with `is_me`) are served from `/trips/{id}/members` and join profiles on `profile_id`. Named scenarios (`src/mocks/scenarios.ts`):
+with `is_me`) are served from `/trips/{id}/members` and join profiles on `profile_id`. Notifications are served by the default world too (6, 3 unread). Named scenarios (`src/mocks/scenarios.ts`):
 
 | Scenario | What it serves |
 | --- | --- |
@@ -110,6 +110,11 @@ with `is_me`) are served from `/trips/{id}/members` and join profiles on `profil
 | `join-dead` | Preview and accept answer 404 (expired, revoked or full: one answer for all) |
 | `join-already-member` | Preview says `already_member`; accept is idempotent |
 | `join-accept-dead` | Preview 200, then accept 404 (the link died in between) |
+| `notifications-inbox` | 134 notifications (40 unread) of mixed types and dates; list, counter and bulk marking page, sort and filter in memory like the API |
+| `notifications-empty` | No notifications |
+| `notifications-error` | Every `/notifications` call (list, counter, mark, stream) answers 500 |
+| `notifications-live` | The stream sends `ready`, then a notification every 4 s (`tweak` `notificationLiveEveryMs` to change it): toast with action, badge grows |
+| `notifications-stream-down` | The stream answers 503: status `polling`, the counter is polled every minute |
 
 - **In tests:** `src/mocks/vitest-setup.ts` starts one `setupServer` and serves
   `family-warsaw` before each test. Pick another with `useScenario('no-plan')` (from
@@ -531,7 +536,9 @@ branch deleted by hand), which also rewrites the PR's preview comment to
 Secrets and variables (GitHub Actions): secret `CLOUDFLARE_API_TOKEN` (Workers
 Scripts:Edit, Account Workers subdomain read, Zone Workers Routes:Edit and
 DNS:Edit for gburek.app); variables `CLOUDFLARE_ACCOUNT_ID`, `AUTH0_DOMAIN`,
-`AUTH0_CLIENT_ID`, `AUTH0_AUDIENCE`. Without the token the deploy job is
+`AUTH0_CLIENT_ID`, `AUTH0_AUDIENCE`, `VITE_GOOGLE_MAPS_API_KEY`, `VITE_GOOGLE_MAPS_MAP_ID`
+(the Google key is public by design: referrer, API and daily quota limits are set in Google Cloud,
+backend#28). Without the token the deploy job is
 skipped with a warning and `checks` stays green.
 
 ## Workflows

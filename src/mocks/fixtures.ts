@@ -2,13 +2,13 @@
 // after `pnpm api:sync` a contract change breaks `tsc` here instead of silently drifting.
 // Amounts are decimal strings, like in the API.
 import type { Schemas } from '@/api/client'
+import type { Plan, PlanDay, PlanStop, PriceDiscount, PriceLine } from '@/api/queries/plans'
 import type { VotePlace } from '@/api/vote-contract'
+import { allocate, centsToDecimal, toCents } from '@/lib/money'
 
 export type Trip = Schemas['TripRead']
 export type Profile = Schemas['ProfileRead']
-export type Plan = Schemas['PlanRead']
-export type PlanStop = Schemas['PlanStop']
-export type PlanDay = Schemas['PlanDay']
+export type { Plan, PlanDay, PlanStop } from '@/api/queries/plans'
 export type PlanBudget = Schemas['PlanBudget']
 export type PersonFairness = Schemas['PersonFairness']
 export type PlanDomainCode = Schemas['PlanDomainCode']
@@ -20,6 +20,7 @@ export type VoteLink = Schemas['VoteLinkRead']
 export type PlaceVoteSummary = Schemas['PlaceVoteSummary']
 export type City = Schemas['CityRead']
 export type Preferences = Schemas['PreferencesRead']
+export type Expense = Schemas['ExpenseRead']
 export type CatalogPlace = Schemas['PlaceRead']
 
 /** The signed-in test user, the host of most scenarios. */
@@ -38,6 +39,12 @@ export const PROFILE_IDS = {
   babcia: '0b1f5c1a-7d3e-4e0a-9c11-1a2b3c4d5e03',
   zosia: '0b1f5c1a-7d3e-4e0a-9c11-1a2b3c4d5e04',
   antek: '0b1f5c1a-7d3e-4e0a-9c11-1a2b3c4d5e05',
+} as const
+
+/** Google Place IDs of two catalogue places; the others have none (no card button). */
+export const GOOGLE_PLACE_IDS = {
+  zamek: 'ChIJ-mock-zamek-krolewski',
+  kopernik: 'ChIJ-mock-centrum-kopernik',
 } as const
 
 const PLACE_IDS = {
@@ -137,7 +144,6 @@ export const familyProfiles = (): Profile[] => [
   profile(PROFILE_IDS.tata, 'Marek', 40, 'adult', { user_sub: SUBS.tata }),
   profile(PROFILE_IDS.babcia, 'Babcia Halina', 72, 'senior', {
     user_sub: SUBS.babcia,
-    weight: 1.5,
     segment_km: 0.8,
     daily_km: 4,
     active_min: 420,
@@ -259,9 +265,9 @@ export const familyPreferences = (): Preferences[] => [
   preferences(PROFILE_IDS.antek),
 ]
 
-const DOMAINS: PlanDomainCode[] = ['attractions', 'food', 'pace', 'cost', 'lodging']
+export const DOMAINS: PlanDomainCode[] = ['attractions', 'food', 'pace', 'cost', 'lodging']
 
-const person = (
+export const person = (
   profileId: string,
   name: string,
   u: number,
@@ -308,7 +314,19 @@ const verifiedStop = (overrides: Partial<PlanStop> & Pick<PlanStop, 'place_id' |
     ...overrides,
   }) satisfies PlanStop
 
-const days = (): PlanDay[] => [
+/** One line per person of the family, in the order of the profiles. */
+const priceLines = (
+  prices: [adult: string, senior: string, child: string, toddler: string],
+  discounts: [PriceDiscount, PriceDiscount, PriceDiscount] = ['senior', 'child', 'free'],
+): PriceLine[] => [
+  { profile_id: PROFILE_IDS.mama, price: prices[0], discount: 'none' },
+  { profile_id: PROFILE_IDS.tata, price: prices[0], discount: 'none' },
+  { profile_id: PROFILE_IDS.babcia, price: prices[1], discount: discounts[0] },
+  { profile_id: PROFILE_IDS.zosia, price: prices[2], discount: discounts[1] },
+  { profile_id: PROFILE_IDS.antek, price: prices[3], discount: discounts[2] },
+]
+
+export const days = (): PlanDay[] => [
   {
     index: 1,
     date: '2026-10-10',
@@ -317,13 +335,19 @@ const days = (): PlanDay[] => [
         place_id: PLACE_IDS.zamek,
         name: 'Zamek Królewski',
         address: 'Plac Zamkowy 4, 00-277 Warszawa',
+        lat: 52.248,
+        lon: 21.0147,
+        google_place_id: GOOGLE_PLACE_IDS.zamek,
         start: '10:00:00',
         end: '12:00:00',
+        price_lines: priceLines(['30.00', '15.00', '15.00', '0.00']),
       }),
       // Price not verified: the plan inflated the base price by delta (E6).
       verifiedStop({
         place_id: PLACE_IDS.prasowy,
         name: 'Bar Mleczny Prasowy',
+        lat: 52.2338,
+        lon: 21.0205,
         kind: 'food',
         start: '12:30:00',
         end: '13:30:00',
@@ -334,10 +358,13 @@ const days = (): PlanDay[] => [
         price_verified: false,
         price_source_url: 'https://example.com/bar-cennik',
         price_verified_at: null,
+        price_lines: priceLines(['28.75', '28.75', '14.38', '0.00'], ['none', 'child', 'free']),
       }),
       verifiedStop({
         place_id: PLACE_IDS.lazienki,
         name: 'Łazienki Królewskie',
+        lat: 52.215,
+        lon: 21.0357,
         start: '15:00:00',
         end: '17:30:00',
         transfer: { minutes: 25, mode: 'transit', cost: '4.40' },
@@ -354,16 +381,27 @@ const days = (): PlanDay[] => [
       verifiedStop({
         place_id: PLACE_IDS.kopernik,
         name: 'Centrum Nauki Kopernik',
+        lat: 52.2397,
+        lon: 21.0287,
+        google_place_id: GOOGLE_PLACE_IDS.kopernik,
         start: '10:00:00',
         end: '13:00:00',
         cost_per_person: '35.00',
         price_base: '35.00',
         price_inflated: '35.00',
+        // A family ticket for the five of them is cheaper than the single tickets (140 zł).
+        price_lines: priceLines(
+          ['20.00', '20.00', '20.00', '20.00'],
+          ['family', 'family', 'family'],
+        ),
+        family_ticket: { total: '100.00', singles_total: '140.00' },
       }),
       // No source for the opening hours, and the price of the meal is unknown.
       verifiedStop({
         place_id: PLACE_IDS.pyzy,
         name: 'Pyzy Flaki Gorące',
+        lat: 52.231,
+        lon: 21.012,
         kind: 'food',
         start: '13:30:00',
         end: '14:30:00',
@@ -396,12 +434,12 @@ const days = (): PlanDay[] => [
 ]
 
 const withinBudget = (): PlanBudget => ({
-  unlimited: false,
   currency: 'PLN',
   cost: '1480.00',
   b_from: '1200.00',
   b_to: '1600.00',
   b_max: '1760.00',
+  unlimited: false,
   zone: 'up_to_b_to',
   over_budget: '0.00',
   needs_approval: false,
@@ -439,6 +477,66 @@ const lodging = (): NonNullable<Plan['lodging']> => ({
   requirements: [],
 })
 
+/** u, u* and the five domain scores of the family at neutral settings (equal weights, alpha 1). */
+export const FAMILY_FAIRNESS: Record<
+  string,
+  { name: string; u: number; uStar: number; scores: number[]; weakest: PlanDomainCode }
+> = {
+  [PROFILE_IDS.mama]: {
+    name: 'Ola',
+    u: 74,
+    uStar: 88,
+    scores: [80, 70, 75, 72, 70],
+    weakest: 'cost',
+  },
+  [PROFILE_IDS.tata]: {
+    name: 'Marek',
+    u: 71,
+    uStar: 85,
+    scores: [78, 72, 68, 70, 66],
+    weakest: 'lodging',
+  },
+  [PROFILE_IDS.babcia]: {
+    name: 'Babcia Halina',
+    u: 62,
+    uStar: 70,
+    scores: [60, 66, 55, 72, 58],
+    weakest: 'pace',
+  },
+  [PROFILE_IDS.zosia]: {
+    name: 'Zosia',
+    u: 77,
+    uStar: 90,
+    scores: [88, 70, 64, 80, 70],
+    weakest: 'pace',
+  },
+  [PROFILE_IDS.antek]: {
+    name: 'Antek',
+    u: 58,
+    uStar: 66,
+    scores: [52, 70, 50, 66, 60],
+    weakest: 'attractions',
+  },
+}
+
+export const familyFairness = (): PersonFairness[] =>
+  Object.entries(FAMILY_FAIRNESS).map(([id, p]) =>
+    person(id, p.name, p.u, p.uStar, p.scores, p.weakest),
+  )
+
+/** The group measure from the people's rows: min r and the Jain index, like the API computes them. */
+export const groupFairness = (people: PersonFairness[]): Plan['fairness'] => {
+  const rs = people.map((p) => p.r)
+  const sum = rs.reduce((a, b) => a + b, 0)
+  const squares = rs.reduce((a, b) => a + b * b, 0)
+  return {
+    group_size: people.length,
+    jain: people.length > 1 ? (sum * sum) / (people.length * squares) : 1,
+    min_r: Math.min(...rs),
+    per_person: people,
+  }
+}
+
 export const plan = (tripId: string = TRIP_ID, overrides: Partial<Plan> = {}): Plan => ({
   id: '5d1c0e77-8a2b-4c3d-9e4f-60718293a4b6',
   trip_id: tripId,
@@ -446,27 +544,25 @@ export const plan = (tripId: string = TRIP_ID, overrides: Partial<Plan> = {}): P
   input_hash: 'a'.repeat(64),
   plan_hash: 'a1b2c3d4e5f6',
   created_at: '2026-10-02T12:00:00Z',
-  params: { alpha: 1, weight_preset: 'default' },
+  params: { alpha: 1, weight_preset: 'default', draft: false },
   days: days(),
   lodging: lodging(),
-  fairness: {
-    group_size: 5,
-    jain: 0.94,
-    min_r: 0.81,
-    per_person: [
-      person(PROFILE_IDS.mama, 'Ola', 74, 88, [80, 70, 75, 72, 70], 'cost'),
-      person(PROFILE_IDS.tata, 'Marek', 71, 85, [78, 72, 68, 70, 66], 'lodging'),
-      person(PROFILE_IDS.babcia, 'Babcia Halina', 62, 70, [60, 66, 55, 72, 58], 'pace'),
-      person(PROFILE_IDS.zosia, 'Zosia', 77, 90, [88, 70, 64, 80, 70], 'pace'),
-      person(PROFILE_IDS.antek, 'Antek', 58, 66, [52, 70, 50, 66, 60], 'attractions'),
-    ],
-  },
+  fairness: groupFairness(familyFairness()),
   floors_missed: [],
   violation: 0,
   conflicts: [],
   explain: [],
   verdicts: null,
   budget: withinBudget(),
+  transit_tickets: [
+    {
+      day: 1,
+      ticket: 'day',
+      cost: '15.00',
+      verified: false,
+      source_url: 'https://example.com/ztm',
+    },
+  ],
   telemetry: { solver: 'stub', steps: 120, solo_runs: 5, elapsed_ms: 48 },
   ...overrides,
 })
@@ -546,6 +642,95 @@ export const cities = (): City[] => [
   }),
 ]
 
+/** Another user of the trip: the author of expenses the caller did not write. */
+export const OTHER_USER_SUB = 'auth0|mock-other'
+
+/** The parts of an expense the way the API stores them: allocated to the cent like the backend. */
+export function expenseParticipants(
+  amount: string,
+  method: Expense['split_method'],
+  shares: { profile_id: string; value?: string | null }[],
+): Expense['participants'] {
+  const parts = allocate(
+    toCents(amount),
+    method,
+    shares.map((share) => ({ profileId: share.profile_id, value: share.value ?? null })),
+  )
+  return shares.map((share) => ({
+    profile_id: share.profile_id,
+    value: share.value ?? null,
+    amount: centsToDecimal(parts.get(share.profile_id) ?? 0n),
+  }))
+}
+
+export const expense = (overrides: Partial<Expense> = {}): Expense => {
+  const amount = overrides.amount ?? '100.00'
+  const method = overrides.split_method ?? 'equal'
+  const shares =
+    overrides.participants ??
+    Object.values(PROFILE_IDS).map((profile_id) => ({ profile_id, value: null, amount: '0.00' }))
+  return {
+    id: crypto.randomUUID(),
+    trip_id: TRIP_ID,
+    payer_profile_id: PROFILE_IDS.mama,
+    amount,
+    currency: 'PLN',
+    trip_amount: overrides.amount ?? '100.00',
+    exchange_rate: null,
+    status: 'confirmed',
+    has_evidence: false,
+    description: 'Obiad',
+    spent_on: '2026-10-10',
+    category: 'food',
+    split_method: method,
+    created_by_sub: MOCK_USER_SUB,
+    created_at: '2026-10-10T12:00:00Z',
+    ...overrides,
+    participants: expenseParticipants(amount, method, shares),
+  }
+}
+
+/** Three expenses of the family trip: a hotel for all, a dinner for four, a taxi for two. */
+export const familyExpenses = (): Expense[] => {
+  const ids = PROFILE_IDS
+  return [
+    expense({
+      id: '5a1c0e11-8b2d-4c3e-9f40-000000000001',
+      description: 'Nocleg',
+      category: 'lodging',
+      amount: '300.00',
+      spent_on: '2026-10-10',
+      payer_profile_id: ids.mama,
+    }),
+    expense({
+      id: '5a1c0e11-8b2d-4c3e-9f40-000000000002',
+      description: 'Kolacja',
+      amount: '90.00',
+      spent_on: '2026-10-10',
+      payer_profile_id: ids.tata,
+      created_by_sub: OTHER_USER_SUB,
+      participants: [ids.mama, ids.tata, ids.babcia, ids.zosia].map((profile_id) => ({
+        profile_id,
+        value: null,
+        amount: '0.00',
+      })),
+    }),
+    expense({
+      id: '5a1c0e11-8b2d-4c3e-9f40-000000000003',
+      description: 'Taksówka',
+      category: 'transport',
+      amount: '45.50',
+      spent_on: '2026-10-11',
+      payer_profile_id: ids.babcia,
+      created_by_sub: OTHER_USER_SUB,
+      participants: [ids.babcia, ids.zosia].map((profile_id) => ({
+        profile_id,
+        value: null,
+        amount: '0.00',
+      })),
+    }),
+  ]
+}
 const CATALOG_IDS = {
   narodowe: '5d1c8e20-3b4a-4c75-9e2f-0000000000b1',
   zamek: '5d1c8e20-3b4a-4c75-9e2f-0000000000b2',
@@ -677,3 +862,130 @@ export const votePlaces = (): VotePlace[] =>
     reason_code: null,
     veto_id: null,
   }))
+
+export type Notification = Schemas['NotificationRead']
+
+const NOTIFICATION_NOW = Date.parse('2026-10-04T12:00:00Z')
+
+export const notification = (overrides: Partial<Notification> = {}): Notification => ({
+  id: crypto.randomUUID(),
+  type: 'plan_ready',
+  trip_id: TRIP_ID,
+  params: {},
+  actions: [{ code: 'open_plan', params: {} }],
+  read_at: null,
+  created_at: new Date(NOTIFICATION_NOW).toISOString(),
+  ...overrides,
+})
+
+/** What each type carries, like the producers will send it: small string params and action codes. */
+const NOTIFICATION_SHAPES: Pick<Notification, 'type' | 'params' | 'actions'>[] = [
+  {
+    type: 'member_joined',
+    params: { member_name: 'Anna' },
+    actions: [{ code: 'open_people', params: {} }],
+  },
+  {
+    type: 'veto_added',
+    params: { place_name: 'Zamek Królewski', member_name: 'Marek' },
+    actions: [{ code: 'open_plan', params: {} }],
+  },
+  {
+    type: 'proposal_waiting',
+    params: { proposal_name: 'Muzeum zamiast parku' },
+    actions: [
+      { code: 'approve_proposal', params: {} },
+      { code: 'open_plan', params: {} },
+    ],
+  },
+  {
+    type: 'budget_approval_waiting',
+    params: { amount: '1 640 zł' },
+    actions: [
+      { code: 'approve_budget', params: {} },
+      { code: 'open_plan', params: {} },
+    ],
+  },
+  { type: 'plan_ready', params: {}, actions: [{ code: 'open_plan', params: {} }] },
+]
+
+/**
+ * `count` notifications, newest first: types rotate, every second one belongs to the outing,
+ * every seventh to no trip, and the unread ones are the first `unread` of the list.
+ */
+export const notifications = (count: number, unread = Math.ceil(count / 3)): Notification[] =>
+  Array.from({ length: count }, (_, index) => {
+    const created = new Date(NOTIFICATION_NOW - index * 37 * 60_000).toISOString()
+    return notification({
+      id: `5d1c0000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      ...NOTIFICATION_SHAPES[index % NOTIFICATION_SHAPES.length],
+      trip_id: index % 7 === 6 ? null : index % 2 === 0 ? TRIP_ID : OUTING_ID,
+      created_at: created,
+      read_at: index < unread ? null : created,
+    })
+  })
+export type Checkin = Schemas['CheckinRead']
+export type Photo = Schemas['PhotoRead']
+export type MemberLocation = Schemas['LocationRead']
+
+/** A 1x1 PNG: enough for a thumbnail or a full picture in a test. */
+export const PIXEL_PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+export const PIXEL_DATA_URL = `data:image/png;base64,${PIXEL_PNG_BASE64}`
+
+export const checkin = (profileId: string, overrides: Partial<Checkin> = {}): Checkin => ({
+  profile_id: profileId,
+  display_name: 'Ola',
+  accommodation: 'Hotel Polonia',
+  room: '214',
+  updated_at: '2026-10-09T18:00:00Z',
+  is_me: false,
+  ...overrides,
+})
+
+/** Marek has settled in with the grandmother's room next door; Ola has not entered hers yet. */
+export const familyCheckins = (): Checkin[] => [
+  checkin(PROFILE_IDS.tata, { display_name: 'Marek', accommodation: 'Hotel Polonia', room: '214' }),
+  checkin(PROFILE_IDS.babcia, {
+    display_name: 'Babcia Halina',
+    accommodation: 'Hotel Polonia',
+    room: '216',
+  }),
+]
+
+export const photo = (id: string, overrides: Partial<Photo> = {}): Photo => ({
+  id,
+  author_name: 'Marek',
+  is_mine: false,
+  content_type: 'image/jpeg',
+  size_bytes: 120_000,
+  created_at: '2026-10-10T12:00:00Z',
+  thumbnail: PIXEL_DATA_URL,
+  ...overrides,
+})
+
+/** Thirty photos, newest first by id, every third one the caller's. */
+export const galleryPhotos = (count = 30): Photo[] =>
+  Array.from({ length: count }, (_, index) =>
+    photo(`6b0f1c20-0000-4000-8000-${String(index).padStart(12, '0')}`, {
+      is_mine: index % 3 === 0,
+      author_name: index % 3 === 0 ? 'Ola' : 'Marek',
+      size_bytes: 100_000 + index * 1000,
+      created_at: new Date(Date.UTC(2026, 9, 10, 8, index)).toISOString(),
+    }),
+  )
+
+export const location = (
+  profileId: string,
+  overrides: Partial<MemberLocation> = {},
+): MemberLocation => ({
+  profile_id: profileId,
+  display_name: 'Marek',
+  latitude: 52.2297,
+  longitude: 21.0122,
+  accuracy_m: 20,
+  recorded_at: new Date().toISOString(),
+  expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+  is_me: false,
+  ...overrides,
+})

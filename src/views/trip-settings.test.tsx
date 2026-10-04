@@ -242,38 +242,43 @@ describe('deleting', () => {
   })
 })
 
-describe('budget slider', () => {
+describe('budget amounts', () => {
   const openBudget = async () => {
     await openSettings()
     openDetails()
-    return screen.getAllByRole('slider') as HTMLElement[]
   }
 
-  it('speaks each thumb with its amount, currency and scope', async () => {
-    const [low, high] = await openBudget()
-    expect(low?.getAttribute('aria-valuetext')).toMatch(/^od 1\s200\szł, cały wyjazd$/)
-    expect(high?.getAttribute('aria-valuetext')).toMatch(/^do 1\s600\szł, cały wyjazd$/)
+  it('is two number fields with the currency, no slider', async () => {
+    await openBudget()
+    expect(screen.queryByRole('slider')).toBeNull()
+    expect(amount(m.trip_form_budget_min_label()).value).toBe('1200')
+    expect(amount(m.trip_form_budget_max_label()).value).toBe('1600')
+    expect(screen.getAllByText('PLN').length).toBe(2)
   })
 
-  it('moves with the arrow keys and writes the amount into the field', async () => {
-    const [low] = await openBudget()
-    fireEvent.keyDown(low as HTMLElement, { key: 'ArrowRight' })
-    expect(amount(m.trip_form_budget_min_label()).value).toBe('1300')
+  it('takes a per-day amount far above the old 1000 limit and saves it', async () => {
+    const calls = recordCalls()
+    await openBudget()
+    fireEvent.click(screen.getByRole('radio', { name: m.trip_form_budget_scope_day() }))
+    fireEvent.change(amount(m.trip_form_budget_min_label()), { target: { value: '1500' } })
+    fireEvent.change(amount(m.trip_form_budget_max_label()), { target: { value: '25000' } })
+    save()
+    await waitFor(() => expect(writes(calls)).toHaveLength(1))
+    expect(await writes(calls)[0]?.body).toMatchObject({
+      budget_day_min: '1500',
+      budget_day_max: '25000',
+      budget_total_min: null,
+      budget_total_max: null,
+    })
   })
 
-  it('keeps the upper thumb at the end while only "from" is typed', async () => {
-    const [low, high] = await openBudget()
-    fireEvent.change(amount(m.trip_form_budget_max_label()), { target: { value: '' } })
-    fireEvent.change(amount(m.trip_form_budget_min_label()), { target: { value: '2000,5' } })
-    expect(low?.getAttribute('aria-valuenow')).toBe('2000.5')
-    expect(high?.getAttribute('aria-valuenow')).toBe('10000')
-  })
-
-  it('never inverts the thumbs while "from" is above "to"', async () => {
-    const [low, high] = await openBudget()
+  it('refuses "from" above "to" and does not call the API', async () => {
+    const calls = recordCalls()
+    await openBudget()
     fireEvent.change(amount(m.trip_form_budget_min_label()), { target: { value: '4000' } })
-    expect(low?.getAttribute('aria-valuenow')).toBe('4000')
-    expect(high?.getAttribute('aria-valuenow')).toBe('4000')
+    save()
+    expect(await screen.findByText(m.trip_form_budget_max_below_min())).toBeTruthy()
+    expect(writes(calls)).toHaveLength(0)
   })
 
   it('clears the amounts when the scope changes', async () => {
@@ -285,14 +290,12 @@ describe('budget slider', () => {
 })
 
 describe('in English', () => {
-  it('reads the form and the spoken slider values in English', async () => {
+  it('reads the form in English', async () => {
     overwriteGetLocale(() => 'en')
     await openSettings()
     openDetails()
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeTruthy()
     expect(screen.getByText('Delete trip')).toBeTruthy()
-    expect(screen.getAllByRole('slider')[0]?.getAttribute('aria-valuetext')).toMatch(
-      /^from PLN\s1,200, whole trip$/,
-    )
+    expect(screen.getByText('Where to?')).toBeTruthy()
   })
 })

@@ -1,14 +1,32 @@
 import { delay, HttpResponse, http, type RequestHandler } from 'msw'
 import type { Schemas } from '@/api/client'
+import type { Veto } from '@/api/queries/vetoes'
 import {
+  centsToDecimal,
+  compareDecimals,
+  parseDecimalInput,
+  sumDecimals,
+  toCents,
+} from '@/lib/money'
+import { searchCities } from './city-search'
+import {
+  checkin,
+  type Expense,
+  expenseParticipants,
   INVITATION_TOKEN,
   invitation,
+  location,
   MOCK_DEMO_TOKEN,
   MOCK_USER_SUB,
+  notification as makeNotification,
+  type Notification,
+  type Photo,
+  PIXEL_PNG_BASE64,
   type Plan,
   PROFILE_IDS,
   type Preferences,
   type Profile,
+  photo,
   plan,
   preferences,
   TRIP_ID,
@@ -21,6 +39,8 @@ import {
 } from './fixtures'
 import { interviewHandlers } from './interview'
 import { permissionHandlers } from './permissions'
+import { buildPlan, type PlanInputs, planInputKey } from './plan-builder'
+import { proposalHandlers } from './proposals'
 import { createWorld, type ScenarioName, type World } from './scenarios'
 
 const API = '*/api/v1'
@@ -195,6 +215,96 @@ function changeAccount(
   return new HttpResponse(null, { status: 204 })
 }
 
+/** The filters shared by the list and by bulk marking, like the API reads them. */
+function matchesNotificationFilter(item: Notification, filter: Schemas['NotificationFilter']) {
+  const { read, type, trip_id, created_from, created_to } = filter
+  return (
+    (read == null || (item.read_at !== null) === read) &&
+    (!type || type.length === 0 || type.includes(item.type)) &&
+    (!trip_id || item.trip_id === trip_id) &&
+    (!created_from || Date.parse(item.created_at) >= Date.parse(created_from)) &&
+    // The end of the range is exclusive.
+    (!created_to || Date.parse(item.created_at) < Date.parse(created_to))
+  )
+}
+
+/** GET /notifications like the API: filters, sort and the page come from the query string. */
+function listNotifications(all: Notification[], params: URLSearchParams) {
+  const read = params.get('read')
+  const filter: Schemas['NotificationFilter'] = {
+    read: read === null ? null : read === 'true',
+    type: params.getAll('type'),
+    trip_id: params.get('trip_id'),
+    created_from: params.get('created_from'),
+    created_to: params.get('created_to'),
+  }
+  const matching = all.filter((item) => matchesNotificationFilter(item, filter))
+  const sign = params.get('dir') === 'asc' ? 1 : -1
+  const byType = params.get('sort') === 'type'
+  // By type, then by date, both in the requested direction; the id is the last key.
+  matching.sort(
+    (a, b) =>
+      (byType ? sign * a.type.localeCompare(b.type) : 0) ||
+      sign * a.created_at.localeCompare(b.created_at) ||
+      a.id.localeCompare(b.id),
+  )
+  const size = Math.min(100, Math.max(1, Number(params.get('size')) || 20))
+  const page = Math.max(1, Number(params.get('page')) || 1)
+  return HttpResponse.json({
+    items: matching.slice((page - 1) * size, page * size),
+    total: matching.length,
+    page,
+    size,
+    pages: Math.ceil(matching.length / size),
+  })
+}
+
+/** The stream like the API sends it: `ready` first, `notification` with the id as SSE id. */
+function notificationStream(world: World, signal: AbortSignal) {
+  const encoder = new TextEncoder()
+  let timer: ReturnType<typeof setInterval> | undefined
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      const send = (event: string, data: unknown, id?: string) =>
+        controller.enqueue(
+          encoder.encode(
+            `${id ? `id: ${id}\n` : ''}event: ${event}\ndata: ${JSON.stringify(data)}\n\n`,
+          ),
+        )
+      send('ready', { unread: world.notifications.filter((n) => n.read_at === null).length })
+      if (world.notificationStream === 'live') {
+        timer = setInterval(() => {
+          const live = makeNotification({
+            created_at: new Date().toISOString(),
+            type: 'proposal_waiting',
+            params: { proposal_name: 'Muzeum zamiast parku' },
+            actions: [
+              { code: 'approve_proposal', params: {} },
+              { code: 'open_plan', params: {} },
+            ],
+          })
+          world.notifications = [live, ...world.notifications]
+          send('notification', live, live.id)
+        }, world.notificationLiveEveryMs)
+      }
+      signal.addEventListener('abort', () => {
+        clearInterval(timer)
+        try {
+          controller.close()
+        } catch {
+          // Already closed.
+        }
+      })
+    },
+    cancel() {
+      clearInterval(timer)
+    },
+  })
+  return new HttpResponse(stream, {
+    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+  })
+}
+
 function brokenHandlers(behaviour: 'server-error' | 'offline', latency: () => Promise<void>) {
   return [
     http.all(`${API}/*`, async () => {
@@ -213,6 +323,7 @@ function normalHandlers(
 ): RequestHandler[] {
   const findTrip = (id: unknown) => world.trips.find((candidate) => candidate.id === id)
   const canWrite = (id: unknown) => findTrip(id)?.my_role !== 'member'
+  const isHostOf = (id: unknown) => findTrip(id)?.my_role === 'host'
 
   return [
     ...interviewHandlers({
@@ -223,6 +334,7 @@ function normalHandlers(
       findTrip,
       canWrite,
     }),
+    ...proposalHandlers({ api: API, world, latency, findTrip, canWrite }),
     // The jury's one-link entry. Like the real API: no-store, and 404 for every bad or disabled token.
     http.post(`${API}/auth/demo`, async ({ request }) => {
       await latency()
@@ -249,6 +361,68 @@ function normalHandlers(
     http.get(`${API}/trips`, async ({ request }) => {
       await latency()
       return listTrips(world.trips, new URL(request.url).searchParams)
+    }),
+
+    http.get(`${API}/notifications`, async ({ request }) => {
+      await latency()
+      if (world.notificationsFail) return failure(500)
+      return listNotifications(world.notifications, new URL(request.url).searchParams)
+    }),
+
+    // Server-Sent Events: `ready`, then (scenario "notifications-live") a notification every few seconds.
+    http.get(`${API}/notifications/stream`, ({ request }) => {
+      if (world.notificationsFail || world.notificationStream === 'down') {
+        return HttpResponse.json({ detail: 'Service Unavailable' }, { status: 503 })
+      }
+      return notificationStream(world, request.signal)
+    }),
+
+    http.get(`${API}/notifications/unread-count`, async () => {
+      await latency()
+      if (world.notificationsFail) return failure(500)
+      return HttpResponse.json({
+        count: world.notifications.filter((n) => n.read_at === null).length,
+      })
+    }),
+
+    http.get(`${API}/notifications/:id`, async ({ params }) => {
+      await latency()
+      if (world.notificationsFail) return failure(500)
+      const found = world.notifications.find((item) => item.id === params.id)
+      return found ? HttpResponse.json(found) : notFound('Notification not found')
+    }),
+
+    // Exactly one of `ids` and `filters`; `filters: {}` is everything. Idempotent, like the API.
+    http.post(`${API}/notifications/mark`, async ({ request }) => {
+      await latency()
+      if (world.notificationsFail) return failure(500)
+      const body = (await request.json()) as Schemas['NotificationMark']
+      if ((body.ids == null) === (body.filters == null)) {
+        return HttpResponse.json({ detail: 'Send ids or filters, not both' }, { status: 422 })
+      }
+      const ids = new Set(body.ids ?? [])
+      const now = new Date().toISOString()
+      let updated = 0
+      world.notifications = world.notifications.map((item) => {
+        const selected = body.ids
+          ? ids.has(item.id)
+          : matchesNotificationFilter(item, body.filters ?? {})
+        if (!selected || (item.read_at !== null) === body.read) return item
+        updated += 1
+        return { ...item, read_at: body.read ? now : null }
+      })
+      return HttpResponse.json({ updated })
+    }),
+
+    http.get(`${API}/places/cities/search`, async ({ request }) => {
+      await latency()
+      if (world.citySearch === 'error') return serverError()
+      const params = new URL(request.url).searchParams
+      const q = params.get('q') ?? ''
+      if (q.length < 2) return HttpResponse.json({ detail: 'q is too short' }, { status: 422 })
+      return HttpResponse.json(
+        searchCities(world.cities, q, Number(params.get('size') ?? 8), world.citySearch),
+      )
     }),
 
     http.get(`${API}/places/cities`, async () => {
@@ -562,11 +736,29 @@ function normalHandlers(
         const profile = world.profiles.find((p) => p.id === params.profileId)
         if (!profile) return notFound('Profile not found')
         if (!canWrite(params.tripId) && !isMe(world, profile.id)) return forbidden()
-        const place = world.places.find((p) => p.id === params.placeId)
+        const catalog = world.places.find((p) => p.id === params.placeId)
+        // A place of the plan is not always in the city catalog of the mock.
+        const planned = world.plan?.days
+          .flatMap((day) => day.items)
+          .find((stop) => stop.place_id === params.placeId)
+        const place = catalog ?? (planned && { id: planned.place_id, name: planned.name })
         if (!place) return notFound('Place not found')
         if (world.preferencesSaveFails)
           return HttpResponse.json({ detail: 'Internal Server Error' }, { status: 500 })
         const body = (await request.json()) as Schemas['RatingUpdate']
+        world.ratings = world.ratings.filter(
+          (rating) => !(rating.profile_id === profile.id && rating.place_id === place.id),
+        )
+        if (body.value !== 'neutral')
+          world.ratings.push({
+            trip_id: String(params.tripId),
+            profile_id: profile.id,
+            place_id: place.id,
+            value: body.value,
+            reason_code: body.reason_code ?? null,
+            updated_by_sub: MOCK_USER_SUB,
+            updated_at: new Date().toISOString(),
+          })
         const current = storedPreferences(world, profile.id)
         current.example_places = current.example_places.filter((e) => e.place_id !== place.id)
         if (body.value !== 'neutral')
@@ -677,6 +869,7 @@ function normalHandlers(
       )
     }),
 
+    ...expenseHandlers(world, latency, findTrip, canWrite),
     // Voting links of the host. Like the real API the token is in the 201 answer only, and
     // creating a link for a person with an account is a 409.
     http.get(`${API}/trips/:tripId/vote-links`, async ({ params }) => {
@@ -808,6 +1001,164 @@ function normalHandlers(
       return HttpResponse.json(place)
     }),
 
+    // Check-ins. Like the API: any member reads them all; a member sets their own profile, a
+    // co-host or host also profiles without an account.
+    http.get(`${API}/trips/:tripId/checkins`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const query = new URL(request.url).searchParams
+      const part = (query.get('accommodation') ?? '').toLowerCase()
+      const sort = (query.get('sort') ?? 'accommodation') as 'accommodation' | 'room' | 'updated_at'
+      const rows = world.checkins.filter((entry) =>
+        entry.accommodation.toLowerCase().includes(part),
+      )
+      return HttpResponse.json(
+        pageOf(rows, query, (a, b) => String(a[sort] ?? '').localeCompare(String(b[sort] ?? ''))),
+      )
+    }),
+
+    http.put(`${API}/trips/:tripId/checkins/:profileId`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const profile = world.profiles.find((p) => p.id === params.profileId)
+      if (!profile) return notFound('Profile not found')
+      const allowed = isMe(world, profile.id) || (isHostOf(params.tripId) && !profile.user_sub)
+      if (!allowed) return forbidden()
+      const body = (await request.json()) as Schemas['CheckinUpdate']
+      const entry = checkin(profile.id, {
+        display_name: profile.display_name,
+        accommodation: body.accommodation.trim(),
+        room: body.room?.trim() || null,
+        updated_at: new Date().toISOString(),
+        is_me: isMe(world, profile.id),
+      })
+      world.checkins = [...world.checkins.filter((c) => c.profile_id !== profile.id), entry]
+      return HttpResponse.json(entry)
+    }),
+
+    http.delete(`${API}/trips/:tripId/checkins/:profileId`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const profile = world.profiles.find((p) => p.id === params.profileId)
+      if (profile && !(isMe(world, profile.id) || (isHostOf(params.tripId) && !profile.user_sub)))
+        return forbidden()
+      world.checkins = world.checkins.filter((c) => c.profile_id !== params.profileId)
+      return new HttpResponse(null, { status: 204 })
+    }),
+
+    // Photos. The upload takes the two multipart parts and keeps the thumbnail as a data: URL.
+    http.get(`${API}/trips/:tripId/photos`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const query = new URL(request.url).searchParams
+      const mine = query.get('mine')
+      const sort = (query.get('sort') ?? 'created_at') as 'created_at' | 'size_bytes'
+      const rows = world.photos.filter((p) => mine === null || p.is_mine === (mine === 'true'))
+      return HttpResponse.json(
+        pageOf(
+          rows,
+          query,
+          (a, b) => String(a[sort]).localeCompare(String(b[sort]), 'en', { numeric: true }),
+          'desc',
+        ),
+      )
+    }),
+
+    http.post(`${API}/trips/:tripId/photos`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (world.photoUploadStatus) return failure(world.photoUploadStatus)
+      const form = await request.formData()
+      const image = form.get('image')
+      const thumbnail = form.get('thumbnail')
+      // Not `instanceof Blob`: under jsdom the parts are undici's, not the page's Blob class.
+      if (!isFilePart(image) || !isFilePart(thumbnail))
+        return HttpResponse.json({ detail: 'image and thumbnail are required' }, { status: 422 })
+      const created: Photo = photo(crypto.randomUUID(), {
+        author_name: 'Ola',
+        is_mine: true,
+        content_type: image.type || 'image/jpeg',
+        size_bytes: image.size,
+        created_at: new Date().toISOString(),
+        thumbnail: `data:${thumbnail.type || 'image/jpeg'};base64,${PIXEL_PNG_BASE64}`,
+      })
+      world.photos.push(created)
+      return HttpResponse.json(created, { status: 201 })
+    }),
+
+    http.get(`${API}/trips/:tripId/photos/:photoId/image`, async ({ params }) => {
+      await latency()
+      if (!world.photos.some((p) => p.id === params.photoId)) return notFound('Photo not found')
+      return new HttpResponse(
+        Uint8Array.from(atob(PIXEL_PNG_BASE64), (c) => c.charCodeAt(0)),
+        {
+          headers: { 'Content-Type': 'image/png' },
+        },
+      )
+    }),
+
+    http.delete(`${API}/trips/:tripId/photos/:photoId`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const found = world.photos.find((p) => p.id === params.photoId)
+      if (!found) return notFound('Photo not found')
+      if (!found.is_mine && findTrip(params.tripId)?.my_role !== 'host') return forbidden()
+      world.photos = world.photos.filter((p) => p.id !== found.id)
+      return new HttpResponse(null, { status: 204 })
+    }),
+
+    // Locations. Opt-in: a position without a live consent is refused and not stored.
+    http.get(`${API}/trips/:tripId/locations`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const mine = new URL(request.url).searchParams.get('mine')
+      const rows = world.locations.filter((l) => mine === null || l.is_me === (mine === 'true'))
+      return HttpResponse.json(pageOf(rows, new URL(request.url).searchParams, () => 0, 'desc'))
+    }),
+
+    http.get(`${API}/trips/:tripId/locations/me/consent`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      return HttpResponse.json(world.consent)
+    }),
+
+    http.put(`${API}/trips/:tripId/locations/me/consent`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const body = (await request.json()) as Schemas['ConsentUpdate']
+      const minutes = body.duration_minutes ?? 240
+      world.consent = {
+        enabled: true,
+        until: new Date(Date.now() + minutes * 60_000).toISOString(),
+      }
+      return HttpResponse.json(world.consent)
+    }),
+
+    http.put(`${API}/trips/:tripId/locations/me`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!world.consent.enabled) return forbidden()
+      const body = (await request.json()) as Schemas['PositionUpdate']
+      const mine = world.profiles.find((p) => isMe(world, p.id))
+      const stored = location(mine?.id ?? PROFILE_IDS.mama, {
+        display_name: mine?.display_name ?? 'Ola',
+        latitude: body.latitude,
+        longitude: body.longitude,
+        accuracy_m: body.accuracy_m ?? null,
+        is_me: true,
+      })
+      world.locations = [...world.locations.filter((l) => !l.is_me), stored]
+      return HttpResponse.json(stored)
+    }),
+
+    http.delete(`${API}/trips/:tripId/locations/me`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      world.consent = { enabled: false, until: null }
+      world.locations = world.locations.filter((l) => !l.is_me)
+      return new HttpResponse(null, { status: 204 })
+    }),
+
     http.get(`${API}/trips/:tripId/plans/latest`, async ({ params }) => {
       await latency()
       if (!findTrip(params.tripId)) return notFound('Trip not found')
@@ -816,18 +1167,114 @@ function normalHandlers(
         : notFound('No plan yet')
     }),
 
-    // "Policz plan": the first call creates the plan (201), later calls with the same input
-    // return the existing version (200), like the real API.
+    // "Policz plan": the first call creates the plan (201). Later calls with the same inputs
+    // (alpha, weights, vetoes) return the existing version (200); other inputs build a new one.
     http.post(`${API}/trips/:tripId/plans`, async ({ params }) => {
+      await latency()
+      const found = findTrip(params.tripId)
+      if (!found) return notFound('Trip not found')
+      if (!canWrite(params.tripId)) return forbidden()
+      const tripId = String(params.tripId)
+      if (!world.plan || world.plan.trip_id !== tripId) {
+        const created: Plan = plan(tripId)
+        world.plan = created
+        return HttpResponse.json(created, { status: 201 })
+      }
+      if (world.recomputeFails)
+        return HttpResponse.json({ detail: 'Internal Server Error' }, { status: 500 })
+      const inputs: PlanInputs = {
+        alpha: found.fairness_alpha,
+        weights: Object.fromEntries(world.profiles.map((p) => [p.id, p.weight])),
+        vetoed: world.vetoes.map((veto) => veto.place_id),
+      }
+      if (planInputKey(inputs) === planInputKey(world.planInputs))
+        return HttpResponse.json(world.plan)
+      world.planInputs = inputs
+      world.plan = buildPlan(tripId, world.profiles, inputs, world.plan.version + 1)
+      return HttpResponse.json(world.plan, { status: 201 })
+    }),
+
+    // Weights: a preset or a list, like the API (max/min at most 3, "dzien_babci" needs a person).
+    http.put(`${API}/trips/:tripId/profiles/weights`, async ({ params, request }) => {
       await latency()
       if (!findTrip(params.tripId)) return notFound('Trip not found')
       if (!canWrite(params.tripId)) return forbidden()
-      if (world.plan?.trip_id === params.tripId) return HttpResponse.json(world.plan)
-      const created: Plan = plan(String(params.tripId ?? TRIP_ID))
-      world.plan = created
+      const body = (await request.json()) as Schemas['WeightsUpdate']
+      const next = new Map(world.profiles.map((p) => [p.id, p.weight]))
+      if (body.preset === 'po_rowno') for (const id of next.keys()) next.set(id, 1)
+      else if (body.preset === 'pod_dzieci')
+        for (const p of world.profiles)
+          next.set(p.id, p.age_group === 'toddler' || p.age_group === 'child' ? 2 : 1)
+      else if (body.preset === 'dzien_babci') {
+        if (!body.focus_profile_id)
+          return HttpResponse.json({ detail: 'focus_profile_id is required' }, { status: 422 })
+        for (const id of next.keys()) next.set(id, id === body.focus_profile_id ? 2 : 1)
+      } else for (const item of body.weights ?? []) next.set(item.profile_id, item.weight)
+      const values = [...next.values()]
+      if (Math.max(...values) / Math.min(...values) > 3)
+        return HttpResponse.json({ detail: 'max/min must be at most 3' }, { status: 422 })
+      world.profiles = world.profiles.map((p) => ({ ...p, weight: next.get(p.id) ?? p.weight }))
+      return HttpResponse.json(world.profiles)
+    }),
+
+    http.get(`${API}/trips/:tripId/ratings`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      return HttpResponse.json(world.ratings)
+    }),
+
+    http.get(`${API}/trips/:tripId/vetoes`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      return HttpResponse.json(world.vetoes)
+    }),
+
+    // A veto: your own profile, or any profile as co-host or higher (then on_behalf is true).
+    http.post(`${API}/trips/:tripId/vetoes`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const body = (await request.json()) as Schemas['VetoCreate']
+      const profile = world.profiles.find((p) => p.id === body.profile_id)
+      if (!profile) return notFound('Profile not found')
+      if (!canWrite(params.tripId) && !isMe(world, profile.id)) return forbidden()
+      const created: Veto = {
+        id: `9e0a7c10-5b2d-4a3e-8f61-${String(world.vetoes.length + 1).padStart(12, '0')}`,
+        trip_id: String(params.tripId),
+        profile_id: profile.id,
+        place_id: body.place_id,
+        created_by_sub: MOCK_USER_SUB,
+        on_behalf: !isMe(world, profile.id),
+        created_at: new Date().toISOString(),
+        revoked_at: null,
+        revoked_by_sub: null,
+      }
+      world.vetoes.push(created)
       return HttpResponse.json(created, { status: 201 })
     }),
   ]
+}
+
+const isFilePart = (value: unknown): value is File =>
+  typeof value === 'object' && value !== null && 'size' in value && 'type' in value
+
+/** One page of a list like the API's: `page`, `size`, `sort` and `dir` from the query string. */
+function pageOf<T>(
+  rows: T[],
+  query: URLSearchParams,
+  compare: (a: T, b: T) => number,
+  defaultDir: 'asc' | 'desc' = 'asc',
+) {
+  const size = Number(query.get('size') ?? 20)
+  const page = Number(query.get('page') ?? 1)
+  const direction = (query.get('dir') ?? defaultDir) === 'desc' ? -1 : 1
+  const sorted = rows.toSorted((a, b) => direction * compare(a, b))
+  return {
+    items: sorted.slice((page - 1) * size, page * size),
+    total: rows.length,
+    page,
+    size,
+    pages: Math.ceil(rows.length / size),
+  }
 }
 
 const COMFORT_FIELDS = [
@@ -949,3 +1396,247 @@ function viewPreferences(world: World, profileId: string, isManager: boolean): P
 
 const withoutUndefined = <T extends object>(body: T): Partial<T> =>
   Object.fromEntries(Object.entries(body).filter(([, value]) => value !== undefined)) as Partial<T>
+
+type ExpenseDetail = { type: string; loc: string[]; msg: string }
+
+/** The API's own rules for an expense (backend `expenses/logic/split.py`), as 422 items with codes. */
+function checkExpense(
+  world: World,
+  merged: Expense,
+  entered: Schemas['ShareInput'][],
+): ExpenseDetail[] {
+  const found: ExpenseDetail[] = []
+  const add = (type: string, field: string, msg: string) =>
+    found.push({ type, loc: ['body', field], msg })
+  const onTrip = new Set(world.profiles.map((profile) => profile.id))
+  if (compareDecimals(merged.amount, '0') <= 0)
+    add('expense.amount_not_positive', 'amount', 'Amount must be above zero')
+  if (!onTrip.has(merged.payer_profile_id))
+    add('expense.payer_not_on_trip', 'payer_profile_id', 'Payer is not on the trip')
+  if (entered.length === 0)
+    return [
+      ...found,
+      {
+        type: 'expense.participants_required',
+        loc: ['body', 'participants'],
+        msg: 'At least one participant',
+      },
+    ]
+  if (entered.some((share) => !onTrip.has(share.profile_id)))
+    add('expense.participant_not_on_trip', 'participants', 'A participant is not on the trip')
+  if (merged.split_method !== 'equal') {
+    const values = entered.map((share) =>
+      share.value == null ? null : parseDecimalInput(String(share.value), 4),
+    )
+    if (values.some((value) => value === null))
+      add('expense.share_value_required', 'participants', 'Every participant needs a value')
+    else if (values.some((value) => value !== null && compareDecimals(value, '0') <= 0))
+      add('expense.share_value_not_positive', 'participants', 'Values must be above zero')
+    else if (
+      merged.split_method === 'percent' &&
+      compareDecimals(sumDecimals(values.filter((v): v is string => v !== null)), '100') !== 0
+    )
+      add('expense.percent_sum', 'participants', 'Percentages must add up to 100')
+  }
+  return found
+}
+
+/** Balances and transfers from the stored parts: a plain greedy matching, enough for a mock. */
+function settle(world: World, tripId: string) {
+  const balance = new Map<string, bigint>()
+  let total = 0n
+  for (const item of world.expenses.filter((e) => e.trip_id === tripId)) {
+    total += toCents(item.amount)
+    balance.set(
+      item.payer_profile_id,
+      (balance.get(item.payer_profile_id) ?? 0n) + toCents(item.amount),
+    )
+    for (const part of item.participants) {
+      balance.set(part.profile_id, (balance.get(part.profile_id) ?? 0n) - toCents(part.amount))
+    }
+  }
+  const creditors = [...balance]
+    .filter(([, cents]) => cents > 0n)
+    .sort((a, b) => (a[1] > b[1] ? -1 : 1))
+  const debtors = [...balance]
+    .filter(([, cents]) => cents < 0n)
+    .sort((a, b) => (a[1] < b[1] ? -1 : 1))
+  const transfers: { from_profile_id: string; to_profile_id: string; amount: string }[] = []
+  let [i, j] = [0, 0]
+  while (i < debtors.length && j < creditors.length) {
+    const [debtor, owed] = debtors[i] ?? ['', 0n]
+    const [creditor, due] = creditors[j] ?? ['', 0n]
+    const pay = -owed < due ? -owed : due
+    transfers.push({
+      from_profile_id: debtor,
+      to_profile_id: creditor,
+      amount: centsToDecimal(pay),
+    })
+    debtors[i] = [debtor, owed + pay]
+    creditors[j] = [creditor, due - pay]
+    if (debtors[i]?.[1] === 0n) i += 1
+    if (creditors[j]?.[1] === 0n) j += 1
+  }
+  return {
+    currency: world.trips.find((t) => t.id === tripId)?.currency ?? null,
+    total_spent: centsToDecimal(total),
+    closed_at: world.settlementClosed ? '2026-10-12T10:00:00Z' : null,
+    balances: world.profiles
+      .filter((profile) => profile.trip_id === tripId)
+      .map((profile) => ({
+        profile_id: profile.id,
+        amount: centsToDecimal(balance.get(profile.id) ?? 0n),
+      })),
+    transfers,
+  }
+}
+
+function listExpenses(all: Expense[], params: URLSearchParams) {
+  const [from, to] = [params.get('date_from'), params.get('date_to')]
+  const matching = all.filter(
+    (e) =>
+      (!from || e.spent_on >= from) &&
+      (!to || e.spent_on <= to) &&
+      (!params.get('payer_profile_id') || e.payer_profile_id === params.get('payer_profile_id')) &&
+      (!params.get('participant_profile_id') ||
+        e.participants.some((p) => p.profile_id === params.get('participant_profile_id'))) &&
+      (!params.get('category') || e.category === params.get('category')),
+  )
+  const sort = params.get('sort') ?? 'spent_on'
+  const sign = params.get('dir') === 'asc' ? 1 : -1
+  const key = (e: Expense) =>
+    sort === 'amount'
+      ? e.amount.padStart(14, '0')
+      : sort === 'created_at'
+        ? e.created_at
+        : e.spent_on
+  matching.sort((a, b) => sign * key(a).localeCompare(key(b)) || a.id.localeCompare(b.id))
+  const size = Math.min(100, Math.max(1, Number(params.get('size')) || 20))
+  const page = Math.max(1, Number(params.get('page')) || 1)
+  return HttpResponse.json({
+    items: matching.slice((page - 1) * size, page * size),
+    total: matching.length,
+    page,
+    size,
+    pages: Math.ceil(matching.length / size),
+  })
+}
+
+function expenseHandlers(
+  world: World,
+  latency: () => Promise<void>,
+  findTrip: (id: unknown) => Trip | undefined,
+  canWrite: (id: unknown) => boolean,
+): RequestHandler[] {
+  // Like the API: the author, a host and a co-host may change or delete an expense.
+  const mayChange = (tripId: unknown, item: Expense) =>
+    canWrite(tripId) || item.created_by_sub === MOCK_USER_SUB
+  const closedSettlement = () =>
+    HttpResponse.json({ detail: 'The settlement is closed' }, { status: 409 })
+  const unprocessable422 = (detail: ExpenseDetail[]) =>
+    HttpResponse.json({ detail }, { status: 422 })
+
+  return [
+    http.get(`${API}/trips/:tripId/expenses`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      return listExpenses(
+        world.expenses.filter((e) => e.trip_id === params.tripId),
+        new URL(request.url).searchParams,
+      )
+    }),
+
+    http.post(`${API}/trips/:tripId/expenses`, async ({ params, request }) => {
+      await latency()
+      const found = findTrip(params.tripId)
+      if (!found) return notFound('Trip not found')
+      if (world.settlementClosed) return closedSettlement()
+      const body = (await request.json()) as Schemas['ExpenseCreate']
+      const created: Expense = {
+        id: crypto.randomUUID(),
+        trip_id: found.id,
+        payer_profile_id: body.payer_profile_id,
+        amount: parseDecimalInput(String(body.amount)) ?? '0',
+        currency: body.currency ?? found.currency ?? 'PLN',
+        description: body.description,
+        spent_on: body.spent_on,
+        category: body.category ?? null,
+        split_method: body.split_method,
+        trip_amount: parseDecimalInput(String(body.amount)) ?? '0',
+        exchange_rate: null,
+        status: 'confirmed',
+        has_evidence: false,
+        participants: [],
+        created_by_sub: MOCK_USER_SUB,
+        created_at: new Date().toISOString(),
+      }
+      const errors = checkExpense(world, created, body.participants)
+      if (errors.length > 0) return unprocessable422(errors)
+      created.participants = expenseParticipants(
+        created.amount,
+        created.split_method,
+        body.participants.map((p) => ({
+          profile_id: p.profile_id,
+          value: p.value == null ? null : String(p.value),
+        })),
+      )
+      world.expenses.unshift(created)
+      return HttpResponse.json(created, { status: 201 })
+    }),
+
+    http.patch(`${API}/trips/:tripId/expenses/:expenseId`, async ({ params, request }) => {
+      await latency()
+      const current = world.expenses.find(
+        (e) => e.id === params.expenseId && e.trip_id === params.tripId,
+      )
+      if (!current) return notFound('Expense not found')
+      if (!mayChange(params.tripId, current)) return forbidden()
+      if (world.settlementClosed) return closedSettlement()
+      const body = (await request.json()) as Schemas['ExpenseUpdate']
+      const merged: Expense = {
+        ...current,
+        payer_profile_id: body.payer_profile_id ?? current.payer_profile_id,
+        amount:
+          body.amount == null ? current.amount : (parseDecimalInput(String(body.amount)) ?? '0'),
+        description: body.description ?? current.description,
+        spent_on: body.spent_on ?? current.spent_on,
+        category: body.category === undefined ? current.category : body.category,
+        split_method: body.split_method ?? current.split_method,
+      }
+      const entered =
+        body.participants ??
+        current.participants.map((p) => ({ profile_id: p.profile_id, value: p.value }))
+      const errors = checkExpense(world, merged, entered)
+      if (errors.length > 0) return unprocessable422(errors)
+      merged.participants = expenseParticipants(
+        merged.amount,
+        merged.split_method,
+        entered.map((p) => ({
+          profile_id: p.profile_id,
+          value: p.value == null ? null : String(p.value),
+        })),
+      )
+      world.expenses = world.expenses.map((e) => (e.id === merged.id ? merged : e))
+      return HttpResponse.json(merged)
+    }),
+
+    http.delete(`${API}/trips/:tripId/expenses/:expenseId`, async ({ params }) => {
+      await latency()
+      const current = world.expenses.find(
+        (e) => e.id === params.expenseId && e.trip_id === params.tripId,
+      )
+      if (!current) return notFound('Expense not found')
+      if (!mayChange(params.tripId, current)) return forbidden()
+      if (world.settlementClosed) return closedSettlement()
+      world.expenses = world.expenses.filter((e) => e.id !== current.id)
+      return new HttpResponse(null, { status: 204 })
+    }),
+
+    // Backend issue #84 (not merged when this was written): the shape follows the issue.
+    http.get(`${API}/trips/:tripId/expenses/settlement`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      return HttpResponse.json(settle(world, String(params.tripId)))
+    }),
+  ]
+}

@@ -5,6 +5,7 @@ import { ResponsiveModal } from '@/components/shared/responsive-modal'
 import { TripForm } from '@/components/trips/trip-form'
 import { Button } from '@/components/ui/button'
 import { useCities } from '@/hooks/use-cities'
+import { useCitySearch } from '@/hooks/use-city-search'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
 import { useSaveTrip } from '@/hooks/use-save-trip'
 import { useSession } from '@/hooks/use-session'
@@ -27,6 +28,7 @@ function TripSettingsEditor({ trip }: { trip: Trip }) {
   const session = useSession()
   const { cities } = useCities(session.status)
   const save = useSaveTrip(trip, cities)
+  const citySearch = useCitySearch(session.status)
 
   const change = (next: boolean) => {
     setOpen(next)
@@ -50,6 +52,7 @@ function TripSettingsEditor({ trip }: { trip: Trip }) {
         open={open}
         onOpenChange={change}
         isDesktop={isDesktop}
+        wide
         title={m.trip_settings_title()}
         description={m.trip_settings_description()}
       >
@@ -57,6 +60,7 @@ function TripSettingsEditor({ trip }: { trip: Trip }) {
           initial={tripToFormValues(trip)}
           tripCurrency={trip.currency}
           cities={cities}
+          citySearch={citySearch}
           fieldErrors={save.fieldErrors}
           submitError={save.submitError}
           isSubmitting={save.isPending}

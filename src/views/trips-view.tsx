@@ -1,6 +1,7 @@
 import {
   CloudOff,
   KeyRound,
+  Mic,
   PlaneTakeoff,
   Plus,
   SearchX,
@@ -16,8 +17,11 @@ import { DeleteTripDialog } from '@/components/trips/delete-trip-dialog'
 import { TripForm } from '@/components/trips/trip-form'
 import { TripsTable, TripsTableSkeleton } from '@/components/trips/trips-table'
 import { TripsToolbar } from '@/components/trips/trips-toolbar'
+import { VoiceTripForm } from '@/components/trips/voice-trip-form'
 import { Button } from '@/components/ui/button'
 import { useCities } from '@/hooks/use-cities'
+import { useCitySearch } from '@/hooks/use-city-search'
+import { useCreateVoiceTrip } from '@/hooks/use-create-voice-trip'
 import { useDebouncedInput } from '@/hooks/use-debounced-input'
 import { useDeleteTrip } from '@/hooks/use-delete-trip'
 import { useHelpTopic } from '@/hooks/use-help-topic'
@@ -54,6 +58,10 @@ export function TripsView() {
   const createTrip = useSaveTrip(null, cities)
   const [doomed, setDoomed] = useState<Trip | null>(null)
   const remove = useDeleteTrip(() => setDoomed(null))
+  const [voiceOpen, setVoiceOpen] = useState(false)
+  const voiceTrip = useCreateVoiceTrip(() => setVoiceOpen(false))
+
+  const citySearch = useCitySearch(session.status)
   const queryInput = useDebouncedInput(search.q, (q) => setFilters({ q }))
 
   const hasFilters =
@@ -66,6 +74,11 @@ export function TripsView() {
   const openCreate = () => {
     createTrip.reset()
     setCreateTripOpen(true)
+  }
+
+  const openVoice = () => {
+    voiceTrip.reset()
+    setVoiceOpen(true)
   }
 
   const needsLogin = session.status === 'anonymous' || problem === 'unauthorized'
@@ -83,6 +96,12 @@ export function TripsView() {
             {showList && total > 0 ? m.trips_count({ count: total }) : m.trips_tagline()}
           </p>
         </div>
+        {!needsLogin && session.status !== 'loading' && (
+          <Button variant="outline" className="h-11 shrink-0 md:h-9" onClick={openVoice}>
+            <Mic aria-hidden="true" />
+            {m.trip_voice_action()}
+          </Button>
+        )}
       </div>
 
       {showList && (total > 0 || hasFilters) && (
@@ -97,6 +116,7 @@ export function TripsView() {
             filters={search}
             onFiltersChange={setFilters}
             cities={cities}
+            citySearch={citySearch}
             hasFilters={hasFilters}
             onReset={reset}
           />
@@ -224,15 +244,31 @@ export function TripsView() {
       />
 
       <ResponsiveModal
+        open={voiceOpen}
+        onOpenChange={setVoiceOpen}
+        isDesktop={isDesktop}
+        title={m.trip_voice_title()}
+        description={m.trip_voice_description()}
+      >
+        <VoiceTripForm
+          isSubmitting={voiceTrip.isPending}
+          submitError={voiceTrip.submitError}
+          onSubmit={(name) => void voiceTrip.submit(name)}
+        />
+      </ResponsiveModal>
+
+      <ResponsiveModal
         open={createTripOpen}
         onOpenChange={setCreateTripOpen}
         isDesktop={isDesktop}
+        wide
         title={m.action_new_trip()}
         description={m.trips_create_description()}
       >
         <TripForm
           initial={EMPTY_TRIP_FORM}
           cities={cities}
+          citySearch={citySearch}
           fieldErrors={createTrip.fieldErrors}
           submitError={createTrip.submitError}
           isSubmitting={createTrip.isPending}

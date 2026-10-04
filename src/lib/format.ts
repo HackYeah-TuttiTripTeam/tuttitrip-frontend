@@ -83,6 +83,29 @@ export function formatPercent(share: number): string {
   }).format(share)
 }
 
+/** "+4" / "−3" / "0": a change with its sign (the minus is a real minus sign). */
+export function formatSigned(value: number, maximumFractionDigits = 0): string {
+  return new Intl.NumberFormat(INTL_TAG[getLocale()], {
+    signDisplay: 'exceptZero',
+    maximumFractionDigits,
+    useGrouping: 'always',
+  }).format(value)
+}
+
+/** A number with exactly `digits` decimal places: "0,90" / "0.90", "74" for 0 digits. */
+export function formatFixed(value: number, digits: number): string {
+  return new Intl.NumberFormat(INTL_TAG[getLocale()], {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value)
+}
+
+/** "+90 zł" / "−45 zł" / "0 zł": a change of money with its sign. */
+export function formatMoneyDelta(delta: number, currency = 'PLN'): string {
+  if (delta === 0) return formatMoney(0, currency)
+  return `${delta > 0 ? '+' : '−'}${formatMoney(Math.abs(delta), currency)}`
+}
+
 /** Locale-aware, accent- and case-insensitive comparison for sorting names. */
 export function compareText(a: string, b: string): number {
   return collator().compare(a, b)
@@ -147,6 +170,18 @@ export function formatDecimal(amount: string, currency = 'PLN'): string {
   }).format(amount as `${number}`)
 }
 
+/** A plain decimal string ("6.67") in the locale's notation, no float in between: "6,67" / "6.67". */
+export function formatDecimalNumber(value: string, maximumFractionDigits = 4): string {
+  return new Intl.NumberFormat(INTL_TAG[getLocale()], { maximumFractionDigits }).format(
+    value as `${number}`,
+  )
+}
+
+/** Money with a currency, or a plain two-decimal number when the API has no currency to name. */
+export function formatAmount(amount: string, currency: string | null): string {
+  return currency ? formatDecimal(amount, currency) : formatDecimalNumber(amount, 2)
+}
+
 interface BudgetFields {
   currency: string | null
   budget_total_min: string | null
@@ -169,4 +204,41 @@ export function budgetSummary(trip: BudgetFields): string | null {
     flex: trip.budget_flex_pct,
     scope: byDay ? m.trip_budget_scope_day_short() : m.trip_budget_scope_total_short(),
   })
+}
+
+const relativeFormat = memoByLocale(
+  (tag) => new Intl.RelativeTimeFormat(tag, { numeric: 'auto', style: 'short' }),
+)
+const RELATIVE_STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['second', 60],
+  ['minute', 60],
+  ['hour', 24],
+  ['day', 7],
+  ['week', 4.345],
+  ['month', 12],
+  ['year', Number.POSITIVE_INFINITY],
+]
+
+/** "5 min temu" / "5 min ago": the largest unit that fits; `now` is injectable for tests. */
+export function formatRelative(iso: string, now: number = Date.now()): string {
+  let value = (new Date(iso).getTime() - now) / 1000
+  for (const [unit, size] of RELATIVE_STEPS) {
+    if (Math.abs(value) < size) return relativeFormat().format(Math.round(value), unit)
+    value /= size
+  }
+  return formatDate(iso)
+}
+
+const MS_PER_MINUTE = 60_000
+const MINUTES_PER_HOUR = 60
+const HOURS_PER_DAY = 24
+
+/** "5 min temu" / "5 min. ago": how long ago a position or an entry was updated. */
+export function formatAgo(iso: string, now: number = Date.now()): string {
+  const minutes = Math.round((new Date(iso).getTime() - now) / MS_PER_MINUTE)
+  const format = relativeFormat()
+  if (Math.abs(minutes) < MINUTES_PER_HOUR) return format.format(minutes, 'minute')
+  const hours = Math.round(minutes / MINUTES_PER_HOUR)
+  if (Math.abs(hours) < HOURS_PER_DAY) return format.format(hours, 'hour')
+  return format.format(Math.round(hours / HOURS_PER_DAY), 'day')
 }

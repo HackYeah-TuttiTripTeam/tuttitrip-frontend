@@ -37,6 +37,8 @@ if (typeof Element !== 'undefined') {
   Element.prototype.setPointerCapture ??= () => undefined
   Element.prototype.releasePointerCapture ??= () => undefined
   Element.prototype.hasPointerCapture ??= () => false
+  // cmdk (the city suggestions) scrolls the highlighted item into view.
+  Element.prototype.scrollIntoView ??= () => undefined
 }
 
 // The router scrolls to the top on navigation; jsdom only prints "not implemented".
