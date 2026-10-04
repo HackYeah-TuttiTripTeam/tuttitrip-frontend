@@ -32,6 +32,7 @@ import {
   voteSummary,
 } from './fixtures'
 import { adminMe, createPermissionsWorld, type PermissionsWorld } from './permissions'
+import { emptyInterviewWorld, emptyTrip, type InterviewWorld, resumedMessages } from './interview'
 
 export const scenarioNames = [
   'family-warsaw',
@@ -62,6 +63,8 @@ export const scenarioNames = [
   'vote-with-link',
   'vote-dead',
   'vote-write-error',
+  'interview-empty',
+  'interview-resumed',
 ] as const
 
 export type ScenarioName = (typeof scenarioNames)[number]
@@ -124,6 +127,8 @@ export interface World {
     /** Every write answers 500. */
     writeFails: boolean
   }
+  /** The interview of the main trip: session, scripted assistant, knowledge sources. */
+  interview: InterviewWorld
   /** Whether POST /auth/demo accepts the invitation token (false: switched off, answers 404). */
   demoEnabled: boolean
   /** POST /auth/demo answers 429: too many attempts from this address. */
@@ -186,6 +191,7 @@ export function createWorld(name: ScenarioName): World {
     voteLinks: [],
     voteSummary: voteSummary(),
     vote: { link: 'ok', profileName: 'Zosia', places: votePlaces(), writeFails: false },
+    interview: emptyInterviewWorld(),
     demoEnabled: true,
     demoRateLimited: false,
     join: {
@@ -278,6 +284,19 @@ export function createWorld(name: ScenarioName): World {
       return { ...base, vote: { ...base.vote, link: 'dead' } }
     case 'vote-write-error':
       return { ...base, vote: { ...base.vote, writeFails: true } }
+    case 'interview-empty': {
+      const fresh = emptyTrip()
+      return {
+        ...base,
+        trips: [fresh, outing()],
+        profiles: familyProfiles().slice(0, 1),
+        preferences: [],
+      }
+    }
+    case 'interview-resumed': {
+      const messages = resumedMessages(40)
+      return { ...base, interview: { ...emptyInterviewWorld(), started: true, messages } }
+    }
     case 'join-named':
       return {
         ...base,

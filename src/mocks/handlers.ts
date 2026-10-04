@@ -20,9 +20,12 @@ import {
   votePlaces,
 } from './fixtures'
 import { permissionHandlers } from './permissions'
+import { interviewHandlers } from './interview'
 import { createWorld, type ScenarioName, type World } from './scenarios'
 
 const API = '*/api/v1'
+/** Pause between the events of a streamed answer in the browser, so the typing is visible. */
+const STREAM_GAP_MS = 60
 
 const notFound = (detail: string) => HttpResponse.json({ detail }, { status: 404 })
 const NO_STORE = { 'Cache-Control': 'no-store' }
@@ -70,7 +73,7 @@ export function createHandlers(name: ScenarioName, { delayMs = 0, tweak }: Handl
     if (delayMs > 0) await delay(delayMs)
   }
   return world.behaviour === 'normal'
-    ? [...normalHandlers(world, latency), ...noRealApi]
+    ? [...normalHandlers(world, latency, delayMs > 0 ? STREAM_GAP_MS : 0), ...noRealApi]
     : brokenHandlers(world.behaviour, latency)
 }
 
@@ -203,11 +206,23 @@ function brokenHandlers(behaviour: 'server-error' | 'offline', latency: () => Pr
   ]
 }
 
-function normalHandlers(world: World, latency: () => Promise<void>): RequestHandler[] {
+function normalHandlers(
+  world: World,
+  latency: () => Promise<void>,
+  streamGapMs: number,
+): RequestHandler[] {
   const findTrip = (id: unknown) => world.trips.find((candidate) => candidate.id === id)
   const canWrite = (id: unknown) => findTrip(id)?.my_role !== 'member'
 
   return [
+    ...interviewHandlers({
+      api: API,
+      world,
+      latency,
+      gapMs: streamGapMs,
+      findTrip,
+      canWrite,
+    }),
     // The jury's one-link entry. Like the real API: no-store, and 404 for every bad or disabled token.
     http.post(`${API}/auth/demo`, async ({ request }) => {
       await latency()

@@ -188,6 +188,12 @@ options from `src/api/queries/`, so a route never touches the API directly.
    or `cva()`; Biome's `noTailwindRawColors` rejects palette colors
    (`bg-red-500`). Runs in `pnpm biome check` / `biome ci`.
 
+9. **The AG-UI client lives in `hooks/` and `api/` only.** `@ag-ui/*` is imported by
+   `api/interview-agent.ts`, `api/interview-events.ts` and `hooks/use-interview.ts`; components,
+   views, routes, loaders, lib and stores get plain types and props. `@copilotkit/*` is not allowed
+   anywhere (spike #24: production needs a licence key, its runtime does not start in a Worker).
+   (`ag-ui-only-in-hooks-and-api`, `no-copilotkit` and a package.json check in `scripts/check-arch.mjs`)
+
 Also enforced: no circular imports, no unresolvable or undeclared packages,
 loaders/stores/api stay UI-free, and only the folders above exist in `src/`.
 Each rule was proven to fail on a deliberate violation. If you need to break
@@ -244,6 +250,20 @@ widoki ani komponenty.
 
 - Poza zakresem: manifest PWA (`vite.config.ts`) i `index.html` mają opis po polsku, bo nie znają
   języka użytkownika.
+
+## Interview (Wywiad tab, AG-UI)
+
+`views/trip-view.interview.tsx` (lazy chunk) wires `hooks/use-interview-session.ts` (session and
+history over REST, newest page first with `dir=desc`), `hooks/use-interview.ts` (the AG-UI run) and
+`hooks/use-knowledge.ts` (the "Co już wiem" panel). The client sends only the latest user text; the
+server keeps the history of the session (`threadId` = session id), one run at a time (409 otherwise).
+The shared state is read defensively (`lib/interview.ts`): `knowledge` (a `KnowledgeRead` snapshot,
+applied to the query cache) and `card` (kind, question, options). A card answers with a sentence
+that carries the numbers (`lib/interview-answers.ts`). The REST answer of `/interview/knowledge`
+is the truth; the panel refetches after every run and edits go through the trips and profiles REST.
+`api/interview-events.ts` folds all 31 AG-UI 1.0 events (8 families) into the run view; RAW and
+CUSTOM land in `unhandled` (logged in dev). Mock: scenarios `interview-empty` and
+`interview-resumed`, `sseResponse()` in `src/mocks/interview.ts` for tests that script a stream.
 
 ## Data flow for a feature (example: trips)
 

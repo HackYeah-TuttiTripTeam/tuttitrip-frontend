@@ -1,6 +1,5 @@
 import { Calendar, MessageSquare, UserCheck, Users } from '@keyline-icons/react'
 import type { ReactNode } from 'react'
-import { StatusMessage } from '@/components/shared/status-message'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TOUR } from '@/lib/help'
 import { TRIP_TABS, type TripTab } from '@/lib/trip-tabs'
@@ -23,6 +22,8 @@ const TAB_ICONS: Record<TripTab, ReactNode> = {
 interface TripTabsProps {
   tab: TripTab
   onTabChange: (tab: TripTab) => void
+  /** The content of the Wywiad tab: a view, so this component stays free of the data layer. */
+  interview: ReactNode
   /** The content of the Osoby tab: a view, so this component stays free of the data layer. */
   people: ReactNode
   /** The content of the Członkowie tab: a view, so this component stays free of the data layer. */
@@ -31,8 +32,8 @@ interface TripTabsProps {
   plan: ReactNode
 }
 
-/** Wywiad, Osoby, Członkowie, Plan: a four-segment switch. The Interview panel is a placeholder for the next issue. */
-export function TripTabs({ tab, onTabChange, people, members, plan }: TripTabsProps) {
+/** Wywiad, Osoby, Członkowie, Plan: a four-segment switch. */
+export function TripTabs({ tab, onTabChange, interview, people, members, plan }: TripTabsProps) {
   return (
     <Tabs
       value={tab}
@@ -54,11 +55,7 @@ export function TripTabs({ tab, onTabChange, people, members, plan }: TripTabsPr
         ))}
       </TabsList>
 
-      <TabsContent value="interview">
-        <StatusMessage icon={<MessageSquare />} title={m.trip_interview_title()}>
-          {m.trip_interview_body()}
-        </StatusMessage>
-      </TabsContent>
+      <TabsContent value="interview">{interview}</TabsContent>
       <TabsContent value="people">{people}</TabsContent>
       <TabsContent value="members">{members}</TabsContent>
       <TabsContent value="plan">{plan}</TabsContent>
