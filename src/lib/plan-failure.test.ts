@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '@/api/errors'
-import { CITY_INPUT, classifyPlanFailure, missingCard } from './plan-failure'
+import { classifyPlanFailure, missingCard } from './plan-failure'
 
 const missing = [
   { field: 'dates', kind: 'date_range', person_id: null, options: [] },
@@ -13,9 +13,9 @@ describe('classifyPlanFailure', () => {
     expect(classifyPlanFailure(error)).toEqual({ kind: 'missing', missing })
   })
 
-  it('asks for the city again when the catalog has no places for it', () => {
-    const error = new ApiError(409, { code: 'plan.catalog_empty', message: 'x' })
-    expect(classifyPlanFailure(error)).toEqual({ kind: 'catalog_empty', missing: [CITY_INPUT] })
+  it('asks nothing when the places of the city are being fetched (catalog_missing)', () => {
+    const error = new ApiError(409, { code: 'catalog_missing', job_id: 'job-1' })
+    expect(classifyPlanFailure(error)).toEqual({ kind: 'catalog_missing', missing: [] })
   })
 
   it.each([

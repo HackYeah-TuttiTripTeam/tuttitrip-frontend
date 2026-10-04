@@ -13,8 +13,6 @@ interface MissingInputsDialogProps {
   input: MissingInput
   step: number
   total: number
-  /** The server has no places for the chosen city: say so instead of "something is missing". */
-  catalogEmpty: boolean
   /** An answer is being saved. */
   pending: boolean
   problem: string | null
@@ -33,7 +31,6 @@ export function MissingInputsDialog({
   input,
   step,
   total,
-  catalogEmpty,
   pending,
   problem,
   citySearch,
@@ -45,7 +42,7 @@ export function MissingInputsDialog({
       onOpenChange={onOpenChange}
       isDesktop={isDesktop}
       title={m.plan_missing_title()}
-      description={catalogEmpty ? m.plan_missing_catalog_body() : m.plan_missing_body()}
+      description={m.plan_missing_body()}
     >
       <div className="flex flex-col gap-3 pb-4">
         {total > 1 && (

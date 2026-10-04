@@ -139,7 +139,6 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
       input={missing.current}
       step={missing.step}
       total={missing.total}
-      catalogEmpty={creation.failure?.kind === 'catalog_empty'}
       pending={missing.pending}
       problem={missing.problem}
       citySearch={missing.citySearch}

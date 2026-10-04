@@ -8,7 +8,7 @@ export type MissingInput = Schemas['MissingInput']
 /** Why "Policz plan" failed, as far as the UI has a different thing to say or do. */
 export type PlanFailure =
   | 'missing'
-  | 'catalog_empty'
+  | 'catalog_missing'
   | 'forbidden'
   | 'offline'
   | 'server'
@@ -16,15 +16,8 @@ export type PlanFailure =
 
 /** `detail.code` of the 422 and 409 the plan endpoint answers with (`PlanErrorCode` in the backend). */
 const CODE_MISSING_INPUTS = 'plan.missing_inputs'
-const CODE_CATALOG_EMPTY = 'plan.catalog_empty'
-
-/** A city outside the catalog has to be replaced: ask for the city again. */
-export const CITY_INPUT: MissingInput = {
-  field: 'destination',
-  kind: 'city',
-  person_id: null,
-  options: [],
-}
+/** Any city is a destination: one the catalog lacks is fetched, not asked for again. */
+const CODE_CATALOG_MISSING = 'catalog_missing'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -34,7 +27,7 @@ const isMissingInput = (value: unknown): value is MissingInput =>
 
 export interface PlanFailureInfo {
   kind: PlanFailure
-  /** What to ask, in order; empty unless the failure is `missing` or `catalog_empty`. */
+  /** What to ask, in order; empty unless the failure is `missing`. */
   missing: MissingInput[]
 }
 
@@ -48,8 +41,8 @@ export function classifyPlanFailure(error: unknown): PlanFailureInfo | null {
     const missing = Array.isArray(detail.missing) ? detail.missing.filter(isMissingInput) : []
     return { kind: missing.length > 0 ? 'missing' : 'unknown', missing }
   }
-  if (error.status === 409 && detail?.code === CODE_CATALOG_EMPTY) {
-    return { kind: 'catalog_empty', missing: [CITY_INPUT] }
+  if (error.status === 409 && detail?.code === CODE_CATALOG_MISSING) {
+    return { kind: 'catalog_missing', missing: [] }
   }
   if (error.status === 403) return { kind: 'forbidden', missing: [] }
   if (error.status >= 500) return { kind: 'server', missing: [] }
@@ -58,7 +51,7 @@ export function classifyPlanFailure(error: unknown): PlanFailureInfo | null {
 
 export const PLAN_FAILURE_TEXT: Record<PlanFailure, () => string> = {
   missing: m.plan_compute_missing,
-  catalog_empty: m.plan_compute_catalog_empty,
+  catalog_missing: m.plan_compute_catalog_missing,
   forbidden: m.plan_compute_forbidden,
   offline: m.plan_compute_offline,
   server: m.plan_compute_server,

@@ -71,23 +71,29 @@ describe('Plan tab, braki w danych', () => {
     expect(within(dialog).getByText(m.plan_missing_step({ step: 1, total: 2 }))).toBeTruthy()
   })
 
-  it('asks for another city when the catalog has no places for this one', async () => {
+  it('does not ask for the city when its places are being fetched (catalog_missing)', async () => {
     useScenario('no-plan')
     server.use(
       http.post(
         PLANS,
         () =>
           HttpResponse.json(
-            { detail: { code: 'plan.catalog_empty', message: 'The city has no places' } },
+            {
+              detail: {
+                code: 'catalog_missing',
+                message: 'No places yet',
+                city_slug: 'x',
+                job_id: 'j',
+              },
+            },
             { status: 409 },
           ),
         { once: true },
       ),
     )
     await compute()
-    const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByText(m.plan_missing_catalog_body())).toBeTruthy()
-    expect(within(dialog).getByRole('combobox', { name: m.interview_city_label() })).toBeTruthy()
+    expect(await screen.findByText(m.plan_compute_catalog_missing())).toBeTruthy()
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('keeps a button to open the questions again after the dialog is closed', async () => {
