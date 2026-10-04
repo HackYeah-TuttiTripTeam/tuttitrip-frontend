@@ -212,7 +212,7 @@ describe('Plan tab, no-plan', () => {
     server.use(http.post(PLANS, () => HttpResponse.json({ detail: 'boom' }, { status: 500 })))
     renderApp(`/trips/${TRIP_ID}?tab=plan`)
     fireEvent.click(await screen.findByRole('button', { name: m.plan_compute() }))
-    expect(await screen.findByText(m.plan_compute_failed())).toBeTruthy()
+    expect(await screen.findByText(m.plan_compute_server())).toBeTruthy()
   })
 
   it('tells a co-host without the right that the plan cannot be built (403 on POST)', async () => {

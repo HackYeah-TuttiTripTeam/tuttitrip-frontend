@@ -9,12 +9,12 @@ import {
 } from '@keyline-icons/react'
 import { getRouteApi } from '@tanstack/react-router'
 import { useState } from 'react'
-import { ApiError } from '@/api/errors'
 import type { Plan } from '@/api/queries/plans'
 import type { Trip } from '@/api/queries/trips'
 import { DayCost } from '@/components/planning/cost-breakdown'
 import { DayTabs } from '@/components/planning/day-tabs'
 import { DraftBanner } from '@/components/planning/draft-banner'
+import { MissingInputsDialog } from '@/components/planning/missing-inputs-dialog'
 import { PlanHashLabel } from '@/components/planning/plan-hash-label'
 import { PlanPrintout } from '@/components/planning/plan-printout'
 import { PlanProgress } from '@/components/planning/plan-progress'
@@ -28,6 +28,7 @@ import { useCreatePlan } from '@/hooks/use-create-plan'
 import { useDraftAssumptions } from '@/hooks/use-draft-plan'
 import { useFairness } from '@/hooks/use-fairness'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
+import { useMissingInputs } from '@/hooks/use-missing-inputs'
 import { usePlaceFeedback } from '@/hooks/use-place-feedback'
 import { usePlan } from '@/hooks/use-plan'
 import { usePlanProgress } from '@/hooks/use-plan-progress'
@@ -38,6 +39,7 @@ import { useVerdicts } from '@/hooks/use-verdict'
 import { percentOf } from '@/lib/fairness'
 import { TOUR } from '@/lib/help'
 import { dayCost, dayTickets } from '@/lib/plan-cost'
+import { PLAN_FAILURE_TEXT } from '@/lib/plan-failure'
 import { m } from '@/paraglide/messages'
 import { PlanConsent } from './trip-view.consent'
 import { PlanDecisions } from './trip-view.decisions'
@@ -59,6 +61,12 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
   const { plan, isPending, isRecalculating, hasNoPlan, forbidden, problem, refetch } =
     usePlan(tripId)
   const creation = useCreatePlan(tripId)
+  const missing = useMissingInputs({
+    trip,
+    failure: creation.failure,
+    error: creation.error,
+    retry: () => creation.create(),
+  })
   const progress = usePlanProgress(tripId, creation.isPending || isRecalculating)
   const session = useSession()
   const { people } = useProfiles(tripId, session.status)
@@ -113,17 +121,38 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
     )
   }
 
-  const failure = creation.error ? (
-    <p role="alert" className="text-destructive text-sm">
-      {creation.error instanceof ApiError && creation.error.status === 403
-        ? m.plan_compute_forbidden()
-        : m.plan_compute_failed()}
-    </p>
+  const failure =
+    creation.failure && !missing.open ? (
+      <div className="flex flex-col items-start gap-2">
+        <p role="alert" className="text-destructive text-sm">
+          {PLAN_FAILURE_TEXT[creation.failure.kind]()}
+        </p>
+        {missing.current && (
+          <Button variant="outline" className="h-11 rounded-full px-5" onClick={missing.reopen}>
+            {m.plan_missing_reopen()}
+          </Button>
+        )}
+      </div>
+    ) : null
+  const dialog = missing.current ? (
+    <MissingInputsDialog
+      open={missing.open}
+      onOpenChange={(open) => (open ? missing.reopen() : missing.dismiss())}
+      isDesktop={isDesktop}
+      input={missing.current}
+      step={missing.step}
+      total={missing.total}
+      pending={missing.pending}
+      problem={missing.problem}
+      citySearch={missing.citySearch}
+      onAnswer={(input, value) => void missing.answer(input, value)}
+    />
   ) : null
 
   if (hasNoPlan || !plan) {
     return (
       <div data-tour={TOUR.planEmpty}>
+        {dialog}
         <StatusMessage
           icon={<Calendar />}
           title={m.plan_empty_title()}
@@ -173,6 +202,7 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
 
   return (
     <>
+      {dialog}
       {printing && <PlanPrintout plan={plan} trip={trip} />}
       <div
         className="grid gap-6 md:grid-cols-[minmax(0,1fr)_23rem] md:gap-10 print:hidden"

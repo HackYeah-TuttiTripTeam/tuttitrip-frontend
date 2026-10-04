@@ -31,6 +31,8 @@ export interface VoiceView {
   /** The assistant is producing an answer (from `response.created` to `response.done`). */
   responding: boolean
   tools: VoiceTool[]
+  /** How many times the host started to speak: a card shown before the last one is answered. */
+  speechStarts: number
 }
 
 export const EMPTY_VOICE_VIEW: VoiceView = {
@@ -40,6 +42,7 @@ export const EMPTY_VOICE_VIEW: VoiceView = {
   heard: false,
   responding: false,
   tools: [],
+  speechStarts: 0,
 }
 
 /** What the screen says the call is doing right now, most specific first. */
@@ -207,7 +210,7 @@ export function applyRealtimeEvent(view: VoiceView, raw: unknown): VoiceView {
     }
   }
   if (type === 'input_audio_buffer.speech_started') {
-    return { ...view, userSpeaking: true, heard: false }
+    return { ...view, userSpeaking: true, heard: false, speechStarts: view.speechStarts + 1 }
   }
   if (type === 'input_audio_buffer.speech_stopped') {
     return { ...view, userSpeaking: false, heard: true }
@@ -224,3 +227,15 @@ export function applyRealtimeEvent(view: VoiceView, raw: unknown): VoiceView {
 /** Captions without text (an item still waiting for its transcript) are not shown. */
 export const visibleCaptions = (captions: readonly Caption[]) =>
   captions.filter((caption) => caption.text.trim() !== '')
+
+/**
+ * The two client events that make the provider treat a tapped answer as if it were spoken: the text
+ * as a user message, then a request for the assistant's reply.
+ */
+export const typedAnswerEvents = (text: string) => [
+  {
+    type: 'conversation.item.create',
+    item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] },
+  },
+  { type: 'response.create' },
+]

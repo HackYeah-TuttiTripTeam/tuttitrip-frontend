@@ -17,6 +17,7 @@ import {
   EMPTY_VOICE_VIEW,
   micMayBeOpen,
   runningTool,
+  typedAnswerEvents,
   type VoiceTool,
   type VoiceView,
   voiceActivity,
@@ -175,6 +176,8 @@ export function useVoiceCall({
   const [micOpen, setMicOpen] = useState(true)
   const [saved, setSaved] = useState<VoiceTool | null>(null)
   const [elsewhere, setElsewhere] = useState<BusyKind | null>(null)
+  /** The provider's id of the live call, for the card the server shows next to the captions. */
+  const [callId, setCallId] = useState<string | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
 
   const send = useCallback((...events: object[]) => {
@@ -187,6 +190,7 @@ export function useVoiceCall({
   const release = useCallback((): Call | null => {
     const call = callRef.current
     callRef.current = null
+    setCallId(null)
     setStream(null)
     if (!call) return null
     for (const track of call.stream.getTracks()) track.stop()
@@ -294,6 +298,7 @@ export function useVoiceCall({
       if (!data) throw new TypeError(EMPTY_ANSWER)
       const token = await currentAccessToken().catch(() => undefined)
       callRef.current = { id: data.call_id, connection, stream, audio, channel, token }
+      setCallId(data.call_id)
       setStream(stream)
       connection.onconnectionstatechange = () => {
         if (['failed', 'closed', 'disconnected'].includes(connection?.connectionState ?? '')) {
@@ -422,6 +427,26 @@ export function useVoiceCall({
   // Leaving the tab ends the call.
   useEffect(() => () => void stop(), [stop])
 
+  /**
+   * Says something in the call as the host without speaking: a tap on a card. The provider answers
+   * it like a spoken sentence; it is added to the captions so the transcript shows what was sent.
+   */
+  const sendText = useCallback(
+    (text: string): boolean => {
+      if (callRef.current?.channel.readyState !== 'open') return false
+      send(...typedAnswerEvents(text))
+      setView((current) => ({
+        ...current,
+        captions: [
+          ...current.captions,
+          { id: crypto.randomUUID(), role: 'user', text, final: true },
+        ],
+      }))
+      return true
+    },
+    [send],
+  )
+
   const level = useMicLevel(stream, held && status === 'live')
   const tool = runningTool(view)
   return {
@@ -429,6 +454,9 @@ export function useVoiceCall({
     level,
     status,
     problem,
+    callId,
+    sendText,
+    speechStarts: view.speechStarts,
     captions: view.captions,
     speaking: view.speaking,
     activity,
