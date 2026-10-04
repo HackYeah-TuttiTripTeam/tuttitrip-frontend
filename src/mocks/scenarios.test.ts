@@ -136,9 +136,11 @@ describe('no real API', () => {
     'answers an endpoint without a mock handler with 501 and says so (%s)',
     async (name) => {
       useScenario(name)
-      const response = await fetch('/api/v1/places')
+      const response = await fetch('/api/v1/vote/access')
       expect(response.status).toBe(501)
-      expect(await response.json()).toEqual({ detail: 'No mock handler for GET /api/v1/places' })
+      expect(await response.json()).toEqual({
+        detail: 'No mock handler for GET /api/v1/vote/access',
+      })
     },
   )
 })

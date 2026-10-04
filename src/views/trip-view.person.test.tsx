@@ -458,7 +458,7 @@ describe('Lubiane i nielubiane miejsca', () => {
       http.put(PREFERENCES, async () => {
         puts += 1
         if (puts > 1) return undefined
-        await delay(150)
+        await delay(600)
         return HttpResponse.json({ detail: 'boom' }, { status: 500 })
       }),
     )

@@ -73,7 +73,7 @@ export function ImportancePool({ pool, isDefault, readOnly = false, onSave }: Im
 
   if (readOnly) {
     return (
-      <ul aria-label={m.prefs_pool_readonly_label()} className="flex flex-col gap-3">
+      <ul aria-label={m.prefs_pool_readonly_label()} className="flex max-w-md flex-col gap-3">
         {POOL_DOMAINS.map((domain) => (
           <li key={domain} className="flex flex-col gap-1">
             <span className="flex items-center justify-between gap-3">
@@ -128,7 +128,7 @@ export function ImportancePool({ pool, isDefault, readOnly = false, onSave }: Im
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex max-w-md flex-col gap-4">
       <ul className="flex flex-col gap-4">
         {POOL_DOMAINS.map((domain) => {
           const points = shown[domain]
