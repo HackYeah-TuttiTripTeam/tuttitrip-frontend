@@ -212,7 +212,7 @@ export function proposalHandlers({ api, world, latency, findTrip, canWrite, stag
         id: crypto.randomUUID(),
         version,
         plan_hash: `d${String(version).padStart(11, '0')}`,
-        params: { alpha: 1, weight_preset: 'default', draft: true },
+        params: { alpha: 1, weight_preset: 'default', draft: true, parameters_version: 1 },
       })
       world.plan = created
       const assumptions: DraftPlan['assumptions'] = []
