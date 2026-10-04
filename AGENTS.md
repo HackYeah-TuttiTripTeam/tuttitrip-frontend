@@ -264,6 +264,33 @@ erroring), pass it to `validateSearch`, strip defaults with
 `navigate({ search: (prev) => ({ ...prev, ... }), replace: true })`. Never
 mirror search state in `useState` or Zustand.
 
+## Lists
+
+Every list view is paginated, filterable and sortable by the server, and
+all of its state lives in URL query params.
+
+- Build the route's search schema with `createListSearchSchema`
+  (`src/loaders/list-search.ts`): page, size, sort, dir and the view's
+  filters, each with `.default()` + `.catch()`, defaults removed by
+  `stripSearchParams`, `validateSearch` on the route.
+- Read with `getRouteApi(...).useSearch()` (through `useListSearch`), write with
+  `useListSearch`. Page changes push history; filter, sort and size changes
+  replace it and reset page to 1 (so Back leaves the list). Text filters go
+  through `useDebouncedInput` (300 ms). Never mirror these in `useState` or
+  Zustand.
+- The query key holds the whole search object, `placeholderData` is
+  `keepPreviousData` (`pagedQueryOptions`, type `Page<T>` in
+  `src/api/queries/paged.ts`), and the loader prefetches the same key
+  (`loaderDeps`). Writes invalidate the list by its key prefix.
+- Send the search to the API as is. Do not filter or sort on the client.
+  Clamp a page past the end (`useClampPage`) only from a real answer, never
+  from placeholder data.
+- Arrays (a multi-value filter) stay in the URL in the router's default JSON
+  form (`role=["host","member"]`); the API request repeats the param.
+- Row selection and open popovers are UI state, not search params. A fixed
+  small list (the 5 latest in a popover) calls the same endpoint with
+  constant params and no URL.
+
 Auth: `hooks/use-api-auth-bridge.ts` hands Auth0's `getAccessTokenSilently`
 to the openapi-fetch middleware in `api/client.ts`, which adds
 `Authorization: Bearer <token>`. Without `VITE_AUTH0_DOMAIN` and
