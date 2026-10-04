@@ -21,8 +21,13 @@
   "trips_tagline": "Plans you put together as a group.",
   "trips_count": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} trip",
         "countPlural=*": "{count} trips"
@@ -31,8 +36,14 @@
   ],
   "trips_count_filtered": [
     {
-      "declarations": ["input count", "input total", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "input total",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} trip of {total}",
         "countPlural=*": "{count} trips of {total}"
@@ -180,8 +191,13 @@
   "plan_total": "Plan cost for the whole group: {amount}",
   "plan_lodging": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "Lodging: {name}, {count} night. {cost}",
         "countPlural=*": "Lodging: {name}, {count} nights. {cost}"
@@ -192,8 +208,13 @@
   "plan_lodging_cost_none": "Lodging price: no data",
   "people_count": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} person",
         "countPlural=*": "{count} people"
@@ -208,8 +229,13 @@
   "people_list_label": "People on this trip",
   "people_age": [
     {
-      "declarations": ["input age", "local agePlural = age: plural"],
-      "selectors": ["agePlural"],
+      "declarations": [
+        "input age",
+        "local agePlural = age: plural"
+      ],
+      "selectors": [
+        "agePlural"
+      ],
       "match": {
         "agePlural=one": "{age} year old",
         "agePlural=*": "{age} years old"
@@ -697,8 +723,13 @@
   "prefs_pool_less": "Take a point: {domain}",
   "prefs_pool_remaining": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} dot left to give out",
         "countPlural=*": "{count} dots left to give out"
@@ -982,8 +1013,13 @@
   "admin_users_tagline": "TuttiTrip accounts: find one, block it or delete it.",
   "admin_users_count": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} account",
         "countPlural=*": "{count} accounts"
@@ -1318,5 +1354,23 @@
   "expense_error_currency_unsupported": "This currency is not supported. Choose another.",
   "expense_error_rate_not_found": "There is no exchange rate for that day (it may be a weekend or a holiday). Pick another date or the trip's currency.",
   "expense_error_rate_unavailable": "Could not fetch the exchange rate. Try again in a moment.",
-  "help_trip_expenses_title": "Guide: expenses"
+  "help_trip_expenses_title": "Guide: expenses",
+  "settlement_close": "Close the settlement",
+  "settlement_reopen": "Reopen",
+  "settlement_close_body": "Once closed, nobody can add, change or delete an expense, and the transfers stay as they are. You can reopen the settlement later.",
+  "settlement_reopen_body": "Once reopened, expenses can change again and the list of transfers is worked out anew.",
+  "settlement_close_confirm": "Close the settlement",
+  "settlement_reopen_confirm": "Reopen",
+  "settlement_closed_on": "Closed {date}.",
+  "settlement_mark_paid": "Paid",
+  "settlement_mark_paid_label": "Mark the transfer from {from} to {to} as paid",
+  "settlement_payments_title": "Paid",
+  "settlement_payment_line": "{from} paid {to}, {date}",
+  "settlement_undo": "Undo",
+  "settlement_undo_label": "Undo the paid mark of the transfer from {from} to {to}",
+  "settlement_error_forbidden": "You cannot do that. The host closes and reopens, and a transfer is marked by the payer, the receiver or the host.",
+  "settlement_error_drafts": "Confirm or delete the expense drafts from receipts first, then close the settlement.",
+  "settlement_error_state_failed": "Could not change the state of the settlement. Try again.",
+  "settlement_error_payment_failed": "Could not save the payment. Try again.",
+  "settlement_state_description": "Change the state of the trip's settlement."
 }

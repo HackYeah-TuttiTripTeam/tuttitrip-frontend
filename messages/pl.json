@@ -21,8 +21,13 @@
   "trips_tagline": "Plany, które układacie razem.",
   "trips_count": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} wyjazd",
         "countPlural=few": "{count} wyjazdy",
@@ -33,8 +38,14 @@
   ],
   "trips_count_filtered": [
     {
-      "declarations": ["input count", "input total", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "input total",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} wyjazd z {total}",
         "countPlural=few": "{count} wyjazdy z {total}",
@@ -184,8 +195,13 @@
   "plan_total": "Koszt planu dla całej grupy: {amount}",
   "plan_lodging": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "Nocleg: {name}, {count} noc. {cost}",
         "countPlural=few": "Nocleg: {name}, {count} noce. {cost}",
@@ -198,8 +214,13 @@
   "plan_lodging_cost_none": "Cena noclegu: brak danych",
   "people_count": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} osoba",
         "countPlural=few": "{count} osoby",
@@ -216,8 +237,13 @@
   "people_list_label": "Osoby na wyjeździe",
   "people_age": [
     {
-      "declarations": ["input age", "local agePlural = age: plural"],
-      "selectors": ["agePlural"],
+      "declarations": [
+        "input age",
+        "local agePlural = age: plural"
+      ],
+      "selectors": [
+        "agePlural"
+      ],
       "match": {
         "agePlural=one": "{age} rok",
         "agePlural=few": "{age} lata",
@@ -707,8 +733,13 @@
   "prefs_pool_less": "Zabierz punkt: {domain}",
   "prefs_pool_remaining": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "Została {count} kropka do rozdania",
         "countPlural=few": "Zostały {count} kropki do rozdania",
@@ -994,8 +1025,13 @@
   "admin_users_tagline": "Konta w TuttiTrip: znajdź konto, zablokuj je albo usuń.",
   "admin_users_count": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} konto",
         "countPlural=few": "{count} konta",
@@ -1332,5 +1368,23 @@
   "expense_error_currency_unsupported": "Tej waluty nie obsługujemy. Wybierz inną.",
   "expense_error_rate_not_found": "Brak kursu na ten dzień (to może być weekend albo święto). Wybierz inną datę albo walutę wyjazdu.",
   "expense_error_rate_unavailable": "Nie udało się pobrać kursu waluty. Spróbuj jeszcze raz za chwilę.",
-  "help_trip_expenses_title": "Przewodnik: wydatki"
+  "help_trip_expenses_title": "Przewodnik: wydatki",
+  "settlement_close": "Zamknij rozliczenie",
+  "settlement_reopen": "Otwórz ponownie",
+  "settlement_close_body": "Po zamknięciu nikt nie doda, nie zmieni ani nie usunie wydatku, a przelewy zostaną takie, jak są. Możesz otworzyć rozliczenie ponownie.",
+  "settlement_reopen_body": "Po otwarciu wydatki znów można zmieniać, a lista przelewów policzy się od nowa.",
+  "settlement_close_confirm": "Zamknij rozliczenie",
+  "settlement_reopen_confirm": "Otwórz ponownie",
+  "settlement_closed_on": "Zamknięte {date}.",
+  "settlement_mark_paid": "Zapłacone",
+  "settlement_mark_paid_label": "Oznacz przelew od {from} do {to} jako zapłacony",
+  "settlement_payments_title": "Zapłacone",
+  "settlement_payment_line": "{from} zapłacił(a) {to}, {date}",
+  "settlement_undo": "Cofnij",
+  "settlement_undo_label": "Cofnij oznaczenie przelewu od {from} do {to}",
+  "settlement_error_forbidden": "Tego nie możesz zrobić. Zamyka i otwiera host, a przelew oznacza płacący, odbiorca albo host.",
+  "settlement_error_drafts": "Najpierw potwierdź albo usuń szkice wydatków z paragonów, potem zamknij rozliczenie.",
+  "settlement_error_state_failed": "Nie udało się zmienić stanu rozliczenia. Spróbuj jeszcze raz.",
+  "settlement_error_payment_failed": "Nie udało się zapisać przelewu. Spróbuj jeszcze raz.",
+  "settlement_state_description": "Zmiana stanu rozliczenia wyjazdu."
 }

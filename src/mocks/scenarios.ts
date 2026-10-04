@@ -120,6 +120,8 @@ export interface World {
   expenses: Expense[]
   /** The host has closed the settlement: expense writes answer 409 and `closed_at` is set. */
   settlementClosed: boolean
+  /** Payments marked as made on the main trip; the settlement subtracts them from the transfers. */
+  payments: Schemas['PaymentRead'][]
   /** The latest plan of the main trip; null until "Policz plan" creates one. */
   plan: Plan | null
   /** Invitations of the main trip, newest first (the host's list). */
@@ -215,6 +217,7 @@ export function createWorld(name: ScenarioName): World {
     preferencesSaveFails: false,
     expenses: familyExpenses(),
     settlementClosed: false,
+    payments: [],
     plan: plan(main.id),
     invitations: [invitation()],
     voteLinks: [],

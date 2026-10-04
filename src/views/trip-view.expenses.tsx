@@ -7,7 +7,8 @@ import { DeleteExpenseConfirm } from '@/components/expenses/delete-expense-confi
 import { ExpenseForm } from '@/components/expenses/expense-form'
 import { ExpenseList, ExpenseListSkeleton } from '@/components/expenses/expense-list'
 import { ExpensesToolbar } from '@/components/expenses/expenses-toolbar'
-import { SettlementPanel } from '@/components/expenses/settlement-panel'
+import { SettlementPanel, transferKey } from '@/components/expenses/settlement-panel'
+import { SettlementStateConfirm } from '@/components/expenses/settlement-state-confirm'
 import { PaginationBar } from '@/components/shared/pagination-bar'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
 import { StatusMessage } from '@/components/shared/status-message'
@@ -19,10 +20,12 @@ import { useExpenses } from '@/hooks/use-expenses'
 import { useClampPage, useListSearch } from '@/hooks/use-list-search'
 import { useMe } from '@/hooks/use-me'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
+import { usePayments } from '@/hooks/use-payments'
 import { useProfiles } from '@/hooks/use-profiles'
 import { useSaveExpense } from '@/hooks/use-save-expense'
 import { useSession } from '@/hooks/use-session'
 import { useSettlement } from '@/hooks/use-settlement'
+import { settlementWriteFailure, useSettlementActions } from '@/hooks/use-settlement-actions'
 import { emptyExpenseForm, expenseToFormValues, expenseWriteFailure } from '@/lib/expense-form'
 import { formatAmount } from '@/lib/format'
 import { downloadTextFile, transfersToCsv } from '@/lib/settlement-csv'
@@ -60,6 +63,10 @@ export function TripExpensesView({ trip }: TripExpensesViewProps) {
 
   const list = useExpenses(tripId, search, session.status)
   const settlement = useSettlement(tripId, session.status)
+  const { payments } = usePayments(tripId, session.status)
+  const actions = useSettlementActions(tripId)
+  const isHost = trip.my_role === 'host'
+  const [stateDialog, setStateDialog] = useState<'close' | 'reopen' | null>(null)
   useClampPage(search.page, list.pages, setPage)
 
   const [editing, setEditing] = useState<Expense | 'new' | null>(null)
@@ -91,6 +98,28 @@ export function TripExpensesView({ trip }: TripExpensesViewProps) {
     save.reset()
     setEditing(expense)
   }
+
+  const busyKey = actions.markPaid.isPending
+    ? transferKey(actions.markPaid.variables.body)
+    : actions.removePayment.isPending
+      ? actions.removePayment.variables.params.path.payment_id
+      : null
+  const paymentError = actions.markPaid.isError
+    ? settlementWriteFailure(actions.markPaid.error, 'payment')
+    : actions.removePayment.isError
+      ? settlementWriteFailure(actions.removePayment.error, 'payment')
+      : null
+  const stateMutation = stateDialog === 'reopen' ? actions.reopen : actions.close
+  const openStateDialog = (mode: 'close' | 'reopen') => {
+    actions.close.reset()
+    actions.reopen.reset()
+    setStateDialog(mode)
+  }
+  const changeState = () =>
+    stateMutation.mutate(
+      { params: { path: { trip_id: tripId } } },
+      { onSuccess: () => setStateDialog(null) },
+    )
 
   const addButton = closed ? null : (
     <Button onClick={openNew} className="hidden h-9 md:inline-flex">
@@ -216,6 +245,31 @@ export function TripExpensesView({ trip }: TripExpensesViewProps) {
         settlement={data}
         people={people}
         onAddExpense={closed ? undefined : openNew}
+        isHost={isHost}
+        onRequestClose={() => openStateDialog('close')}
+        onRequestReopen={() => openStateDialog('reopen')}
+        payments={payments}
+        // The payer, the receiver and the host; the API checks it again (403).
+        canMark={(from, to) =>
+          isHost || (myProfileId !== undefined && [from, to].includes(myProfileId))
+        }
+        busyKey={busyKey}
+        onMarkPaid={(transfer) =>
+          actions.markPaid.mutate({
+            params: { path: { trip_id: tripId } },
+            body: {
+              from_profile_id: transfer.from_profile_id,
+              to_profile_id: transfer.to_profile_id,
+              amount: transfer.amount,
+            },
+          })
+        }
+        onUndoPayment={(payment) =>
+          actions.removePayment.mutate({
+            params: { path: { trip_id: tripId, payment_id: payment.id } },
+          })
+        }
+        actionError={paymentError}
         onDownload={() =>
           downloadTextFile(
             'settlement.csv',
@@ -331,6 +385,26 @@ export function TripExpensesView({ trip }: TripExpensesViewProps) {
             onSubmit={async (values) => {
               if (await save.submit(values)) setEditing(null)
             }}
+          />
+        )}
+      </ResponsiveModal>
+
+      <ResponsiveModal
+        open={stateDialog !== null}
+        onOpenChange={(open) => !open && setStateDialog(null)}
+        isDesktop={isDesktop}
+        title={stateDialog === 'reopen' ? m.settlement_reopen() : m.settlement_close()}
+        description={m.settlement_state_description()}
+      >
+        {stateDialog !== null && (
+          <SettlementStateConfirm
+            mode={stateDialog}
+            isPending={stateMutation.isPending}
+            error={
+              stateMutation.isError ? settlementWriteFailure(stateMutation.error, 'state') : null
+            }
+            onConfirm={changeState}
+            onCancel={() => setStateDialog(null)}
           />
         )}
       </ResponsiveModal>
