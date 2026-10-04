@@ -8577,6 +8577,12 @@ export interface components {
             /** @description Whether the caller confirmed they are going (`confirmed`). */
             my_status: components["schemas"]["MemberStatus"];
             /**
+             * Is Sample
+             * @description The sample trip a new account gets (named `Przykład: ...`); the host can delete it like any trip.
+             * @default false
+             */
+            is_sample?: boolean;
+            /**
              * Kind
              * @description ``outing`` for a single day without a stay, otherwise ``trip``.
              *

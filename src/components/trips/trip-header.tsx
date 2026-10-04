@@ -6,6 +6,7 @@ import { HelpHint } from '@/components/shared/help-hint'
 import { Skeleton } from '@/components/ui/skeleton'
 import { budgetSummary, formatDateRange } from '@/lib/format'
 import { m } from '@/paraglide/messages'
+import { SampleBadge } from './sample-badge'
 
 const ROLE_LABELS: Record<Trip['my_role'], () => string> = {
   host: m.trip_role_host,
@@ -51,6 +52,7 @@ export function TripHeader({ trip, actions }: { trip: Trip; actions?: ReactNode 
           </span>
           <HelpHint id="role" />
           {trip.kind === 'outing' && <span>{m.trip_kind_outing()}</span>}
+          {trip.is_sample && <SampleBadge />}
         </li>
       </ul>
     </header>
