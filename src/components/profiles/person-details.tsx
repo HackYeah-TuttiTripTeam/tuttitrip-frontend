@@ -1,12 +1,15 @@
 import { ArrowLeft } from '@keyline-icons/react'
-import type { Diet, Preferences } from '@/api/queries/preferences'
+import type { Diet, ExamplePlace, ExampleVerdict, Preferences } from '@/api/queries/preferences'
 import { Button } from '@/components/ui/button'
+import { POOL_TOTAL } from '@/lib/importance'
 import { GROUP_LABELS, hasAccount, type Person, type SaveResult } from '@/lib/people'
 import type { ConstraintsValues } from '@/lib/preferences'
 import { m } from '@/paraglide/messages'
 import { ConstraintsForm, ConstraintsSummary } from './constraints-form'
 import { DietPicker } from './diet-picker'
+import { ImportancePool } from './importance-pool'
 import { InterestsPicker } from './interests-picker'
+import { type CatalogOption, LikedPlaces } from './liked-places'
 import { PersonAvatar } from './person-avatar'
 import { ROLE_LABELS } from './person-row'
 
@@ -21,6 +24,15 @@ interface PersonDetailsProps {
   onSetInterests: (
     change: (interests: Preferences['interests']) => Preferences['interests'],
   ) => Promise<SaveResult>
+  onSetPool: (pool: Preferences['importance_pool']) => Promise<SaveResult>
+  /** Catalog places of the trip's city, to search by name. */
+  catalog: CatalogOption[]
+  onAddExample: (example: {
+    name: string
+    placeId: string | null
+    verdict: ExampleVerdict
+  }) => Promise<SaveResult>
+  onRemoveExample: (place: ExamplePlace) => Promise<SaveResult>
 }
 
 function Section({
@@ -48,8 +60,8 @@ function Section({
 }
 
 /**
- * One person's preferences: constraints, diet and interests. New sections of the profile (the
- * importance pool, liked and disliked places) are more `Section`s below the interests.
+ * One person's preferences: constraints, diet, interests, the importance pool and the liked and
+ * disliked places.
  */
 export function PersonDetails({
   person,
@@ -59,6 +71,10 @@ export function PersonDetails({
   onSaveConstraints,
   onSetDiet,
   onSetInterests,
+  onSetPool,
+  catalog,
+  onAddExample,
+  onRemoveExample,
 }: PersonDetailsProps) {
   const { profile, role } = person
   const tag = role ? ROLE_LABELS[role]() : hasAccount(person) ? null : m.people_profile_only()
@@ -137,6 +153,40 @@ export function PersonDetails({
           interests={preferences.interests}
           onChange={onSetInterests}
           readOnly={!canEdit}
+        />
+      </Section>
+
+      <Section
+        id="prefs-pool"
+        title={m.prefs_pool_title()}
+        hint={[
+          canEdit ? m.prefs_pool_hint({ total: POOL_TOTAL }) : null,
+          profile.age_group === 'toddler' || profile.age_group === 'child'
+            ? m.prefs_pool_child()
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        <ImportancePool
+          pool={preferences.importance_pool}
+          isDefault={!preferences.filled}
+          readOnly={!canEdit}
+          onSave={onSetPool}
+        />
+      </Section>
+
+      <Section
+        id="prefs-places"
+        title={m.prefs_places_title()}
+        hint={canEdit ? `${m.prefs_places_hint()} ${m.prefs_autosave()}` : m.prefs_places_hint()}
+      >
+        <LikedPlaces
+          examples={preferences.example_places}
+          catalog={catalog}
+          readOnly={!canEdit}
+          onAdd={onAddExample}
+          onRemove={onRemoveExample}
         />
       </Section>
     </div>

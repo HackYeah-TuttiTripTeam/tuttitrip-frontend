@@ -3,7 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { delay, HttpResponse, http } from 'msw'
 import { describe, expect, it } from 'vitest'
-import { PROFILE_IDS, TRIP_ID } from '@/mocks/fixtures'
+import { CATALOG_PLACE_IDS, PROFILE_IDS, TRIP_ID } from '@/mocks/fixtures'
 import { server, useScenario } from '@/mocks/node'
 import { renderApp } from '@/mocks/render-app'
 import { m } from '@/paraglide/messages'
@@ -235,5 +235,258 @@ describe('Preferencje osoby, member-readonly', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual([m.prefs_interest_music(), m.prefs_interest_parks()])
+  })
+})
+
+const spin = (name: string) => screen.findByRole('spinbutton', { name })
+
+describe('Pula ważności', () => {
+  it('names each domain with its points for a screen reader and moves by arrow keys', async () => {
+    openPerson(PROFILE_IDS.zosia)
+    await heading('Zosia')
+    const food = await spin(m.prefs_pool_domain_food())
+    expect(food.getAttribute('aria-valuenow')).toBe('2')
+    expect(food.getAttribute('aria-valuemin')).toBe('0')
+    expect(food.getAttribute('aria-valuetext')).toBe(
+      m.prefs_pool_value({ domain: m.prefs_pool_domain_food(), points: 2, total: 10 }),
+    )
+    expect(screen.getByRole('status').textContent).toBe(m.prefs_pool_complete())
+
+    food.focus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(food.getAttribute('aria-valuenow')).toBe('1')
+    expect(screen.getByRole('status').textContent).toBe(m.prefs_pool_remaining({ count: 1 }))
+    expect(screen.getByText(m.prefs_pool_need_all())).toBeTruthy()
+    expect(screen.getByRole('button', { name: m.prefs_pool_save() }).hasAttribute('disabled')).toBe(
+      true,
+    )
+  })
+
+  it('never lets the pool go over 10 dots', async () => {
+    openPerson(PROFILE_IDS.zosia)
+    await heading('Zosia')
+    const pace = await spin(m.prefs_pool_domain_pace())
+    pace.focus()
+    await userEvent.keyboard('{ArrowUp}{ArrowUp}{End}')
+    expect(pace.getAttribute('aria-valuenow')).toBe('2')
+    const more = screen.getByRole('button', {
+      name: m.prefs_pool_more({ domain: m.prefs_pool_domain_pace() }),
+    })
+    expect(more.hasAttribute('disabled')).toBe(true)
+    // Free points can be given out up to the total, and only then.
+    await userEvent.keyboard('{Home}')
+    expect(pace.getAttribute('aria-valuenow')).toBe('0')
+    await userEvent.keyboard('{End}')
+    expect(pace.getAttribute('aria-valuenow')).toBe('2')
+  })
+
+  it('shows the automatic minimum from 4 points: 1 place at 4 to 6, 2 at 7 to 9, 3 at 10', async () => {
+    openPerson(PROFILE_IDS.zosia)
+    await heading('Zosia')
+    const min = (count: number) => m.prefs_pool_min({ count })
+    expect(screen.queryByText(min(1))).toBeNull()
+    for (const domain of [m.prefs_pool_domain_lodging(), m.prefs_pool_domain_pace()]) {
+      ;(await spin(domain)).focus()
+      await userEvent.keyboard('{Home}')
+    }
+    ;(await spin(m.prefs_pool_domain_attractions())).focus()
+    await userEvent.keyboard('{End}')
+    expect(screen.getByText(min(1))).toBeTruthy() // attractions 6
+    await userEvent.keyboard('{Home}')
+    ;(await spin(m.prefs_pool_domain_food())).focus()
+    await userEvent.keyboard('{End}')
+    expect(screen.getByText(min(2))).toBeTruthy() // food 9: 2 + 2 + 2 + 2 + 1 free... see below
+  })
+
+  it('saves a full pool as the whole body, only the pool changed', async () => {
+    openPerson(PROFILE_IDS.mama)
+    const bodies = recordBodies('put', '/preferences')
+    await heading('Ola')
+    ;(await spin(m.prefs_pool_domain_cost())).focus()
+    await userEvent.keyboard('{ArrowDown}')
+    ;(await spin(m.prefs_pool_domain_food())).focus()
+    await userEvent.keyboard('{ArrowUp}')
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_pool_save() }))
+
+    await waitFor(() => expect(bodies).toHaveLength(1))
+    expect(bodies[0]).toMatchObject({
+      importance_pool: { lodging: 2, food: 3, attractions: 2, pace: 2, cost: 1 },
+      interests: { history: 1, museums: 1, local_food: 1 },
+    })
+    expect(await screen.findByText(m.prefs_pool_complete())).toBeTruthy()
+    expect(screen.queryByRole('button', { name: m.prefs_pool_save() })).toBeNull()
+  })
+
+  it('leaves the pool out of other saves until someone saved it, so the age default keeps following', async () => {
+    openPerson(PROFILE_IDS.zosia)
+    const bodies = recordBodies('put', '/preferences')
+    await heading('Zosia')
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_interest_kids() }))
+    await waitFor(() => expect(bodies).toHaveLength(1))
+    expect(bodies[0]).not.toHaveProperty('importance_pool')
+  })
+
+  it('says why a pool was not saved, and the saved values come back with "undo"', async () => {
+    useScenario('preferences-save-error')
+    openPerson(PROFILE_IDS.mama)
+    await heading('Ola')
+    const attractions = await spin(m.prefs_pool_domain_attractions())
+    attractions.focus()
+    await userEvent.keyboard('{ArrowDown}')
+    ;(await spin(m.prefs_pool_domain_food())).focus()
+    await userEvent.keyboard('{ArrowUp}')
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_pool_save() }))
+
+    expect(await screen.findByText(m.people_error_generic())).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_pool_reset() }))
+    expect((await spin(m.prefs_pool_domain_attractions())).getAttribute('aria-valuenow')).toBe('2')
+    expect((await spin(m.prefs_pool_domain_food())).getAttribute('aria-valuenow')).toBe('2')
+    expect(screen.queryByText(m.people_error_generic())).toBeNull()
+  })
+
+  it('says the parent sets the points for a child', async () => {
+    openPerson(PROFILE_IDS.zosia)
+    await heading('Zosia')
+    expect(await screen.findByText(new RegExp(m.prefs_pool_child()))).toBeTruthy()
+  })
+})
+
+describe('Lubiane i nielubiane miejsca', () => {
+  it('rates a catalog place as disliked on its own endpoint, and it is still there after a reload', async () => {
+    const view = openPerson(PROFILE_IDS.mama)
+    const ratings = recordBodies('put', `/ratings/${CATALOG_PLACE_IDS.narodowe}`)
+    const preferences = recordBodies('put', '/preferences')
+    await heading('Ola')
+    await userEvent.type(
+      await screen.findByLabelText(m.prefs_places_name_label()),
+      'Muzeum Narodowe',
+    )
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_places_add_dislike() }))
+
+    await waitFor(() => expect(ratings).toEqual([{ value: 'dont_want', reason_code: 'other' }]))
+    const disliked = await screen.findByRole('list', { name: m.prefs_places_disliked() })
+    expect(within(disliked).getByText('Muzeum Narodowe')).toBeTruthy()
+    expect(preferences).toEqual([])
+
+    view.unmount()
+    openPerson(PROFILE_IDS.mama)
+    await heading('Ola')
+    const again = await screen.findByRole('list', { name: m.prefs_places_disliked() })
+    expect(within(again).getByText('Muzeum Narodowe')).toBeTruthy()
+  })
+
+  it('offers catalog places while typing and rates the one picked', async () => {
+    openPerson(PROFILE_IDS.mama)
+    const ratings = recordBodies('put', `/ratings/${CATALOG_PLACE_IDS.lazienki}`)
+    await heading('Ola')
+    await userEvent.type(await screen.findByLabelText(m.prefs_places_name_label()), 'łazien')
+    await userEvent.click(await screen.findByRole('button', { name: 'Łazienki Królewskie' }))
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_places_add_like() }))
+    await waitFor(() => expect(ratings).toEqual([{ value: 'want' }]))
+    const liked = await screen.findByRole('list', { name: m.prefs_places_liked() })
+    expect(within(liked).getByText('Łazienki Królewskie')).toBeTruthy()
+  })
+
+  it('keeps a typed name with the preferences, and later saves do not echo the ratings back', async () => {
+    openPerson(PROFILE_IDS.mama)
+    const bodies = recordBodies('put', '/preferences')
+    await heading('Ola')
+    const input = await screen.findByLabelText(m.prefs_places_name_label())
+    await userEvent.type(input, 'Bar Prasowy')
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_places_add_like() }))
+    await waitFor(() => expect(bodies).toHaveLength(1))
+    expect(bodies[0]?.example_places).toEqual([{ name: 'Bar Prasowy', verdict: 'like' }])
+
+    await userEvent.type(input, 'Muzeum Polin')
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_places_add_dislike() }))
+    await screen.findByText('Muzeum Polin')
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_interest_art() }))
+    await waitFor(() => expect(bodies).toHaveLength(2))
+    // The rated Muzeum Polin is not in the body; the typed Bar Prasowy stays.
+    expect(bodies[1]?.example_places).toEqual([{ name: 'Bar Prasowy', verdict: 'like' }])
+  })
+
+  it('removes a rating and a typed name', async () => {
+    openPerson(PROFILE_IDS.mama)
+    await heading('Ola')
+    const input = await screen.findByLabelText(m.prefs_places_name_label())
+    await userEvent.type(input, 'Zamek Królewski')
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_places_add_like() }))
+    await userEvent.type(input, 'Bar Prasowy')
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_places_add_like() }))
+    await userEvent.click(
+      await screen.findByRole('button', {
+        name: m.prefs_places_remove({ name: 'Zamek Królewski' }),
+      }),
+    )
+    await userEvent.click(
+      await screen.findByRole('button', { name: m.prefs_places_remove({ name: 'Bar Prasowy' }) }),
+    )
+    await waitFor(() => expect(screen.queryByText('Zamek Królewski')).toBeNull())
+    await waitFor(() => expect(screen.queryByText('Bar Prasowy')).toBeNull())
+  })
+
+  it('takes a failed rating back off the list and says so', async () => {
+    useScenario('preferences-save-error')
+    openPerson(PROFILE_IDS.mama)
+    await heading('Ola')
+    await userEvent.type(
+      await screen.findByLabelText(m.prefs_places_name_label()),
+      'Muzeum Narodowe',
+    )
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_places_add_dislike() }))
+
+    expect(await screen.findByText(m.people_error_generic())).toBeTruthy()
+    await waitFor(() => expect(screen.queryByText('Muzeum Narodowe')).toBeNull())
+  })
+
+  it('takes a failed typed name back off the list', async () => {
+    useScenario('preferences-save-error')
+    openPerson(PROFILE_IDS.mama)
+    await heading('Ola')
+    await userEvent.type(await screen.findByLabelText(m.prefs_places_name_label()), 'Bar Prasowy')
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_places_add_like() }))
+    expect(await screen.findByText(m.people_error_generic())).toBeTruthy()
+    await waitFor(() => expect(screen.queryByText('Bar Prasowy')).toBeNull())
+  })
+
+  it('does not echo a failed first place into the next save', async () => {
+    openPerson(PROFILE_IDS.tata)
+    let puts = 0
+    const bodies = recordBodies('put', '/preferences')
+    server.use(
+      http.put(PREFERENCES, async () => {
+        puts += 1
+        if (puts > 1) return undefined
+        await delay(150)
+        return HttpResponse.json({ detail: 'boom' }, { status: 500 })
+      }),
+    )
+    await heading('Marek')
+    const input = await screen.findByLabelText(m.prefs_places_name_label())
+    await userEvent.type(input, 'Pierwsze')
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_places_add_like() }))
+    await userEvent.type(input, 'Drugie')
+    await userEvent.click(screen.getByRole('button', { name: m.prefs_places_add_like() }))
+    await waitFor(() => expect(puts).toBe(2))
+    expect(bodies[1]?.example_places).toEqual([{ name: 'Drugie', verdict: 'like' }])
+    await waitFor(() => expect(screen.queryByText('Pierwsze')).toBeNull())
+  })
+})
+
+describe('Pula i miejsca, member-readonly', () => {
+  it("lists another person's pool and places without any control", async () => {
+    useScenario('member-readonly')
+    openPerson(PROFILE_IDS.babcia)
+    await heading('Babcia Halina')
+    expect(screen.queryByRole('spinbutton')).toBeNull()
+    expect(screen.queryByLabelText(m.prefs_places_name_label())).toBeNull()
+    const pool = screen.getByRole('list', { name: m.prefs_pool_readonly_label() })
+    expect(within(pool).getAllByRole('listitem')).toHaveLength(5)
+    expect(
+      within(pool).getByText(
+        m.prefs_pool_value({ domain: m.prefs_pool_domain_food(), points: 2, total: 10 }),
+      ),
+    ).toBeTruthy()
   })
 })

@@ -2,6 +2,8 @@ import type {
   Constraints,
   Diet,
   DietTag,
+  ExamplePlace,
+  ExampleVerdict,
   InterestTag,
   Preferences,
   PreferencesWrite,
@@ -51,7 +53,48 @@ export function applyWrite(current: Preferences, body: PreferencesWrite): Prefer
     min_tags: body.min_tags ?? current.min_tags,
     constraints: body.constraints ?? current.constraints,
     importance_pool: body.importance_pool ?? current.importance_pool,
+    // The body carries the typed examples only; the catalog ratings stay as they are shown.
+    example_places: body.example_places
+      ? [...body.example_places, ...current.example_places.filter((place) => place.place_id)]
+      : current.example_places,
   }
+}
+
+/** Typed examples are saved with the preferences; examples with a place_id are catalog ratings. */
+export const MAX_TEXT_EXAMPLES = 50
+export const MAX_EXAMPLE_NAME_LENGTH = 200
+
+const sameName = (a: string, b: string) => a.toLocaleLowerCase() === b.toLocaleLowerCase()
+
+/**
+ * The typed examples after adding `name`. A name that is there already (any case) takes the new
+ * verdict instead of appearing twice; blank, too long or over the limit changes nothing.
+ */
+export function withTextExample(
+  examples: ExamplePlace[],
+  raw: string,
+  verdict: ExampleVerdict,
+): ExamplePlace[] {
+  const name = raw.trim()
+  const typed = examples.filter((place) => !place.place_id)
+  if (!name || name.length > MAX_EXAMPLE_NAME_LENGTH) return typed
+  const others = typed.filter((place) => !sameName(place.name, name))
+  return others.length >= MAX_TEXT_EXAMPLES ? typed : [...others, { name, verdict }]
+}
+
+export function withoutTextExample(examples: ExamplePlace[], name: string): ExamplePlace[] {
+  return examples.filter((place) => !place.place_id && place.name !== name)
+}
+
+/** The examples with the catalog rating of one place set (or, with a null verdict, taken away). */
+export function withCatalogRating(
+  examples: ExamplePlace[],
+  rating: { placeId: string; name: string; verdict: ExampleVerdict | null },
+): ExamplePlace[] {
+  const rest = examples.filter((place) => place.place_id !== rating.placeId)
+  return rating.verdict
+    ? [...rest, { name: rating.name, place_id: rating.placeId, verdict: rating.verdict }]
+    : rest
 }
 
 /**

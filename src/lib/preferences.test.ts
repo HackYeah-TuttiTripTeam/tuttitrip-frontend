@@ -8,6 +8,9 @@ import {
   setDietTag,
   setInterest,
   toWrite,
+  withCatalogRating,
+  withoutTextExample,
+  withTextExample,
 } from './preferences'
 
 const read = (overrides: Partial<Preferences> = {}): Preferences => ({
@@ -118,5 +121,43 @@ describe('addAllergy', () => {
     expect(addAllergy(diet, '  ')).toBe(diet)
     expect(addAllergy(diet, 'orzechy')).toBe(diet)
     expect(addAllergy(diet, 'x'.repeat(61))).toBe(diet)
+  })
+})
+
+describe('example places', () => {
+  const rated = { name: 'Muzeum Narodowe', verdict: 'dislike' as const, place_id: 'abc' }
+  const typed = { name: 'Bar Prasowy', verdict: 'like' as const }
+
+  it('adds a typed name once, in any case, with the newest verdict', () => {
+    const next = withTextExample([typed, rated], ' bar prasowy ', 'dislike')
+    expect(next).toEqual([{ name: 'bar prasowy', verdict: 'dislike' }])
+  })
+
+  it('ignores a blank or too long name', () => {
+    expect(withTextExample([typed], '   ', 'like')).toEqual([typed])
+    expect(withTextExample([typed], 'x'.repeat(201), 'like')).toEqual([typed])
+  })
+
+  it('removes a typed example by name and never touches the ratings', () => {
+    expect(withoutTextExample([typed, rated], 'Bar Prasowy')).toEqual([])
+  })
+
+  it('sets and takes back a catalog rating', () => {
+    const liked = withCatalogRating([typed, rated], {
+      placeId: 'abc',
+      name: 'Muzeum Narodowe',
+      verdict: 'like',
+    })
+    expect(liked).toEqual([typed, { name: 'Muzeum Narodowe', place_id: 'abc', verdict: 'like' }])
+    expect(
+      withCatalogRating(liked, { placeId: 'abc', name: 'Muzeum Narodowe', verdict: null }),
+    ).toEqual([typed])
+  })
+
+  it('applyWrite shows typed examples from the body next to the ratings already shown', () => {
+    const next = applyWrite(read({ example_places: [typed, rated] }), {
+      example_places: [{ name: 'Nowe', verdict: 'like' }],
+    })
+    expect(next.example_places).toEqual([{ name: 'Nowe', verdict: 'like' }, rated])
   })
 })

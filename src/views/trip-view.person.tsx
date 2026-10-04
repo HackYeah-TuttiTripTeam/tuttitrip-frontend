@@ -3,6 +3,7 @@ import { PersonDetails } from '@/components/profiles/person-details'
 import { StatusMessage } from '@/components/shared/status-message'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useCatalogPlaces } from '@/hooks/use-catalog-places'
 import { usePersonActions } from '@/hooks/use-person-actions'
 import { useProfilePreferences } from '@/hooks/use-profile-preferences'
 import { useSession } from '@/hooks/use-session'
@@ -15,6 +16,8 @@ interface TripPersonViewProps {
   person: Person | undefined
   /** Host and co-host: may edit anyone. */
   canManage: boolean
+  /** The city of the trip, whose catalog the liked places are searched in. */
+  citySlug: string | null
   onBack: () => void
 }
 
@@ -22,7 +25,13 @@ interface TripPersonViewProps {
  * The details of one person inside the Osoby tab. Named `trip-view.person` because a view may
  * only import views of its own name (rule 1).
  */
-export function TripPersonView({ tripId, person, canManage, onBack }: TripPersonViewProps) {
+export function TripPersonView({
+  tripId,
+  person,
+  canManage,
+  citySlug,
+  onBack,
+}: TripPersonViewProps) {
   if (!person) {
     return (
       <StatusMessage
@@ -39,13 +48,22 @@ export function TripPersonView({ tripId, person, canManage, onBack }: TripPerson
       </StatusMessage>
     )
   }
-  return <LoadedPerson tripId={tripId} person={person} canManage={canManage} onBack={onBack} />
+  return (
+    <LoadedPerson
+      tripId={tripId}
+      person={person}
+      canManage={canManage}
+      citySlug={citySlug}
+      onBack={onBack}
+    />
+  )
 }
 
 function LoadedPerson({
   tripId,
   person,
   canManage,
+  citySlug,
   onBack,
 }: TripPersonViewProps & { person: Person }) {
   const session = useSession()
@@ -55,6 +73,11 @@ function LoadedPerson({
     session.status,
   )
   const actions = usePersonActions(tripId, person.profile)
+  const canEdit = canManage || person.isMe
+  const catalog = useCatalogPlaces(
+    citySlug,
+    canEdit && (session.status === 'authenticated' || session.status === 'disabled'),
+  )
 
   if (isPending) return <PersonDetailsSkeleton />
 
@@ -82,11 +105,15 @@ function LoadedPerson({
     <PersonDetails
       person={person}
       preferences={preferences}
-      canEdit={canManage || person.isMe}
+      canEdit={canEdit}
       onBack={onBack}
       onSaveConstraints={actions.saveConstraints}
       onSetDiet={actions.setDiet}
       onSetInterests={actions.setInterests}
+      onSetPool={actions.setPool}
+      catalog={catalog}
+      onAddExample={actions.addExample}
+      onRemoveExample={actions.removeExample}
     />
   )
 }
@@ -98,6 +125,7 @@ function PersonDetailsSkeleton() {
       <Skeleton className="h-12 w-1/2" />
       <Skeleton className="h-40 w-full" />
       <Skeleton className="h-24 w-full" />
+      <Skeleton className="h-48 w-full" />
     </div>
   )
 }

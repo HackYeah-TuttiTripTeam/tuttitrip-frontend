@@ -14,6 +14,7 @@ interface TripPeopleViewProps {
   tripId: string
   tripName: string
   canManage: boolean
+  citySlug: string | null
   /** The person whose details are open (the `person` search param), or undefined for the list. */
   personId: string | undefined
   onPersonChange: (id: string | undefined) => void
@@ -27,6 +28,7 @@ export function TripPeopleView({
   tripId,
   tripName,
   canManage,
+  citySlug,
   personId,
   onPersonChange,
 }: TripPeopleViewProps) {
@@ -62,6 +64,7 @@ export function TripPeopleView({
         tripId={tripId}
         person={people.find((person) => person.profile.id === personId)}
         canManage={canManage}
+        citySlug={citySlug}
         onBack={() => onPersonChange(undefined)}
       />
     )

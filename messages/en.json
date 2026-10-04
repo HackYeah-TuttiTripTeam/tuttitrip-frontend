@@ -674,5 +674,44 @@
   "privacy_changes_p1": "When what the app does changes, we update this page and the date at the top.",
   "privacy_contact_title": "Contact",
   "privacy_contact_p1": "The HackYeah-TuttiTripTeam team is on GitHub and on the Contact page.",
-  "privacy_contact_link": "Go to the Contact page"
+  "privacy_contact_link": "Go to the Contact page",
+  "prefs_pool_title": "What matters most",
+  "prefs_pool_hint": "Spread {total} dots over five areas. The more dots, the harder the plan guards that area.",
+  "prefs_pool_child": "A parent sets the points for a child.",
+  "prefs_pool_domain_lodging": "Lodging",
+  "prefs_pool_domain_food": "Food",
+  "prefs_pool_domain_attractions": "Attractions",
+  "prefs_pool_domain_pace": "Pace",
+  "prefs_pool_domain_cost": "Cost",
+  "prefs_pool_value": "{domain}: {points} of {total} points",
+  "prefs_pool_more": "Add a point: {domain}",
+  "prefs_pool_less": "Take a point: {domain}",
+  "prefs_pool_remaining": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} dot left to give out",
+        "countPlural=*": "{count} dots left to give out"
+      }
+    }
+  ],
+  "prefs_pool_complete": "All dots given out.",
+  "prefs_pool_need_all": "Give out all the dots to save.",
+  "prefs_pool_save": "Save the pool",
+  "prefs_pool_reset": "Undo changes",
+  "prefs_pool_min": "Automatic minimum, places per tag: {count}.",
+  "prefs_pool_default": "Default for now, based on age. Saving sets your own.",
+  "prefs_pool_readonly_label": "Importance pool",
+  "prefs_places_title": "Liked and disliked places",
+  "prefs_places_hint": "Examples that help match proposals to this person.",
+  "prefs_places_name_label": "Place name",
+  "prefs_places_name_placeholder": "For example National Museum",
+  "prefs_places_suggestions": "Suggestions from the catalog",
+  "prefs_places_add_like": "Add to liked",
+  "prefs_places_add_dislike": "Add to disliked",
+  "prefs_places_liked": "Liked",
+  "prefs_places_disliked": "Disliked",
+  "prefs_places_none": "None.",
+  "prefs_places_remove": "Remove: {name}"
 }
