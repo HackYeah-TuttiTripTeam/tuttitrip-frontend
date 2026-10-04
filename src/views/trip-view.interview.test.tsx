@@ -87,6 +87,91 @@ describe('Wywiad, pierwsze zdanie', () => {
   })
 })
 
+/**
+ * The events exactly as the develop API sent them (a `show_card` call, its result, then the
+ * `STATE_SNAPSHOT` with the card): the card must come out of the stream, whatever its kind.
+ */
+function cardRun(card: object, say: string) {
+  return sseResponse([
+    { type: 'RUN_STARTED', threadId: SESSION_ID, runId: 'r1' },
+    { type: 'TEXT_MESSAGE_START', messageId: 'a1', role: 'assistant' },
+    { type: 'TEXT_MESSAGE_CONTENT', messageId: 'a1', delta: say },
+    { type: 'TEXT_MESSAGE_END', messageId: 'a1' },
+    { type: 'TOOL_CALL_START', toolCallId: 'c1', toolCallName: 'show_card', parentMessageId: 'a1' },
+    { type: 'TOOL_CALL_ARGS', toolCallId: 'c1', delta: '{"kind": "choice", "field": "dates"}' },
+    { type: 'TOOL_CALL_END', toolCallId: 'c1' },
+    {
+      type: 'TOOL_CALL_RESULT',
+      messageId: 't1',
+      toolCallId: 'c1',
+      content: 'Card shown; wait for the answer.',
+      role: 'tool',
+    },
+    { type: 'STATE_SNAPSHOT', snapshot: { knowledge: null, card, draft_plan: null } },
+    { type: 'RUN_FINISHED', threadId: SESSION_ID, runId: 'r1' },
+  ])
+}
+
+describe('Wywiad, karty ze strumienia', () => {
+  it('renders the date card the server fixed for the dates question and answers with ISO days', async () => {
+    useScenario('interview-empty')
+    server.use(
+      http.post(AGUI, () =>
+        cardRun(
+          {
+            kind: 'date_range',
+            question: 'Kiedy wyruszacie?',
+            field: 'dates',
+            person_id: null,
+            options: [],
+          },
+          'Świetnie, Gdańsk.',
+        ),
+      ),
+    )
+    const runs = recordRuns()
+    const user = await sendFirstSentence('Gdańsk')
+    expect(await screen.findByRole('heading', { name: 'Kiedy wyruszacie?' })).toBeTruthy()
+    await user.type(screen.getByLabelText(m.interview_dates_start()), '2026-10-10')
+    await user.type(screen.getByLabelText(m.interview_dates_end()), '2026-10-12')
+    server.use(
+      http.post(AGUI, () =>
+        sseResponse([{ type: 'RUN_FINISHED', threadId: SESSION_ID, runId: 'r2' }]),
+      ),
+    )
+    await user.click(screen.getByRole('button', { name: m.interview_card_submit() }))
+    await waitFor(() => expect(runs).toHaveLength(2))
+    expect(runs[1]?.messages.map((message) => message.content)).toEqual([
+      m.interview_answer_dates({ from: '2026-10-10', to: '2026-10-12' }),
+    ])
+  })
+
+  it('renders the city card with a search box the host can open', async () => {
+    useScenario('interview-empty')
+    server.use(
+      http.post(AGUI, () =>
+        cardRun(
+          {
+            kind: 'city',
+            question: 'Do jakiego miasta jedziecie?',
+            field: 'destination',
+            person_id: null,
+            options: [],
+          },
+          'Cześć!',
+        ),
+      ),
+    )
+    const user = await sendFirstSentence('Cześć')
+    expect(
+      await screen.findByRole('heading', { name: 'Do jakiego miasta jedziecie?' }),
+    ).toBeTruthy()
+    const trigger = screen.getByRole('combobox', { name: m.interview_city_label() })
+    await user.click(trigger)
+    expect(await screen.findByPlaceholderText(m.city_search_input_placeholder())).toBeTruthy()
+  })
+})
+
 describe('Wywiad, błędy', () => {
   it('asks to sign in again when the session ran out, keeping the message', async () => {
     useScenario('interview-empty', {
