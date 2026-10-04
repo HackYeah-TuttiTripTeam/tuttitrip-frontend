@@ -695,13 +695,8 @@
   "prefs_pool_less": "Take a point: {domain}",
   "prefs_pool_remaining": [
     {
-      "declarations": [
-        "input count",
-        "local countPlural = count: plural"
-      ],
-      "selectors": [
-        "countPlural"
-      ],
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
       "match": {
         "countPlural=one": "{count} dot left to give out",
         "countPlural=*": "{count} dots left to give out"
