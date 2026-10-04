@@ -36,10 +36,10 @@ const trip = (over: Partial<Trip> = {}): Trip => ({
   budget_day_max: null,
   budget_flex_pct: 10,
   fairness_alpha: 1,
-  propose_cheaper_alternatives: true,
   my_role: 'host',
   my_status: 'confirmed',
   kind: 'trip',
+  propose_cheaper_alternatives: true,
   ...over,
 })
 

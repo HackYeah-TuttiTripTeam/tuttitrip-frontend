@@ -1,6 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { PROPOSE_CHEAPER_DEFAULT, VOICE_START_FLAG } from '@/lib/constants'
+import { VOICE_START_FLAG } from '@/lib/constants'
 import { m } from '@/paraglide/messages'
 import { useCreateTrip } from './use-create-trip'
 
@@ -16,9 +16,7 @@ export function useCreateVoiceTrip(onCreated: () => void) {
   const submit = async (name: string) => {
     setSubmitError(null)
     try {
-      const trip = await create.mutateAsync({
-        body: { name, propose_cheaper_alternatives: PROPOSE_CHEAPER_DEFAULT },
-      })
+      const trip = await create.mutateAsync({ body: { name, propose_cheaper_alternatives: null } })
       onCreated()
       await navigate({
         to: '/trips/$tripId',

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { ApiError } from '@/api/errors'
 import type { City } from '@/api/queries/cities'
 import type { Trip } from '@/api/queries/trips'
-import { PROPOSE_CHEAPER_DEFAULT } from '@/lib/constants'
 import {
   diffPatch,
   effectiveCurrency,
@@ -42,9 +41,9 @@ export function useSaveTrip(trip: Trip | null, cities: City[]) {
       if (!trip) {
         return await create.mutateAsync({
           body: {
+            propose_cheaper_alternatives: null,
             ...formValuesToPatch(values, currency),
             name: values.name.trim(),
-            propose_cheaper_alternatives: PROPOSE_CHEAPER_DEFAULT,
           },
         })
       }

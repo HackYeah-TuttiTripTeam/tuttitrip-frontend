@@ -19,6 +19,7 @@ import { expenseSearchReset } from '@/loaders/expenses'
 import { decisionLogReset } from '@/loaders/trip'
 import { m } from '@/paraglide/messages'
 import { TripAccommodationView } from './trip-view.accommodation'
+import { TripDelete } from './trip-view.delete'
 import { TripExpensesView } from './trip-view.expenses'
 import { TripLocationsView } from './trip-view.locations'
 import { TripMembersView } from './trip-view.members'
@@ -148,7 +149,15 @@ export function TripView() {
   return (
     <div className="flex flex-col gap-6">
       <div className="print:hidden" data-tour={TOUR.tripHeader}>
-        <TripHeader trip={trip} actions={<TripSettings trip={trip} />} />
+        <TripHeader
+          trip={trip}
+          actions={
+            <div className="flex shrink-0 flex-wrap justify-end gap-2">
+              <TripSettings trip={trip} />
+              <TripDelete trip={trip} />
+            </div>
+          }
+        />
       </div>
       {trip.my_status === 'pending' && tab !== 'members' && (
         <div

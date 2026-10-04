@@ -34,7 +34,7 @@ describe('trips list invalidation', () => {
     const { wrapper, invalidated } = setup()
     const { result } = renderHook(() => useCreateTrip(), { wrapper })
     await act(() =>
-      result.current.mutateAsync({ body: { name: 'Gdańsk', propose_cheaper_alternatives: true } }),
+      result.current.mutateAsync({ body: { name: 'Gdańsk', propose_cheaper_alternatives: null } }),
     )
     await waitFor(() => expect(invalidated()).toEqual([true, true]))
   })

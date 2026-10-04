@@ -19,6 +19,8 @@ interface VoiceControlsProps {
   saved: { name: string; ok: boolean } | null
   mode: VoiceMode
   held: boolean
+  /** How loud the host is while the button is held, 0 to 1. */
+  level: number
   micMuted: boolean
   canOverride: boolean
   /** A text turn runs: a call cannot start next to it. */
@@ -45,6 +47,7 @@ export function VoiceControls({
   saved,
   mode,
   held,
+  level,
   micMuted,
   canOverride,
   disabled,
@@ -148,39 +151,64 @@ export function VoiceControls({
             </Button>
           )}
           {mode === 'ptt' && (
-            <Button
-              type="button"
-              variant={held ? 'default' : 'secondary'}
-              aria-pressed={held}
-              className="h-16 w-full touch-none select-none text-base"
-              onPointerDown={down}
-              onPointerUp={onPressEnd}
-              onPointerCancel={onPressEnd}
-              onKeyDown={keyDown}
-              onKeyUp={keyUp}
-              onBlur={onPressEnd}
-              onContextMenu={(event) => event.preventDefault()}
-            >
-              {held ? m.voice_ptt_held() : m.voice_ptt_button()}
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                type="button"
+                variant={held ? 'default' : 'secondary'}
+                aria-pressed={held}
+                className="h-20 w-full touch-none select-none text-lg"
+                onPointerDown={down}
+                onPointerUp={onPressEnd}
+                onPointerCancel={onPressEnd}
+                onKeyDown={keyDown}
+                onKeyUp={keyUp}
+                onBlur={onPressEnd}
+                onContextMenu={(event) => event.preventDefault()}
+              >
+                <Mic aria-hidden="true" className="size-6" />
+                {held ? m.voice_ptt_held() : m.voice_ptt_button()}
+              </Button>
+              {held ? (
+                <div
+                  role="meter"
+                  aria-label={m.voice_ptt_level()}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(level * 100)}
+                  className="h-2 w-full overflow-hidden rounded-full bg-muted"
+                >
+                  <div
+                    className="h-full rounded-full bg-primary motion-safe:transition-[width] motion-safe:duration-75"
+                    style={{ width: `${Math.round(level * 100)}%` }}
+                  />
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground text-sm">{m.voice_ptt_hint()}</p>
+              )}
+            </div>
           )}
         </div>
       )}
 
-      <div className="flex items-start gap-3">
-        <Switch
-          id="voice-ptt"
-          checked={mode === 'ptt'}
-          disabled={status === 'connecting' || finishing}
-          onCheckedChange={(on) => onModeChange(on ? 'ptt' : 'open')}
-        />
-        <div className="flex flex-col gap-0.5">
-          <Label htmlFor="voice-ptt" className="min-h-6 text-sm">
-            {m.voice_ptt_toggle()}
-          </Label>
-          <p className="text-muted-foreground text-xs">{m.voice_ptt_toggle_hint()}</p>
+      <details className="text-sm">
+        <summary className="flex min-h-11 cursor-pointer items-center text-muted-foreground">
+          {m.voice_advanced()}
+        </summary>
+        <div className="flex items-start gap-3 pb-2">
+          <Switch
+            id="voice-always"
+            checked={mode === 'open'}
+            disabled={status === 'connecting' || finishing}
+            onCheckedChange={(on) => onModeChange(on ? 'open' : 'ptt')}
+          />
+          <div className="flex flex-col gap-0.5">
+            <Label htmlFor="voice-always" className="min-h-6 text-sm">
+              {m.voice_always_listen()}
+            </Label>
+            <p className="text-muted-foreground text-xs">{m.voice_always_listen_hint()}</p>
+          </div>
         </div>
-      </div>
+      </details>
     </div>
   )
 }
