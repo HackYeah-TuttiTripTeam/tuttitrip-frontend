@@ -9,8 +9,20 @@ const LABELS = {
   hours: { verified: m.plan_hours_verified, unverified: m.plan_hours_unverified },
 } as const
 
+/** "Verified, 12 Sep" / "Not verified": the words of the chip, also used by the printout. */
+export function verificationText(
+  kind: 'price' | 'hours',
+  verified: boolean,
+  verifiedAt?: string | null,
+): string {
+  const label = LABELS[kind][verified ? 'verified' : 'unverified']()
+  return verified && verifiedAt
+    ? m.plan_verified_on({ label, date: formatDayMonth(verifiedAt) })
+    : label
+}
+
 /** Only http(s) links are shown; the hostname is the part a reader can judge. */
-function parseSource(url: string | null | undefined): URL | null {
+export function parseSource(url: string | null | undefined): URL | null {
   if (!url) return null
   try {
     const parsed = new URL(url)
@@ -32,9 +44,7 @@ interface VerificationChipProps {
  * confirmed. The word carries the meaning, the line and the icon only back it up.
  */
 export function VerificationChip({ kind, verified, verifiedAt, sourceUrl }: VerificationChipProps) {
-  const label = LABELS[kind][verified ? 'verified' : 'unverified']()
-  const text =
-    verified && verifiedAt ? m.plan_verified_on({ label, date: formatDayMonth(verifiedAt) }) : label
+  const text = verificationText(kind, verified, verifiedAt)
   const source = parseSource(sourceUrl)
   const host = source?.hostname.replace(/^www\./, '')
 

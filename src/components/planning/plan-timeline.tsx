@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
 import type { PlanStop } from '@/api/queries/plans'
-import { formatClock, formatDecimal, formatDuration } from '@/lib/format'
+import { formatClock, formatDuration } from '@/lib/format'
 import { m } from '@/paraglide/messages'
+import { stopPriceText } from './stop-price'
 import { TransferRow } from './transfer-row'
 import { VerificationChip } from './verification-chip'
 
@@ -123,27 +124,14 @@ function Rail({ stop }: { stop?: 'dot' | 'goal' }) {
  * counts (base inflated by delta, from the API); no price at all is "no data", never a guess.
  */
 function PriceLine({ stop, currency }: PlanStopItemProps) {
-  // No base price or no source: "no data". A price never comes from anywhere but the data.
-  const price = stop.price_source_url ? stop.price_base : null
-  if (price == null) {
+  const text = stopPriceText(stop, currency)
+  if (text == null) {
     return <p className="text-muted-foreground text-sm leading-[22px]">{m.plan_price_none()}</p>
   }
-  const amount = formatDecimal(price, currency)
-  const budgeted =
-    !stop.price_verified && stop.price_inflated != null && stop.price_inflated !== price
-      ? formatDecimal(stop.price_inflated, currency)
-      : null
-  const isFree = /^0(\.0+)?$/.test(price)
 
   return (
     <div className="flex flex-col gap-1">
-      <p className="font-heading font-semibold tabular-nums leading-6">
-        {isFree
-          ? m.plan_price_free()
-          : budgeted
-            ? m.plan_price_per_person_budgeted({ amount, budgeted })
-            : m.plan_price_per_person({ amount })}
-      </p>
+      <p className="font-heading font-semibold tabular-nums leading-6">{text}</p>
       <VerificationChip
         kind="price"
         verified={stop.price_verified}

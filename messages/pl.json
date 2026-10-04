@@ -179,6 +179,8 @@
   "plan_source": "Źródło: {host}",
   "plan_transfer_line": "{mode} · {minutes} min",
   "plan_transfer_line_cost": "{mode} · {minutes} min · {cost}",
+  "plan_print": "Drukuj albo zapisz PDF",
+  "plan_print_footer": "Plan z TuttiTrip, wersja {n}",
   "plan_total": "Koszt planu dla całej grupy: {amount}",
   "plan_lodging": [
     {

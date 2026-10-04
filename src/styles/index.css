@@ -38,6 +38,21 @@
     radial-gradient(circle, var(--route) 1.6px, transparent 2.2px) 0 50% / 8px 4px repeat-x;
 }
 
+/* The plan printout (components/planning/plan-printout.tsx): paper margins, no page chrome. */
+@page {
+  margin: 14mm;
+}
+
+@media print {
+  body {
+    min-height: 0;
+  }
+  main {
+    max-width: none;
+    padding: 0;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
