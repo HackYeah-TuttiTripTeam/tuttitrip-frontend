@@ -10,6 +10,7 @@ import { useCleanServerHead } from '@/hooks/use-clean-server-head'
 import { useDemoStatus } from '@/hooks/use-demo-session'
 import { useHomeRedirect } from '@/hooks/use-home-redirect'
 import { useLocale } from '@/hooks/use-locale'
+import { useMe } from '@/hooks/use-me'
 import { useOnline } from '@/hooks/use-online'
 import { useSession } from '@/hooks/use-session'
 import { useTheme } from '@/hooks/use-theme'
@@ -40,6 +41,7 @@ export function RootLayoutView() {
   useApiAuthBridge()
   useCleanServerHead()
   const session = useSession()
+  const { access } = useMe(session.status)
   const { locale, setLocale } = useLocale()
   const { theme, resolved, setTheme } = useTheme()
   const setCreateTripOpen = useUiStore((state) => state.setCreateTripOpen)
@@ -88,6 +90,7 @@ export function RootLayoutView() {
             status: session.status,
             userName: session.userName,
             userPicture: session.userPicture,
+            showPermissions: access !== 'NONE',
             onLogin: session.login,
             onLogout: session.logout,
           }}
