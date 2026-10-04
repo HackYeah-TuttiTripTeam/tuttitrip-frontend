@@ -2430,28 +2430,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/trips/{trip_id}/plans/progress": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Stage of the plan computation that is running
-         * @description Poll while `POST .../plans` is in flight (about every 500 ms). Returns the stage (`catalogue`, `reference`, `search`, `floors`, `budget`, `verdicts`; `item` of `items` inside a stage that has units) or `null` when no plan is being computed for the trip. Any member may read it. Only the stage is exposed, never data, and it does not affect the plan or its `plan_hash`. A plan answered from an existing version has no stages, so the answer is `null`.
-         *
-         *     Wymagane uprawnienie: `planning.plans:READ`.
-         */
-        get: operations["get_plan_progress_api_v1_trips__trip_id__plans_progress_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/trips/{trip_id}/plans/latest": {
         parameters: {
             query?: never;
@@ -7245,34 +7223,6 @@ export interface components {
             draft: boolean;
         };
         /**
-         * PlanProgressRead
-         * @description Where the computation of the trip's plan is.
-         */
-        PlanProgressRead: {
-            /** @description Stage of docs/algorytm.md being computed. */
-            step: components["schemas"]["PlanStep"];
-            /**
-             * Position
-             * @description 1-based place of `step` among the stages, in order.
-             */
-            position: number;
-            /**
-             * Total
-             * @description Number of stages (some may be skipped).
-             */
-            total: number;
-            /**
-             * Item
-             * @description 1-based unit of work in the stage (e.g. person 2 of 4).
-             */
-            item?: number | null;
-            /**
-             * Items
-             * @description Units in the stage; set with `item`.
-             */
-            items?: number | null;
-        };
-        /**
          * PlanRead
          * @description A stored plan version with the fairness measure, ledger and budget.
          *
@@ -7340,12 +7290,6 @@ export interface components {
             upgrades?: components["schemas"]["PlanUpgrade"][];
             telemetry: components["schemas"]["PlanTelemetry"];
         };
-        /**
-         * PlanStep
-         * @description Stage of the computation; the declaration order is the order of work.
-         * @enum {string}
-         */
-        PlanStep: "catalogue" | "reference" | "search" | "floors" | "budget" | "verdicts";
         /**
          * PlanStop
          * @description One place in a day, in visiting order.
@@ -13508,58 +13452,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    get_plan_progress_api_v1_trips__trip_id__plans_progress_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                trip_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlanProgressRead"] | null;
-                };
-            };
-            /** @description Brak tokenu albo zły token */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Brak uprawnienia `planning.plans:READ` */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Trip not found, or the caller is not on it. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
             };
         };
     };

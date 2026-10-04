@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { configure, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { http } from 'msw'
+import { HttpResponse, http } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { TRIP_ID } from '@/mocks/fixtures'
 import { server, useScenario } from '@/mocks/node'
@@ -47,6 +47,30 @@ describe('Wywiad, Zbuduj plan teraz', () => {
     // A preliminary plan cannot be sent for approval.
     expect(await screen.findByText(m.proposal_send_blocked())).toBeTruthy()
   })
+
+  it('shows the stage of the build while it runs', async () => {
+    useScenario('interview-city-only')
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    server.use(
+      http.get('*/api/v1/trips/:tripId/plans/progress', () =>
+        HttpResponse.json({ step: 'budget', position: 5, total: 6, item: 1, items: 2 }),
+      ),
+      http.post(DRAFT_PLAN, async () => {
+        await gate
+        return HttpResponse.json({ detail: 'stop' }, { status: 500 })
+      }),
+    )
+    const user = userEvent.setup()
+    openInterview()
+    await user.click((await buildButton())[0] as HTMLElement)
+    const progress = await screen.findByRole('region', { name: m.plan_progress_title() })
+    const counted = `${m.plan_progress_budget()} ${m.plan_progress_count({ item: 1, items: 2 })}`
+    await within(progress).findAllByText(counted, { exact: false })
+    release()
+  }, 20_000)
 
   it('explains a refusal of a co-host-only action', async () => {
     useScenario('interview-city-only')

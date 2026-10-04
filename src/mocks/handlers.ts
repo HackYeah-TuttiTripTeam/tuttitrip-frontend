@@ -36,12 +36,15 @@ import {
 } from './fixtures'
 import { interviewHandlers } from './interview'
 import { permissionHandlers } from './permissions'
+import { planProgressHandler, runPlanStages } from './plan-progress'
 import { proposalHandlers } from './proposals'
 import { createWorld, type ScenarioName, type World } from './scenarios'
 
 const API = '*/api/v1'
 /** Pause between the events of a streamed answer in the browser, so the typing is visible. */
 const STREAM_GAP_MS = 60
+/** With a delay (dev:mock) a plan build lingers on each stage for this long. */
+const PLAN_STAGE_MS = 450
 
 const notFound = (detail: string) => HttpResponse.json({ detail }, { status: 404 })
 const NO_STORE = { 'Cache-Control': 'no-store' }
@@ -240,7 +243,15 @@ function normalHandlers(
       findTrip,
       canWrite,
     }),
-    ...proposalHandlers({ api: API, world, latency, findTrip, canWrite }),
+    ...proposalHandlers({
+      api: API,
+      world,
+      latency,
+      findTrip,
+      canWrite,
+      stageMs: streamGapMs > 0 ? PLAN_STAGE_MS : 0,
+    }),
+    planProgressHandler(API),
     // The jury's one-link entry. Like the real API: no-store, and 404 for every bad or disabled token.
     http.post(`${API}/auth/demo`, async ({ request }) => {
       await latency()
@@ -1011,6 +1022,7 @@ function normalHandlers(
       if (!findTrip(params.tripId)) return notFound('Trip not found')
       if (!canWrite(params.tripId)) return forbidden()
       if (world.plan?.trip_id === params.tripId) return HttpResponse.json(world.plan)
+      await runPlanStages(streamGapMs > 0 ? PLAN_STAGE_MS : 0)
       const created: Plan = plan(String(params.tripId ?? TRIP_ID))
       world.plan = created
       return HttpResponse.json(created, { status: 201 })
