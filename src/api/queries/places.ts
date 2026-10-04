@@ -36,7 +36,6 @@ export function catalogMissing(error: unknown): CatalogMissing | null {
   }
 }
 
-
 export type CatalogPlace = Schemas['PlaceRead']
 
 /** The most places one page of the catalog returns (the API caps `limit` at 500). */

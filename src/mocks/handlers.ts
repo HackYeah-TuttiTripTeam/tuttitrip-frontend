@@ -29,9 +29,9 @@ import {
   votePlaces,
 } from './fixtures'
 import { interviewHandlers } from './interview'
-import { permissionHandlers } from './permissions'
 import { jobHandlers } from './job-handlers'
 import { linterHandlers } from './linter-handlers'
+import { permissionHandlers } from './permissions'
 import { catalogMissingAnswer, placesHandlers } from './places-handlers'
 import { receiptHandlers } from './receipt-handlers'
 import { replanHandlers } from './replan-handlers'

@@ -125,7 +125,12 @@ type TripPath = { trip_id: string }
 export interface PendingPaths {
   '/api/v1/trips/{trip_id}/linter/plans/{plan_id}': {
     post: {
-      parameters: { query?: never; header?: never; path: TripPath & { plan_id: string }; cookie?: never }
+      parameters: {
+        query?: never
+        header?: never
+        path: TripPath & { plan_id: string }
+        cookie?: never
+      }
       requestBody?: never
       responses: Answers<{ 200: LintReport }>
     }

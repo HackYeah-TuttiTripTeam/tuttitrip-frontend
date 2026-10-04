@@ -2,8 +2,8 @@
 // after `pnpm api:sync` a contract change breaks `tsc` here instead of silently drifting.
 // Amounts are decimal strings, like in the API.
 import type { Schemas } from '@/api/client'
-import type { VotePlace } from '@/api/vote-contract'
 import type { Replan } from '@/api/queries/replan'
+import type { VotePlace } from '@/api/vote-contract'
 import { allocate, centsToDecimal, toCents } from '@/lib/money'
 
 export type Trip = Schemas['TripRead']
@@ -399,7 +399,6 @@ const days = (): PlanDay[] => [
 ]
 
 const withinBudget = (): PlanBudget => ({
-  unlimited: false,
   currency: 'PLN',
   cost: '1480.00',
   b_from: '1200.00',

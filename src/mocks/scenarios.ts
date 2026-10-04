@@ -1,6 +1,6 @@
 import type { Schemas } from '@/api/client'
-import type { VotePlace } from '@/api/vote-contract'
 import type { Replan } from '@/api/queries/replan'
+import type { VotePlace } from '@/api/vote-contract'
 import {
   type AdminUser,
   adminUsers,
