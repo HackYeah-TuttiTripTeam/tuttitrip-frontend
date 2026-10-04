@@ -298,6 +298,7 @@ const days = (): PlanDay[] => [
       verifiedStop({
         place_id: PLACE_IDS.zamek,
         name: 'Zamek Królewski',
+        address: 'Plac Zamkowy 4, 00-277 Warszawa',
         start: '10:00:00',
         end: '12:00:00',
       }),
