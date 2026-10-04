@@ -15,3 +15,8 @@ export function publicHead(path: SeoPath) {
     scripts: [{ type: 'application/ld+json', children: JSON.stringify(seo.jsonLd) }],
   }
 }
+
+/** Route `head` of a signed-in page: a tab title, no indexing tags (these pages are not public). */
+export const appHead = (title: () => string) => () => ({
+  meta: [{ title: `${title()} · TuttiTrip` }],
+})

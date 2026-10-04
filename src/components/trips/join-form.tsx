@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { TOUR } from '@/lib/help'
 import { m } from '@/paraglide/messages'
 
 /** Mirrors InvitationAccept: the name is optional and at most 100 characters. */
@@ -86,7 +87,7 @@ export function JoinForm({
       noValidate
       className="flex max-w-md flex-col gap-6"
     >
-      <header className="flex flex-col gap-2">
+      <header className="flex flex-col gap-2" data-tour={TOUR.joinTrip}>
         <h1 className="text-balance font-semibold text-3xl tracking-tight">{tripName}</h1>
         <p className="text-muted-foreground text-sm">{m.join_lead()}</p>
         {destination && (
@@ -116,7 +117,7 @@ export function JoinForm({
       )}
 
       {needsName && (
-        <Field data-invalid={Boolean(errors.name)}>
+        <Field data-invalid={Boolean(errors.name)} data-tour={TOUR.joinName}>
           <Label htmlFor="join-name">{m.join_name_label()}</Label>
           <Input
             id="join-name"
@@ -145,6 +146,7 @@ export function JoinForm({
       {!blocked && (
         <Button
           type="submit"
+          data-tour={TOUR.joinSubmit}
           disabled={isSubmitting || needsChoice}
           aria-describedby={needsChoice ? 'join-submit-hint' : undefined}
           className="h-11 md:h-9"

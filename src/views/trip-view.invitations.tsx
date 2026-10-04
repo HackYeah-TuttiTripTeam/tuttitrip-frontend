@@ -15,10 +15,12 @@ import { m } from '@/paraglide/messages'
 interface TripInvitationsViewProps {
   tripId: string
   tripName: string
+  /** Names of the people on the trip by profile id (for named invitations). */
+  profileNames: ReadonlyMap<string, string>
 }
 
 /** Invitation tools for the host and co-hosts, shown under the people of the Osoby tab. */
-export function TripInvitationsView({ tripId, tripName }: TripInvitationsViewProps) {
+export function TripInvitationsView({ tripId, tripName, profileNames }: TripInvitationsViewProps) {
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
   const list = useInvitations(tripId)
   const creation = useCreateInvitation(tripId)
@@ -51,7 +53,11 @@ export function TripInvitationsView({ tripId, tripName }: TripInvitationsViewPro
           <p className="py-3 text-muted-foreground text-sm">{m.invite_list_empty()}</p>
         ) : (
           <>
-            <InvitationList invitations={list.invitations} onRevoke={setRevoking} />
+            <InvitationList
+              invitations={list.invitations}
+              onRevoke={setRevoking}
+              profileNames={profileNames}
+            />
             <p className="text-muted-foreground text-sm">{m.invite_list_hint()}</p>
           </>
         )}

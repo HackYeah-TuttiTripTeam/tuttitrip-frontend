@@ -21,16 +21,28 @@ interface PlanTimelineProps {
   currency: string
   /** Room for what later issues add to a stop: rating and veto, verdict, place card. */
   renderActions?: (stop: PlanStop) => ReactNode
+  /** The stop picked on the map: highlighted, and the list scrolls to it (`stopDomId`). */
+  selectedPlaceId?: string | null
 }
 
+/** The DOM id of a stop's list item, for scrolling to the stop picked on the map. */
+export const stopDomId = (placeId: string) => `plan-stop-${placeId}`
+
 /** One day as a route: time on the left, a dotted rail, the stops and the legs between them. */
-export function PlanTimeline({ stops, currency, renderActions }: PlanTimelineProps) {
+export function PlanTimeline({
+  stops,
+  currency,
+  renderActions,
+  selectedPlaceId = null,
+}: PlanTimelineProps) {
   return (
     <ol className="flex flex-col">
       {stops.map((stop, index) => (
         <PlanStopItem
           key={stop.place_id}
           stop={stop}
+          number={index + 1}
+          selected={stop.place_id === selectedPlaceId}
           currency={currency}
           isLast={index === stops.length - 1}
         >
@@ -43,12 +55,22 @@ export function PlanTimeline({ stops, currency, renderActions }: PlanTimelinePro
 
 interface PlanStopItemProps {
   stop: PlanStop
+  /** Position in the day, the same number as the marker on the map. */
+  number?: number
+  selected?: boolean
   currency: string
   isLast?: boolean
   children?: ReactNode
 }
 
-function PlanStopItem({ stop, currency, isLast = false, children }: PlanStopItemProps) {
+function PlanStopItem({
+  stop,
+  number,
+  selected = false,
+  currency,
+  isLast = false,
+  children,
+}: PlanStopItemProps) {
   const minutes = minutesOfDay(stop.end) - minutesOfDay(stop.start)
   return (
     <>
@@ -61,14 +83,30 @@ function PlanStopItem({ stop, currency, isLast = false, children }: PlanStopItem
           </div>
         </li>
       )}
-      <li className="grid grid-cols-[3.25rem_1.125rem_1fr] gap-x-3">
+      <li
+        id={stopDomId(stop.place_id)}
+        aria-current={selected || undefined}
+        className="grid scroll-mt-24 grid-cols-[3.25rem_1.125rem_1fr] gap-x-3"
+      >
         <time className="pt-0.5 font-heading font-semibold text-[15px] tabular-nums leading-6">
           {formatClock(stop.start)}
         </time>
         <Rail stop={isLast ? 'goal' : 'dot'} />
-        <div className="flex flex-col gap-2 pb-5">
+        <div
+          className={`flex flex-col gap-2 pb-5 transition-colors ${selected ? '-mt-1 -ml-2 rounded-lg bg-accent pt-1 pl-2' : ''}`}
+        >
           <div className="flex flex-col">
-            <h3 className="font-heading font-semibold text-lg leading-6">{stop.name}</h3>
+            <h3 className="flex items-center gap-2 font-heading font-semibold text-lg leading-6">
+              {number !== undefined && (
+                <span
+                  aria-hidden="true"
+                  className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground text-xs tabular-nums"
+                >
+                  {number}
+                </span>
+              )}
+              {stop.name}
+            </h3>
             <p className="text-muted-foreground text-sm leading-[22px]">
               {minutes > 0
                 ? m.plan_kind_duration({

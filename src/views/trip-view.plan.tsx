@@ -7,21 +7,23 @@ import {
   TriangleAlert,
   Users,
 } from '@keyline-icons/react'
+import { getRouteApi } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ApiError } from '@/api/errors'
 import type { Plan } from '@/api/queries/plans'
 import type { Trip } from '@/api/queries/trips'
 import { DayCost } from '@/components/planning/cost-breakdown'
 import { DayTabs } from '@/components/planning/day-tabs'
+import { DraftBanner } from '@/components/planning/draft-banner'
 import { PlanHashLabel } from '@/components/planning/plan-hash-label'
 import { PlanPrintout } from '@/components/planning/plan-printout'
 import { PlanSummary } from '@/components/planning/plan-summary'
-import { PlanTimeline } from '@/components/planning/plan-timeline'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
 import { StatusMessage } from '@/components/shared/status-message'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCreatePlan } from '@/hooks/use-create-plan'
+import { useDraftAssumptions } from '@/hooks/use-draft-plan'
 import { useFairness } from '@/hooks/use-fairness'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
 import { usePlaceFeedback } from '@/hooks/use-place-feedback'
@@ -30,10 +32,15 @@ import { usePrinting } from '@/hooks/use-printing'
 import { useProfiles } from '@/hooks/use-profiles'
 import { useSession } from '@/hooks/use-session'
 import { percentOf } from '@/lib/fairness'
+import { TOUR } from '@/lib/help'
 import { dayCost, dayTickets } from '@/lib/plan-cost'
 import { m } from '@/paraglide/messages'
 import { FairnessAside } from './trip-view.fairness'
+import { TripPlanProposal } from './trip-view.plan.proposal'
+import { PlanDayPanel } from './trip-view.plan-day'
 import { StopActions } from './trip-view.stop-actions'
+
+const route = getRouteApi('/trips_/$tripId')
 
 interface TripPlanViewProps {
   trip: Trip
@@ -52,8 +59,13 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
   const { ratings, vetoes } = feedback
   const { change } = useFairness(tripId, plan)
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
+  const assumptions = useDraftAssumptions(tripId, plan?.id)
   const [day, setDay] = useState(1)
   const [fairnessOpen, setFairnessOpen] = useState(false)
+  const { view } = route.useSearch()
+  const navigate = route.useNavigate()
+  const setView = (next: typeof view) =>
+    void navigate({ search: (prev) => ({ ...prev, view: next }), replace: true })
   const canBuild = role !== 'member'
 
   if (isPending) return <PlanSkeleton />
@@ -92,37 +104,39 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
     )
   }
 
-  const failure = creation.error && (
+  const failure = creation.error ? (
     <p role="alert" className="text-destructive text-sm">
       {creation.error instanceof ApiError && creation.error.status === 403
         ? m.plan_compute_forbidden()
         : m.plan_compute_failed()}
     </p>
-  )
+  ) : null
 
   if (hasNoPlan || !plan) {
     return (
-      <StatusMessage
-        icon={<Calendar />}
-        title={m.plan_empty_title()}
-        action={
-          <div className="flex flex-col items-start gap-3 md:items-center">
-            {canBuild && (
-              <Button
-                size="lg"
-                className="h-11 rounded-full px-6"
-                onClick={() => creation.create()}
-                disabled={creation.isPending}
-              >
-                {creation.isPending ? m.plan_computing() : m.plan_compute()}
-              </Button>
-            )}
-            {failure}
-          </div>
-        }
-      >
-        {canBuild ? m.plan_empty_body_manage() : m.plan_empty_body_member()}
-      </StatusMessage>
+      <div data-tour={TOUR.planEmpty}>
+        <StatusMessage
+          icon={<Calendar />}
+          title={m.plan_empty_title()}
+          action={
+            <div className="flex flex-col items-start gap-3 md:items-center">
+              {canBuild && (
+                <Button
+                  size="lg"
+                  className="h-11 rounded-full px-6"
+                  onClick={() => creation.create()}
+                  disabled={creation.isPending}
+                >
+                  {creation.isPending ? m.plan_computing() : m.plan_compute()}
+                </Button>
+              )}
+              {failure}
+            </div>
+          }
+        >
+          {canBuild ? m.plan_empty_body_manage() : m.plan_empty_body_member()}
+        </StatusMessage>
+      </div>
     )
   }
 
@@ -155,7 +169,10 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
         aria-busy={recalculating}
       >
         <div className="flex min-w-0 flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div
+            className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
+            data-tour={TOUR.planActions}
+          >
             <p className="flex flex-col text-sm leading-[22px]">
               <span className="font-medium">{m.plan_version({ n: plan.version })}</span>
               <PlanHashLabel hash={plan.plan_hash} />
@@ -191,7 +208,11 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
           >
             {recalculating && m.plan_recomputing_status()}
           </div>
-          <PlanSummary plan={plan} />
+          {plan.params.draft && <DraftBanner assumptions={assumptions} />}
+          <TripPlanProposal tripId={tripId} canManage={canBuild} plan={plan} />
+          <div data-tour={TOUR.planSummary}>
+            <PlanSummary plan={plan} />
+          </div>
           {!isDesktop && <FairnessSummary plan={plan} onOpen={() => setFairnessOpen(true)} />}
           {failure}
           {feedback.failed && (
@@ -207,7 +228,10 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
               </Button>
             </div>
           )}
-          <div className={recalculating ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+          <div
+            className={recalculating ? 'opacity-60 transition-opacity' : 'transition-opacity'}
+            data-tour={TOUR.planDays}
+          >
             <DayTabs
               days={plan.days}
               value={current}
@@ -223,10 +247,13 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
                 planDay.items.length === 0 ? (
                   <p className="text-muted-foreground text-sm">{m.plan_day_empty()}</p>
                 ) : (
-                  <PlanTimeline
-                    stops={planDay.items}
+                  <PlanDayPanel
+                    key={planDay.index}
+                    day={planDay}
                     currency={plan.budget.currency}
-                    renderActions={(stop) => (
+                    view={view}
+                    onViewChange={setView}
+                    renderStopActions={(stop) => (
                       <StopActions
                         tripId={tripId}
                         stop={stop}

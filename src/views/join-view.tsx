@@ -5,10 +5,12 @@ import { StatusMessage } from '@/components/shared/status-message'
 import { JoinForm } from '@/components/trips/join-form'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useHelpTopic } from '@/hooks/use-help-topic'
 import { useJoinInvitation } from '@/hooks/use-join-invitation'
 import { useJoinToken } from '@/hooks/use-join-token'
 import { useSession } from '@/hooks/use-session'
 import { isDev } from '@/lib/env'
+import { joinTopic } from '@/lib/help-topics'
 import { clearJoinToken, stashJoinToken } from '@/lib/invite-link'
 import { m } from '@/paraglide/messages'
 
@@ -25,6 +27,8 @@ export function JoinView() {
   const navigate = useNavigate()
   const signedIn = session.status === 'authenticated'
   const join = useJoinInvitation(token, signedIn)
+  // The tour describes the invitation form, so it exists only while that form is on screen.
+  useHelpTopic(signedIn && join.trip && !join.problem && !join.joined ? joinTopic : null)
 
   // The stash only exists for the login round-trip. Any other state ends it: signed in, login
   // cancelled or failed, Auth0 not configured. (The token itself stays in this component.)

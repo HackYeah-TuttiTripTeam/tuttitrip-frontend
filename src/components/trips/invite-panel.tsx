@@ -1,6 +1,7 @@
 import { UserPlus } from '@keyline-icons/react'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
+import { TOUR } from '@/lib/help'
 import { m } from '@/paraglide/messages'
 
 interface InvitePanelProps {
@@ -15,7 +16,11 @@ interface InvitePanelProps {
 /** The People tab for the host: the Invite action above the invitations already sent. */
 export function InvitePanel({ onInvite, isInviting, inviteError, children }: InvitePanelProps) {
   return (
-    <section aria-labelledby="invite-heading" className="flex flex-col gap-4 border-t py-6">
+    <section
+      aria-labelledby="invite-heading"
+      className="flex flex-col gap-4 border-t py-6"
+      data-tour={TOUR.peopleInvite}
+    >
       <div className="flex flex-col gap-1">
         <h2 id="invite-heading" className="font-medium text-base">
           {m.invite_title()}
