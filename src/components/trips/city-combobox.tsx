@@ -1,6 +1,6 @@
 import { Check, ChevronDown, TriangleAlert, X } from '@keyline-icons/react'
 import { cn } from 'cn'
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import type { CitySuggestion } from '@/api/queries/cities'
 import { Button } from '@/components/ui/button'
 import {
@@ -56,10 +56,16 @@ export function CityCombobox({
   className,
 }: CityComboboxProps) {
   const [open, setOpen] = useState(false)
+  const [highlighted, setHighlighted] = useState('')
   const statusId = useId()
   const locale = getLocale()
   const typed = search.query.trim()
   const hasResults = search.suggestions.length > 0
+
+  // New answers put the highlight on the best match, so Enter takes it and not the item that
+  // happened to be highlighted while the list was still empty.
+  const firstSlug = search.suggestions[0]?.slug
+  useEffect(() => setHighlighted(firstSlug ?? ''), [firstSlug])
 
   const change = (next: boolean) => {
     setOpen(next)
@@ -104,7 +110,12 @@ export function CityCombobox({
         className="w-(--radix-popover-trigger-width) min-w-64 p-0"
         onOpenAutoFocus={(event) => event.stopPropagation()}
       >
-        <Command shouldFilter={false} label={m.city_search_input_label()}>
+        <Command
+          shouldFilter={false}
+          value={highlighted}
+          onValueChange={setHighlighted}
+          label={m.city_search_input_label()}
+        >
           <CommandInput
             value={search.query}
             onValueChange={search.onQueryChange}
