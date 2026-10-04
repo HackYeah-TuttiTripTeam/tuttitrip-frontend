@@ -14,6 +14,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as JoinRouteImport } from './routes/join'
+import { Route as PrywatnoscRouteImport } from './routes/prywatnosc'
 import { Route as TripsRouteImport } from './routes/trips'
 import { Route as TripsTripIdRouteImport } from './routes/trips_.$tripId'
 
@@ -42,6 +43,11 @@ const JoinRoute = JoinRouteImport.update({
   path: '/join',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrywatnoscRoute = PrywatnoscRouteImport.update({
+  id: '/prywatnosc',
+  path: '/prywatnosc',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TripsRoute = TripsRouteImport.update({
   id: '/trips',
   path: '/trips',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
   '/join': typeof JoinRoute
+  '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
   '/trips/$tripId': typeof TripsTripIdRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
   '/join': typeof JoinRoute
+  '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
   '/trips/$tripId': typeof TripsTripIdRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
   '/join': typeof JoinRoute
+  '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
   '/trips_/$tripId': typeof TripsTripIdRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/demo'
     | '/join'
+    | '/prywatnosc'
     | '/trips'
     | '/trips/$tripId'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/demo'
     | '/join'
+    | '/prywatnosc'
     | '/trips'
     | '/trips/$tripId'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/demo'
     | '/join'
+    | '/prywatnosc'
     | '/trips'
     | '/trips_/$tripId'
   fileRoutesById: FileRoutesById
@@ -117,6 +129,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   DemoRoute: typeof DemoRoute
   JoinRoute: typeof JoinRoute
+  PrywatnoscRoute: typeof PrywatnoscRoute
   TripsRoute: typeof TripsRoute
   TripsTripIdRoute: typeof TripsTripIdRoute
 }
@@ -158,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JoinRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/prywatnosc': {
+      id: '/prywatnosc'
+      path: '/prywatnosc'
+      fullPath: '/prywatnosc'
+      preLoaderRoute: typeof PrywatnoscRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/trips': {
       id: '/trips'
       path: '/trips'
@@ -181,6 +201,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   DemoRoute: DemoRoute,
   JoinRoute: JoinRoute,
+  PrywatnoscRoute: PrywatnoscRoute,
   TripsRoute: TripsRoute,
   TripsTripIdRoute: TripsTripIdRoute,
 }

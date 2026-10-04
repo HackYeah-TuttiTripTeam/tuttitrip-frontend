@@ -58,7 +58,7 @@ describe('public pages', () => {
     const router = renderAt('/prywatnosc')
     expect(await screen.findByRole('heading', { level: 1, name: m.privacy_title() })).toBeTruthy()
     expect(router.state.location.pathname).toBe('/prywatnosc')
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(11)
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(12)
     expect(screen.getByText('tuttitrip-demo-session')).toBeTruthy()
   })
 

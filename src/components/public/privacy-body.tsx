@@ -5,6 +5,8 @@ import { EXTERNAL_LINK, GITHUB_ORG_URL } from '@/lib/links'
 import { m } from '@/paraglide/messages'
 import { Section, textLinkClass } from './section'
 
+const OSM_COPYRIGHT_URL = 'https://www.openstreetmap.org/copyright'
+
 interface PolicySection {
   id: string
   title: string
@@ -129,6 +131,23 @@ function sections(): PolicySection[] {
         <>
           <P>{m.privacy_assets_p1()}</P>
           <P>{m.privacy_assets_p2()}</P>
+        </>
+      ),
+    },
+    {
+      id: 'osm',
+      title: m.privacy_osm_title(),
+      body: (
+        <>
+          <P>{m.privacy_osm_p1()}</P>
+          <P>{m.privacy_osm_p2()}</P>
+          <div>
+            <a href={OSM_COPYRIGHT_URL} className={textLinkClass} {...EXTERNAL_LINK}>
+              {m.privacy_osm_link()}
+              <ArrowUpRight aria-hidden="true" className="size-4" />
+              <span className="sr-only">({m.external_link_new_tab()})</span>
+            </a>
+          </div>
         </>
       ),
     },
