@@ -1,9 +1,3 @@
-/** Points a person spreads over the domains in the dot-pool card (docs/algorytm.md, section 1). */
-export const DOT_POOL_TOTAL = 10
-
-/** Domains of the dot-pool card when the assistant sends no options of its own. */
-export const DOT_POOL_DOMAINS = ['lodging', 'food', 'attractions', 'pace', 'cost'] as const
-
 /** Steps of the slider card; the value is whole numbers from 1 to this. */
 export const SLIDER_STEPS = 5
 

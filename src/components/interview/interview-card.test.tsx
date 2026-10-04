@@ -2,8 +2,9 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { POOL_TOTAL } from '@/lib/importance'
 import type { InterviewCard as Card } from '@/lib/interview'
-import { DOT_POOL_TOTAL, SWIPE_FLY_OUT_PX, SWIPE_THRESHOLD_PX } from '@/lib/interview-constants'
+import { SWIPE_FLY_OUT_PX, SWIPE_THRESHOLD_PX } from '@/lib/interview-constants'
 import { m } from '@/paraglide/messages'
 import { InterviewCard } from './interview-card'
 
@@ -127,32 +128,32 @@ describe('dot pool', () => {
   it('never goes past ten dots and sends the pool when none is left', async () => {
     const { onAnswer, user } = setup(card)
     expect((submit() as HTMLButtonElement).disabled).toBe(true)
-    for (let tap = 0; tap < DOT_POOL_TOTAL + 3; tap += 1) {
-      const button = more(m.interview_pool_domain_lodging())
+    for (let tap = 0; tap < POOL_TOTAL + 3; tap += 1) {
+      const button = more(m.prefs_pool_domain_lodging())
       if (!(button as HTMLButtonElement).disabled) await user.click(button)
     }
     expect(screen.getByRole('status').textContent).toBe(
-      m.interview_pool_remaining({ count: 0, total: DOT_POOL_TOTAL }),
+      m.interview_pool_remaining({ count: 0, total: POOL_TOTAL }),
     )
     // Nothing more can be added anywhere.
-    expect((more(m.interview_pool_domain_food()) as HTMLButtonElement).disabled).toBe(true)
+    expect((more(m.prefs_pool_domain_food()) as HTMLButtonElement).disabled).toBe(true)
     await user.click(submit())
     expect(onAnswer).toHaveBeenCalledWith(
-      m.interview_answer_pool({ parts: `${m.interview_pool_domain_lodging()} ${DOT_POOL_TOTAL}` }),
+      m.interview_answer_pool({ parts: `${m.prefs_pool_domain_lodging()} ${POOL_TOTAL}` }),
     )
   })
 
   it('moves a point from one domain to another', async () => {
     const { user } = setup(card)
-    await user.click(more(m.interview_pool_domain_lodging()))
+    await user.click(more(m.prefs_pool_domain_lodging()))
     await user.click(
       screen.getByRole('button', {
-        name: m.interview_pool_less({ domain: m.interview_pool_domain_lodging() }),
+        name: m.interview_pool_less({ domain: m.prefs_pool_domain_lodging() }),
       }),
     )
-    await user.click(more(m.interview_pool_domain_food()))
+    await user.click(more(m.prefs_pool_domain_food()))
     expect(screen.getByRole('status').textContent).toBe(
-      m.interview_pool_remaining({ count: DOT_POOL_TOTAL - 1, total: DOT_POOL_TOTAL }),
+      m.interview_pool_remaining({ count: POOL_TOTAL - 1, total: POOL_TOTAL }),
     )
   })
 })

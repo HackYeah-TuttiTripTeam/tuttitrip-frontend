@@ -2,9 +2,9 @@ import { Minus, Plus } from '@keyline-icons/react'
 import { cn } from 'cn'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { POOL_TOTAL } from '@/lib/importance'
 import type { InterviewCard } from '@/lib/interview'
 import { answerPool, poolItems, poolLeft } from '@/lib/interview-answers'
-import { DOT_POOL_TOTAL } from '@/lib/interview-constants'
 import { m } from '@/paraglide/messages'
 import { CardFrame } from './card-frame'
 
@@ -18,7 +18,7 @@ interface CardDotPoolProps {
 function Dots({ points }: { points: number }) {
   return (
     <span aria-hidden="true" className="flex flex-wrap gap-1">
-      {Array.from({ length: DOT_POOL_TOTAL }, (_, index) => (
+      {Array.from({ length: POOL_TOTAL }, (_, index) => (
         <span
           // biome-ignore lint/suspicious/noArrayIndexKey: the dots are positions, not data
           key={index}
@@ -45,7 +45,7 @@ export function CardDotPool({ card, disabled, onAnswer }: CardDotPoolProps) {
     setPoints((previous) =>
       previous.map((value, at) =>
         at === index
-          ? Math.min(DOT_POOL_TOTAL, Math.max(0, value + Math.min(step, poolLeft(previous))))
+          ? Math.min(POOL_TOTAL, Math.max(0, value + Math.min(step, poolLeft(previous))))
           : value,
       ),
     )
@@ -53,7 +53,7 @@ export function CardDotPool({ card, disabled, onAnswer }: CardDotPoolProps) {
   return (
     <CardFrame question={card.question}>
       <p role="status" className="text-muted-foreground text-sm tabular-nums">
-        {m.interview_pool_remaining({ count: left, total: DOT_POOL_TOTAL })}
+        {m.interview_pool_remaining({ count: left, total: POOL_TOTAL })}
       </p>
       <ul className="flex flex-col divide-y border-y">
         {items.map((item, index) => {
@@ -67,7 +67,7 @@ export function CardDotPool({ card, disabled, onAnswer }: CardDotPoolProps) {
                   {m.interview_pool_domain({
                     domain: item.label,
                     points: value,
-                    total: DOT_POOL_TOTAL,
+                    total: POOL_TOTAL,
                   })}
                 </span>
               </div>

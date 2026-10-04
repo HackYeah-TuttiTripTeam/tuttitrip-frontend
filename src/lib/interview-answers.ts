@@ -1,5 +1,6 @@
 import { m } from '@/paraglide/messages'
-import { DOT_POOL_DOMAINS, DOT_POOL_TOTAL, SLIDER_STEPS } from './interview-constants'
+import { POOL_DOMAINS, POOL_TOTAL, type PoolDomain } from './importance'
+import { SLIDER_STEPS } from './interview-constants'
 
 /**
  * What a card sends back. The server takes the latest user text, so an answer is a sentence the
@@ -37,19 +38,19 @@ export interface PoolItem {
   label: string
 }
 
-const DOMAIN_LABELS: Record<(typeof DOT_POOL_DOMAINS)[number], () => string> = {
-  lodging: m.interview_pool_domain_lodging,
-  food: m.interview_pool_domain_food,
-  attractions: m.interview_pool_domain_attractions,
-  pace: m.interview_pool_domain_pace,
-  cost: m.interview_pool_domain_cost,
+const DOMAIN_LABELS: Record<PoolDomain, () => string> = {
+  lodging: m.prefs_pool_domain_lodging,
+  food: m.prefs_pool_domain_food,
+  attractions: m.prefs_pool_domain_attractions,
+  pace: m.prefs_pool_domain_pace,
+  cost: m.prefs_pool_domain_cost,
 }
 
 /** The assistant's own options, or the five domains of the importance pool. */
 export const poolItems = (options: readonly string[]): PoolItem[] =>
   options.length >= 2
     ? options.map((label) => ({ id: label, label }))
-    : DOT_POOL_DOMAINS.map((id) => ({ id, label: DOMAIN_LABELS[id]() }))
+    : POOL_DOMAINS.map((id) => ({ id, label: DOMAIN_LABELS[id]() }))
 
 export const answerPool = (items: readonly PoolItem[], points: readonly number[]) =>
   m.interview_answer_pool({
@@ -62,4 +63,4 @@ export const answerPool = (items: readonly PoolItem[], points: readonly number[]
 
 /** Points still free; never negative. */
 export const poolLeft = (points: readonly number[]) =>
-  Math.max(0, DOT_POOL_TOTAL - points.reduce((sum, value) => sum + value, 0))
+  Math.max(0, POOL_TOTAL - points.reduce((sum, value) => sum + value, 0))
