@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Slider } from '@/components/ui/slider'
-import { ALPHA_DEFAULT, ALPHA_MAX, ALPHA_MIN, ALPHA_STEP } from '@/lib/fairness'
+import { ALPHA_DEFAULT, ALPHA_MAX, ALPHA_MIN, ALPHA_STEP } from '@/lib/constants'
 import { formatNumber } from '@/lib/format'
 import { m } from '@/paraglide/messages'
 

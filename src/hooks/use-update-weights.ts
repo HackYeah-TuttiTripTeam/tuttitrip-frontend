@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { $api, type Schemas } from '@/api/client'
 import { profilesQueryOptions } from '@/api/queries/profiles'
-import { RECORDED_PRESET, type WeightPresetId } from '@/lib/fairness'
+import type { WeightPresetId } from '@/lib/fairness'
 import { useCreatePlan } from './use-create-plan'
 
 export type WeightsChange =
@@ -25,9 +25,7 @@ export function useUpdateWeights(tripId: string) {
           : { weights: [{ profile_id: change.profileId, weight: change.weight }] }
       const profiles = await save.mutateAsync({ params: { path: { trip_id: tripId } }, body })
       queryClient.setQueryData(profilesQueryOptions(tripId).queryKey, profiles)
-      return plan.createAsync({
-        weight_preset: 'preset' in change ? RECORDED_PRESET[change.preset] : 'default',
-      })
+      return plan.createAsync()
     },
   })
 

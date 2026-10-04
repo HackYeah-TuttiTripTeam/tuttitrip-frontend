@@ -1,14 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchClient } from '@/api/client'
-import type { ReasonCode } from '@/api/queries/vetoes'
-import { type Rating, type RatingValue, ratingsQueryOptions } from '@/api/queries/vetoes'
+import { type Rating, type ReasonCode, ratingsQueryOptions } from '@/api/queries/vetoes'
 
-export interface PlanPlaceRating {
-  placeId: string
-  value: RatingValue
-  /** Needed for `dont_want`, one touch from the reasons of the dictionary. */
-  reason?: ReasonCode
-}
+/** A thumb up, a thumb back to neutral, or a thumb down, which always carries its reason. */
+export type PlanPlaceRating =
+  | { placeId: string; value: 'want' }
+  | { placeId: string; value: 'neutral' }
+  | { placeId: string; value: 'dont_want'; reason: ReasonCode }
 
 /**
  * Thumb rating of a place on the plan. Shown at once (the ratings list of the trip is changed in
@@ -20,30 +18,34 @@ export function useRatePlanPlace(tripId: string, profileId: string) {
   const { queryKey } = ratingsQueryOptions(tripId)
   return useMutation({
     scope: { id: `rating-${profileId}` },
-    mutationFn: ({ placeId, value, reason }: PlanPlaceRating) =>
+    mutationFn: (rating: PlanPlaceRating) =>
       fetchClient.PUT('/api/v1/trips/{trip_id}/profiles/{profile_id}/ratings/{place_id}', {
-        params: { path: { trip_id: tripId, profile_id: profileId, place_id: placeId } },
-        body: value === 'dont_want' ? { value, reason_code: reason ?? 'other' } : { value },
+        params: { path: { trip_id: tripId, profile_id: profileId, place_id: rating.placeId } },
+        body:
+          rating.value === 'dont_want'
+            ? { value: rating.value, reason_code: rating.reason }
+            : { value: rating.value },
       }),
-    onMutate: async ({ placeId, value, reason }) => {
+    onMutate: async (rating) => {
       await queryClient.cancelQueries({ queryKey })
       const before = queryClient.getQueryData<Rating[]>(queryKey)
       const rest = (before ?? []).filter(
-        (rating) => !(rating.profile_id === profileId && rating.place_id === placeId),
+        (existing) => !(existing.profile_id === profileId && existing.place_id === rating.placeId),
       )
+      const reasonCode: ReasonCode | null = rating.value === 'dont_want' ? rating.reason : null
       queryClient.setQueryData<Rating[]>(
         queryKey,
-        value === 'neutral'
+        rating.value === 'neutral'
           ? rest
           : [
               ...rest,
               {
                 trip_id: tripId,
                 profile_id: profileId,
-                place_id: placeId,
-                value,
-                reason_code: value === 'dont_want' ? (reason ?? 'other') : null,
-                updated_by_sub: '',
+                place_id: rating.placeId,
+                value: rating.value,
+                reason_code: reasonCode,
+                updated_by_sub: profileId,
                 updated_at: new Date().toISOString(),
               },
             ],

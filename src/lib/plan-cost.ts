@@ -1,6 +1,5 @@
 import type { PlanDay, PlanStop, TransitTicket } from '@/api/queries/plans'
-
-const CENTS = 100
+import { CENTS } from './constants'
 
 const toCents = (amount: string) => Math.round(Number(amount) * CENTS)
 const fromCents = (cents: number) => (cents / CENTS).toFixed(2)

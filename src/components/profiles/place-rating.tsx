@@ -15,13 +15,18 @@ const REASONS: { code: ReasonCode; label: () => string }[] = [
   { code: 'other', label: m.reason_other },
 ]
 
+export type RatingChoice =
+  | { value: 'want' }
+  | { value: 'neutral' }
+  | { value: 'dont_want'; reason: ReasonCode }
+
 interface PlaceRatingProps {
   placeName: string
   /** The person's rating now; null: none yet. */
   value: RatingValue | null
   reason: ReasonCode | null
-  /** `reason` goes with `dont_want` only. `neutral` takes the rating back. */
-  onRate: (value: RatingValue, reason?: ReasonCode) => void
+  /** `neutral` takes the rating back; a thumb down always comes with its reason. */
+  onRate: (choice: RatingChoice) => void
 }
 
 const thumb =
@@ -52,7 +57,7 @@ export function PlaceRating({ placeName, value, reason, onRate }: PlaceRatingPro
           )}
           onClick={() => {
             setChoosing(false)
-            onRate(value === 'want' ? 'neutral' : 'want')
+            onRate({ value: value === 'want' ? 'neutral' : 'want' })
           }}
         >
           <ThumbsUp aria-hidden="true" className="size-5" />
@@ -71,7 +76,7 @@ export function PlaceRating({ placeName, value, reason, onRate }: PlaceRatingPro
           onClick={() => {
             if (value === 'dont_want') {
               setChoosing(false)
-              onRate('neutral')
+              onRate({ value: 'neutral' })
             } else {
               setChoosing((open) => !open)
             }
@@ -92,7 +97,7 @@ export function PlaceRating({ placeName, value, reason, onRate }: PlaceRatingPro
               const picked = REASONS.find((candidate) => candidate.code === next)
               if (!picked) return
               setChoosing(false)
-              onRate('dont_want', picked.code)
+              onRate({ value: 'dont_want', reason: picked.code })
             }}
           >
             {REASONS.map((candidate) => (

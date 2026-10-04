@@ -1,5 +1,6 @@
 import { Receipt } from '@keyline-icons/react'
 import type { PlanStop, PriceDiscount, TransitTicket } from '@/api/queries/plans'
+import { PERCENT, UNVERIFIED_SURCHARGE_PCT } from '@/lib/constants'
 import { formatDecimal } from '@/lib/format'
 import { familySaving, sumDecimals } from '@/lib/plan-cost'
 import { m } from '@/paraglide/messages'
@@ -21,6 +22,15 @@ const TICKET_LABELS: Record<TransitTicket['ticket'], () => string> = {
   family: m.cost_ticket_family,
 }
 
+/** The surcharge on an unverified price, in percent: what the API applied, else the default delta. */
+function surchargePct(stop: PlanStop): number {
+  const base = Number(stop.price_base)
+  const inflated = Number(stop.price_inflated)
+  return base > 0 && inflated > base
+    ? Math.round((inflated / base - 1) * PERCENT)
+    : UNVERIFIED_SURCHARGE_PCT
+}
+
 interface CostBreakdownProps {
   stop: PlanStop
   currency: string
@@ -29,9 +39,10 @@ interface CostBreakdownProps {
 }
 
 /**
- * What each person pays at a stop, with the discount and the source of the price. Opens under the
- * stop; the verification chip and the source of the price sit with the price above it. Without per-person lines (the API does not send them yet) it falls back to the one price
- * per person. The prices come from the API; this adds them up and nothing else.
+ * What each person pays at a stop, with the discount. Opens under the stop; the verification chip
+ * and the source of the price sit with the price above it. Without per-person lines (the API does
+ * not send them yet) it shows the one price per person. The prices come from the API; this adds
+ * them up and nothing else.
  */
 export function CostBreakdown({ stop, currency, names }: CostBreakdownProps) {
   const lines = stop.price_lines ?? []
@@ -84,7 +95,9 @@ export function CostBreakdown({ stop, currency, names }: CostBreakdownProps) {
           </p>
         )}
         {!stop.price_verified && hasPrice && (
-          <p className="text-muted-foreground">{m.cost_surcharge_note()}</p>
+          <p className="text-muted-foreground">
+            {m.cost_surcharge_note({ pct: surchargePct(stop) })}
+          </p>
         )}
       </div>
     </details>

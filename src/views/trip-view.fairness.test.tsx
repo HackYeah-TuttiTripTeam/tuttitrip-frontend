@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { HttpResponse, http } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DESKTOP_QUERY } from '@/hooks/use-media-query'
 import { PROFILE_IDS, TRIP_ID } from '@/mocks/fixtures'
@@ -55,7 +56,7 @@ describe('Fairness panel, group', () => {
     expect(view.getByText(m.fairness_of_theirs({ pct: 85 }))).toBeTruthy()
     expect(view.getByText(m.fairness_min_r())).toBeTruthy()
     expect(view.getByText(m.fairness_jain())).toBeTruthy()
-    expect(view.getByText(m.fairness_least({ name: 'Marek', pct: 85 }))).toBeTruthy()
+    expect(view.getByText(m.fairness_least_name({ name: 'Marek' }))).toBeTruthy()
     // The floor is named in words, not only drawn.
     expect(view.getAllByText(m.fairness_floor_met({ floor: 40 })).length).toBe(5)
   })
@@ -75,7 +76,6 @@ describe('Fairness panel, group', () => {
     expect(view.getByText(m.warning_own_place_day({ name: 'Antek', day: 2 }))).toBeTruthy()
     expect(view.getByText(m.warning_conflict_floor({ people: 'Babcia Halina' }))).toBeTruthy()
     expect(view.getByText(m.warning_conflict_price())).toBeTruthy()
-    expect(view.getByText(m.warning_violation({ value: '0,35' }))).toBeTruthy()
   })
 
   it('opens the ledger of the host and the domains of one person', async () => {
@@ -103,9 +103,7 @@ describe('Fairness panel, one person', () => {
     renderApp(PLAN_URL)
     const view = await panel()
     expect(await view.findByRole('heading', { name: m.fairness_title_solo() })).toBeTruthy()
-    expect(
-      view.getByText(m.fairness_solo_weakest({ domain: m.prefs_pool_domain_cost(), score: 72 })),
-    ).toBeTruthy()
+    expect(view.getAllByText(m.fairness_weakest())).toHaveLength(1)
     expect(view.queryByText(m.fairness_jain())).toBeNull()
     expect(view.queryByText(m.weights_title())).toBeNull()
     expect(view.queryByText(m.alpha_title())).toBeNull()
@@ -318,6 +316,22 @@ describe('Rating and veto on a stop', () => {
   })
 })
 
+describe('Ratings and vetoes that fail to load', () => {
+  it('says so, with a retry, and does not offer a veto on a list it could not read', async () => {
+    server.use(
+      http.get('*/api/v1/trips/:tripId/vetoes', () =>
+        HttpResponse.json({ detail: 'Internal Server Error' }, { status: 500 }),
+      ),
+    )
+    renderApp(PLAN_URL)
+    expect(await screen.findByText(m.feedback_failed(), {}, SLOW)).toBeTruthy()
+    expect(screen.getByRole('button', { name: m.feedback_retry() })).toBeTruthy()
+    expect(
+      screen.queryByRole('button', { name: m.veto_open({ name: 'Zamek Królewski' }) }),
+    ).toBeNull()
+  })
+})
+
 describe('Cost per person', () => {
   it('shows the price of each person with the discount and the sum', async () => {
     renderApp(PLAN_URL)
@@ -362,6 +376,6 @@ describe('Cost per person', () => {
     // The chip and the link to the source sit with the price; the breakdown names the surcharge.
     expect(bar.getByText(m.plan_price_unverified())).toBeTruthy()
     expect(bar.getAllByRole('link').length).toBeGreaterThan(0)
-    expect(bar.getByText(m.cost_surcharge_note())).toBeTruthy()
+    expect(bar.getByText(m.cost_surcharge_note({ pct: 15 }))).toBeTruthy()
   })
 })

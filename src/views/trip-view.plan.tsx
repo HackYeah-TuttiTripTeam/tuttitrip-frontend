@@ -48,8 +48,9 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
   const creation = useCreatePlan(tripId)
   const session = useSession()
   const { people } = useProfiles(tripId, session.status)
-  const { ratings, vetoes } = usePlaceFeedback(tripId)
-  const { change } = useFairness(plan)
+  const feedback = usePlaceFeedback(tripId)
+  const { ratings, vetoes } = feedback
+  const { change } = useFairness(tripId, plan)
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
   const [day, setDay] = useState(1)
   const [fairnessOpen, setFairnessOpen] = useState(false)
@@ -193,6 +194,19 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
           <PlanSummary plan={plan} />
           {!isDesktop && <FairnessSummary plan={plan} onOpen={() => setFairnessOpen(true)} />}
           {failure}
+          {feedback.failed && (
+            <div role="alert" className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-destructive">{m.feedback_failed()}</span>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 rounded-full"
+                onClick={feedback.refetch}
+              >
+                {m.feedback_retry()}
+              </Button>
+            </div>
+          )}
           <div className={recalculating ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
             <DayTabs
               days={plan.days}
@@ -222,6 +236,7 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
                         canActForOthers={canBuild}
                         ratings={ratings}
                         vetoes={vetoes}
+                        feedbackReady={!feedback.failed}
                         isDesktop={isDesktop}
                       />
                     )}

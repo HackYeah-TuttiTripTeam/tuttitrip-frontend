@@ -63,6 +63,7 @@ describe('planChange', () => {
     const [first, ...rest] = familyFairness()
     if (!first) throw new Error('no people')
     const after = plan(undefined, {
+      plan_hash: 'ffffffffffff',
       fairness: {
         ...before.fairness,
         min_r: before.fairness.min_r + 0.04,

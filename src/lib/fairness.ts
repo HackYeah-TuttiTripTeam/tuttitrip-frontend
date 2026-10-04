@@ -1,35 +1,8 @@
 import type { Plan, PlanFairness } from '@/api/queries/plans'
 import type { Profile } from '@/api/queries/profiles'
-
-/** Fairness slider (E5): 0 favours the total benefit, 3 favours equality. */
-export const ALPHA_MIN = 0
-export const ALPHA_MAX = 3
-/** Step of the fairness slider. */
-export const ALPHA_STEP = 0.5
-/** The default alpha: balanced (Nash, the weighted log), `fairness_alpha` of a new trip. */
-export const ALPHA_DEFAULT = 1
-
-/** A person's weight: the API allows max/min up to 3, so with everyone at least 1 any pick is valid. */
-export const WEIGHT_MIN = 1
-export const WEIGHT_MAX = 3
-export const WEIGHT_STEP = 0.5
-/** The weight of a child or of the grandmother's day, like the API's presets (CHILD_WEIGHT, FOCUS_WEIGHT). */
-export const WEIGHT_RAISED = 2
-
-/** Whole percent: `r` is a share, the screen says "87%". */
-export const PERCENT = 100
-
-/** Offset in `r = (u + 10) / (u* + 10)`, E4 of docs/algorytm.md. */
-const R_OFFSET = 10
+import { PERCENT, R_OFFSET, WEIGHT_MIN, WEIGHT_RAISED } from './constants'
 
 export type WeightPresetId = 'po_rowno' | 'pod_dzieci' | 'dzien_babci'
-
-/** The preset recorded with a plan (`PlanCreate.weight_preset`, informational for now). */
-export const RECORDED_PRESET = {
-  po_rowno: 'equal',
-  pod_dzieci: 'weighted',
-  dzien_babci: 'weighted',
-} as const
 
 const YOUNG_GROUPS: Profile['age_group'][] = ['toddler', 'child']
 
@@ -77,7 +50,7 @@ export interface PlanChange {
   cost: number
   /** Time spent on the way, in minutes. */
   transferMinutes: number
-  /** Nothing moved: not the fairness, not the cost, not the time. */
+  /** The recalculation gave the same plan (same `plan_hash`). */
   unchanged: boolean
 }
 
@@ -106,7 +79,7 @@ export function planChange(before: Plan, after: Plan): PlanChange {
     perPerson,
     cost,
     transferMinutes: minutes,
-    unchanged:
-      minR === 0 && cost === 0 && minutes === 0 && [...perPerson.values()].every((d) => d === 0),
+    // The plan hash is the plan itself: other places at the same numbers are still a change.
+    unchanged: before.plan_hash === after.plan_hash,
   }
 }

@@ -43,6 +43,16 @@ function hash12(text: string): string {
  * the place out of the plan, and a high alpha pulls everyone toward the average. The real numbers
  * come from the API.
  */
+/** The plan hash follows the content (places and welfare), like the API's: same plan, same hash. */
+const contentHash = (placeIds: string[], welfare: number[]) =>
+  hash12(JSON.stringify({ placeIds, welfare }))
+
+/** The hash of the untouched family plan is the one of the fixture. */
+const FAMILY_HASH = contentHash(
+  days().flatMap((day) => day.items.map((stop) => stop.place_id)),
+  Object.values(FAMILY_FAIRNESS).map((p) => p.u),
+)
+
 export function buildPlan(
   tripId: string,
   profiles: Profile[],
@@ -82,11 +92,15 @@ export function buildPlan(
       })),
   }))
   const key = planInputKey(inputs)
+  const planHash = contentHash(
+    kept.flatMap((day) => day.items.map((stop) => stop.place_id)),
+    people.map((p) => p.u),
+  )
   return plan(tripId, {
     id: `5d1c0e77-8a2b-4c3d-9e4f-${version.toString(HEX).padStart(12, '0')}`,
     version,
     input_hash: hash12(key).repeat(6).slice(0, 64),
-    plan_hash: hash12(key),
+    plan_hash: planHash === FAMILY_HASH ? plan(tripId).plan_hash : planHash,
     params: { alpha: inputs.alpha, weight_preset: 'default' },
     days: kept,
     fairness: groupFairness(people),

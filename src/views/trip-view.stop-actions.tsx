@@ -18,6 +18,8 @@ interface StopActionsProps {
   canActForOthers: boolean
   ratings: Rating[]
   vetoes: Veto[]
+  /** False when the ratings or vetoes could not be loaded: rating and vetoing are off then. */
+  feedbackReady: boolean
   isDesktop: boolean
 }
 
@@ -31,6 +33,7 @@ export function StopActions({
   canActForOthers,
   ratings,
   vetoes,
+  feedbackReady,
   isDesktop,
 }: StopActionsProps) {
   const rate = useRatePlanPlace(tripId, meProfileId ?? '')
@@ -55,15 +58,15 @@ export function StopActions({
             onBehalf: candidate.on_behalf,
           }))}
       />
-      {meProfileId && (
+      {feedbackReady && meProfileId && (
         <PlaceRating
           placeName={stop.name}
           value={mine?.value ?? null}
           reason={mine?.reason_code ?? null}
-          onRate={(value, reason) => rate.mutate({ placeId: stop.place_id, value, reason })}
+          onRate={(choice) => rate.mutate({ placeId: stop.place_id, ...choice })}
         />
       )}
-      {defaultPersonId && (
+      {feedbackReady && defaultPersonId && (
         <VetoButton
           placeName={stop.name}
           people={people}

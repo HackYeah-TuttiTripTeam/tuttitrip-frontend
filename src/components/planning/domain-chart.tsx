@@ -1,5 +1,6 @@
 import { cn } from 'cn'
 import type { PlanDomainCode, PlanDomainScore } from '@/api/queries/plans'
+import { Q_MAX } from '@/lib/constants'
 import { formatNumber } from '@/lib/format'
 import { m } from '@/paraglide/messages'
 
@@ -10,9 +11,6 @@ export const DOMAIN_LABELS: Record<PlanDomainCode, () => string> = {
   pace: m.prefs_pool_domain_pace,
   cost: m.prefs_pool_domain_cost,
 }
-
-/** Scale of `q`: satisfaction with a domain, 0 to 100. */
-const Q_MAX = 100
 
 interface DomainChartProps {
   domains: PlanDomainScore[]

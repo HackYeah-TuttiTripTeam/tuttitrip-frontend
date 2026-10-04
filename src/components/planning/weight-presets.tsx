@@ -2,13 +2,11 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { WeightPresetId } from '@/lib/fairness'
 import { m } from '@/paraglide/messages'
 
-const PRESET_LABELS: Record<WeightPresetId, () => string> = {
-  po_rowno: m.weights_preset_equal,
-  pod_dzieci: m.weights_preset_children,
-  dzien_babci: m.weights_preset_grandma,
-}
-
-const PRESETS = ['po_rowno', 'pod_dzieci', 'dzien_babci'] as const
+const PRESETS: { id: WeightPresetId; label: () => string }[] = [
+  { id: 'po_rowno', label: m.weights_preset_equal },
+  { id: 'pod_dzieci', label: m.weights_preset_children },
+  { id: 'dzien_babci', label: m.weights_preset_grandma },
+]
 
 interface WeightPresetsProps {
   /** The preset the stored weights match; null for a custom setting. */
@@ -30,14 +28,17 @@ export function WeightPresets({ active, focusId, people, disabled, onPreset }: W
         value={active ?? ''}
         disabled={disabled}
         onValueChange={(next) => {
-          const preset = PRESETS.find((candidate) => candidate === next)
+          const preset = PRESETS.find((candidate) => candidate.id === next)
           if (preset)
-            onPreset(preset, preset === 'dzien_babci' ? (focusId ?? people[0]?.id) : undefined)
+            onPreset(
+              preset.id,
+              preset.id === 'dzien_babci' ? (focusId ?? people[0]?.id) : undefined,
+            )
         }}
       >
         {PRESETS.map((preset) => (
-          <ToggleGroupItem key={preset} value={preset} className="whitespace-normal">
-            {PRESET_LABELS[preset]()}
+          <ToggleGroupItem key={preset.id} value={preset.id} className="whitespace-normal">
+            {preset.label()}
           </ToggleGroupItem>
         ))}
       </ToggleGroup>

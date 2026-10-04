@@ -56,3 +56,6 @@ export const planQueryOptions = (tripId: string) =>
   $api.queryOptions('get', '/api/v1/trips/{trip_id}/plans/latest', {
     params: { path: { trip_id: tripId } },
   })
+
+/** The plan that was on screen when a recalculation started, to show what the recalculation changed. */
+export const planBeforeQueryKey = (tripId: string) => ['plan-before', tripId] as const

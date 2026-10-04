@@ -1,12 +1,10 @@
 import { cn } from 'cn'
 import type { PersonFairness, PlanFairness } from '@/api/queries/plans'
+import { JAIN_DIGITS } from '@/lib/constants'
 import { floorShare, type PlanChange, percentOf } from '@/lib/fairness'
 import { formatFixed, formatMoneyDelta, formatSigned } from '@/lib/format'
 import { m } from '@/paraglide/messages'
-import { DOMAIN_LABELS, DomainChart } from './domain-chart'
-
-/** Decimal places of the Jain index: "0,94". */
-const JAIN_DIGITS = 2
+import { DomainChart } from './domain-chart'
 
 interface FairnessPanelProps {
   fairness: PlanFairness
@@ -52,20 +50,10 @@ export function FairnessPanel({ fairness, change, currency, meProfileId }: Fairn
 }
 
 function SoloDomains({ person }: { person: PersonFairness }) {
-  const weakest = person.weakest_domain
-  const weakestScore = person.domains.find((domain) => domain.domain === weakest)?.q
   return (
     <>
       <p className="text-muted-foreground text-sm leading-[22px]">{m.fairness_solo_intro()}</p>
-      <DomainChart domains={person.domains} weakest={weakest} />
-      {weakest && weakestScore != null && (
-        <p className="text-sm leading-[22px]">
-          {m.fairness_solo_weakest({
-            domain: DOMAIN_LABELS[weakest](),
-            score: formatFixed(weakestScore, 0),
-          })}
-        </p>
-      )}
+      <DomainChart domains={person.domains} weakest={person.weakest_domain} />
     </>
   )
 }
@@ -88,6 +76,11 @@ function GroupBars({ fairness, change, meProfileId }: GroupBarsProps) {
           <dd className="font-heading font-extrabold text-[40px] tabular-nums leading-10">
             {m.fairness_percent({ pct: percentOf(fairness.min_r) })}
           </dd>
+          {least && (
+            <dd className="text-muted-foreground text-sm">
+              {m.fairness_least_name({ name: least.name })}
+            </dd>
+          )}
           {change && (
             <dd className="font-medium text-sm tabular-nums">
               {change.minR === 0
@@ -104,11 +97,6 @@ function GroupBars({ fairness, change, meProfileId }: GroupBarsProps) {
           <dd className="text-muted-foreground text-sm">{m.fairness_jain_hint()}</dd>
         </div>
       </dl>
-      {least && (
-        <p className="text-sm leading-[22px]">
-          {m.fairness_least({ name: least.name, pct: percentOf(least.r) })}
-        </p>
-      )}
       <ul className="flex flex-col gap-4">
         {people.map((person) => (
           <PersonBar

@@ -7,19 +7,18 @@ import { m } from '@/paraglide/messages'
 interface FairnessWarningsProps {
   floorsMissed: FloorMiss[]
   conflicts: PlanConflict[]
-  /** V(P): the penalty for the guarantees that were not met; 0 when nothing is missed. */
+  /** V(P) above 0 means a guarantee was missed; the number itself is a solver parameter, not shown. */
   violation: number
   /** Names by profile id and by place id, to write the reasons. */
   names: ReadonlyMap<string, string>
   placeNames: ReadonlyMap<string, string>
 }
 
-const VIOLATION_DIGITS = 2
-
 const tagLabel = (tag: string) => INTEREST_LABELS[tag as keyof typeof INTEREST_LABELS]?.() ?? tag
 
 function floorText(miss: FloorMiss, name: string): string {
-  const shortfall = formatFixed(miss.shortfall, miss.kind === 'floor' ? 0 : VIOLATION_DIGITS)
+  // Points, days or places: whole numbers.
+  const shortfall = formatFixed(miss.shortfall, 0)
   switch (miss.kind) {
     case 'floor':
       return m.warning_floor({ name, shortfall })
@@ -79,6 +78,8 @@ export function FairnessWarnings({
       ),
     })),
   ]
+  // The solver reports a penalty with nothing to name: still say that something is missed.
+  if (entries.length === 0) entries.push({ key: 'violation', text: m.warning_conflict_other() })
 
   return (
     <section aria-labelledby="warnings-title" className="flex flex-col gap-2">
@@ -96,11 +97,6 @@ export function FairnessWarnings({
           </li>
         ))}
       </ul>
-      {violation > 0 && (
-        <p className="text-muted-foreground text-sm leading-[22px]">
-          {m.warning_violation({ value: formatFixed(violation, VIOLATION_DIGITS) })}
-        </p>
-      )}
     </section>
   )
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Slider } from '@/components/ui/slider'
-import { WEIGHT_MAX, WEIGHT_MIN, WEIGHT_STEP } from '@/lib/fairness'
+import { WEIGHT_MAX, WEIGHT_MIN, WEIGHT_STEP } from '@/lib/constants'
 import { formatNumber } from '@/lib/format'
 import { m } from '@/paraglide/messages'
 
