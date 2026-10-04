@@ -1,20 +1,24 @@
 import {
   CloudOff,
   KeyRound,
+  Mic,
   PlaneTakeoff,
   Plus,
   SearchX,
   TriangleAlert,
 } from '@keyline-icons/react'
 import { getRouteApi } from '@tanstack/react-router'
+import { useState } from 'react'
 import { PaginationBar } from '@/components/shared/pagination-bar'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
 import { StatusMessage } from '@/components/shared/status-message'
 import { TripForm } from '@/components/trips/trip-form'
 import { TripsTable, TripsTableSkeleton } from '@/components/trips/trips-table'
 import { TripsToolbar } from '@/components/trips/trips-toolbar'
+import { VoiceTripForm } from '@/components/trips/voice-trip-form'
 import { Button } from '@/components/ui/button'
 import { useCities } from '@/hooks/use-cities'
+import { useCreateVoiceTrip } from '@/hooks/use-create-voice-trip'
 import { useDebouncedInput } from '@/hooks/use-debounced-input'
 import { useHelpTopic } from '@/hooks/use-help-topic'
 import { useClampPage, useListSearch } from '@/hooks/use-list-search'
@@ -48,6 +52,8 @@ export function TripsView() {
   const setCreateTripOpen = useUiStore((state) => state.setCreateTripOpen)
   const { cities } = useCities(session.status)
   const createTrip = useSaveTrip(null, cities)
+  const [voiceOpen, setVoiceOpen] = useState(false)
+  const voiceTrip = useCreateVoiceTrip(() => setVoiceOpen(false))
   const queryInput = useDebouncedInput(search.q, (q) => setFilters({ q }))
 
   const hasFilters =
@@ -62,6 +68,11 @@ export function TripsView() {
     setCreateTripOpen(true)
   }
 
+  const openVoice = () => {
+    voiceTrip.reset()
+    setVoiceOpen(true)
+  }
+
   const needsLogin = session.status === 'anonymous' || problem === 'unauthorized'
   // A page past the end is replaced by the last one (useClampPage): skeleton until that lands.
   const pastTheEnd = pages !== undefined && pages > 0 && search.page > pages
@@ -69,7 +80,7 @@ export function TripsView() {
     !needsLogin && !problem && !isPending && !pastTheEnd && session.status !== 'loading'
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-1 flex-col gap-6">
       <div className="flex items-end justify-between gap-4">
         <div className="flex flex-col gap-1" data-tour={TOUR.tripsHeader}>
           <h1 className="font-semibold text-2xl tracking-tight md:text-3xl">{m.trips_title()}</h1>
@@ -77,6 +88,12 @@ export function TripsView() {
             {showList && total > 0 ? m.trips_count({ count: total }) : m.trips_tagline()}
           </p>
         </div>
+        {!needsLogin && session.status !== 'loading' && (
+          <Button variant="outline" className="h-11 shrink-0 md:h-9" onClick={openVoice}>
+            <Mic aria-hidden="true" />
+            {m.trip_voice_action()}
+          </Button>
+        )}
       </div>
 
       {showList && (total > 0 || hasFilters) && (
@@ -198,6 +215,20 @@ export function TripsView() {
           />
         </div>
       )}
+
+      <ResponsiveModal
+        open={voiceOpen}
+        onOpenChange={setVoiceOpen}
+        isDesktop={isDesktop}
+        title={m.trip_voice_title()}
+        description={m.trip_voice_description()}
+      >
+        <VoiceTripForm
+          isSubmitting={voiceTrip.isPending}
+          submitError={voiceTrip.submitError}
+          onSubmit={(name) => void voiceTrip.submit(name)}
+        />
+      </ResponsiveModal>
 
       <ResponsiveModal
         open={createTripOpen}

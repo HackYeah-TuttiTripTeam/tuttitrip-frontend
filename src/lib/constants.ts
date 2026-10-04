@@ -20,3 +20,8 @@ export const ICS_FILE_PREFIX = 'tuttitrip-plan-'
 
 /** Query-key prefix under which the assumptions of the last draft plan are kept (not stored by the API). */
 export const DRAFT_ASSUMPTIONS_KEY = 'draft-plan-assumptions'
+/** Longest name of a trip (TripCreate). */
+export const TRIP_NAME_MAX_CHARS = 200
+
+/** Value of the `voice` search param that tells the Wywiad tab to start a voice call. */
+export const VOICE_START_FLAG = 1

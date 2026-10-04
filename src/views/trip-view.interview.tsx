@@ -1,4 +1,4 @@
-import { Sparkles } from '@keyline-icons/react'
+import { Mic, Sparkles } from '@keyline-icons/react'
 import { useEffect, useRef, useState } from 'react'
 import { BuildPlanButton } from '@/components/interview/build-plan-button'
 import { ChatThread } from '@/components/interview/chat-thread'
@@ -72,6 +72,10 @@ interface TripInterviewViewProps {
   onOpenPerson: (profileId: string) => void
   /** "Build plan now" succeeded: the Plan tab shows the preliminary plan. */
   onPlanBuilt: () => void
+  /** The trip was just created by voice (`?voice=1`): start the call, or ask for the tap that may. */
+  startVoice?: boolean
+  /** The start request was taken over; the view drops the param so a reload does not repeat it. */
+  onVoiceHandled?: () => void
 }
 
 /**
@@ -84,6 +88,8 @@ export function TripInterviewView({
   canManage,
   onOpenPerson,
   onPlanBuilt,
+  startVoice = false,
+  onVoiceHandled,
 }: TripInterviewViewProps) {
   if (!canManage) {
     return (
@@ -93,7 +99,13 @@ export function TripInterviewView({
     )
   }
   return (
-    <InterviewWorkspace tripId={tripId} onOpenPerson={onOpenPerson} onPlanBuilt={onPlanBuilt} />
+    <InterviewWorkspace
+      tripId={tripId}
+      onOpenPerson={onOpenPerson}
+      onPlanBuilt={onPlanBuilt}
+      startVoice={startVoice}
+      onVoiceHandled={onVoiceHandled}
+    />
   )
 }
 
@@ -101,10 +113,14 @@ function InterviewWorkspace({
   tripId,
   onOpenPerson,
   onPlanBuilt,
+  startVoice,
+  onVoiceHandled,
 }: {
   tripId: string
   onOpenPerson: (profileId: string) => void
   onPlanBuilt: () => void
+  startVoice: boolean
+  onVoiceHandled?: () => void
 }) {
   const session = useSession()
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
@@ -142,6 +158,18 @@ function InterviewWorkspace({
   const [editing, setEditing] = useState<Editing>(null)
   const [panelOpen, setPanelOpen] = useState(false)
   const end = useRef<HTMLDivElement>(null)
+  // After "create by voice": the click that made the trip may still count as a gesture and start
+  // the call; if the browser says it no longer does, a big button waits for the tap.
+  const [voicePrompt, setVoicePrompt] = useState(false)
+  const voiceHandled = useRef(false)
+  const { start: startCall } = voice
+  useEffect(() => {
+    if (!startVoice || voiceHandled.current || history.isPending) return
+    voiceHandled.current = true
+    onVoiceHandled?.()
+    if (navigator.userActivation?.isActive) void startCall()
+    else setVoicePrompt(true)
+  }, [startVoice, history.isPending, onVoiceHandled, startCall])
 
   const lines = [...history.history, ...interview.lines]
   const lastLine = lines.at(-1)
@@ -251,6 +279,23 @@ function InterviewWorkspace({
         )}
 
         <section className="flex flex-col gap-3">
+          {voicePrompt && !voice.active && (
+            <div className="flex flex-col items-start gap-3 rounded-lg border p-4">
+              <p className="text-sm">{m.interview_voice_begin_body()}</p>
+              <Button
+                type="button"
+                size="lg"
+                className="h-14 w-full text-base sm:w-auto"
+                onClick={() => {
+                  setVoicePrompt(false)
+                  void voice.start()
+                }}
+              >
+                <Mic aria-hidden="true" />
+                {m.interview_voice_begin()}
+              </Button>
+            </div>
+          )}
           <VoiceButton
             status={voice.status}
             speaking={voice.speaking}

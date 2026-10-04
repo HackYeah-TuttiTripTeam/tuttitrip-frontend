@@ -1,4 +1,12 @@
-import { Calendar, MessageSquare, UserCheck, Users } from '@keyline-icons/react'
+import {
+  Calendar,
+  Images,
+  MessageSquare,
+  Navigation,
+  UserCheck,
+  Users,
+  Wallet,
+} from '@keyline-icons/react'
 import type { ReactNode } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TOUR } from '@/lib/help'
@@ -10,6 +18,9 @@ const TAB_LABELS: Record<TripTab, () => string> = {
   people: m.trip_tab_people,
   members: m.trip_tab_members,
   plan: m.trip_tab_plan,
+  photos: m.trip_tab_photos,
+  locations: m.trip_tab_locations,
+  expenses: m.trip_tab_expenses,
 }
 
 const TAB_ICONS: Record<TripTab, ReactNode> = {
@@ -17,6 +28,9 @@ const TAB_ICONS: Record<TripTab, ReactNode> = {
   people: <Users />,
   members: <UserCheck />,
   plan: <Calendar />,
+  photos: <Images />,
+  locations: <Navigation />,
+  expenses: <Wallet />,
 }
 
 interface TripTabsProps {
@@ -30,10 +44,27 @@ interface TripTabsProps {
   members: ReactNode
   /** The content of the Plan tab: a view, so this component stays free of the data layer. */
   plan: ReactNode
+  /** The content of the Wydatki tab: a view. */
+  expenses: ReactNode
+  /** The content of the Zdjęcia tab. */
+  photos: ReactNode
+  /** The content of the Lokalizacje tab. */
+  locations: ReactNode
 }
 
-/** Wywiad, Osoby, Członkowie, Plan: a four-segment switch. */
-export function TripTabs({ tab, onTabChange, interview, people, members, plan }: TripTabsProps) {
+/** Wywiad, Osoby, Członkowie, Plan, Wydatki, Zdjęcia, Lokalizacje: a scrollable segment switch. */
+
+export function TripTabs({
+  tab,
+  onTabChange,
+  interview,
+  people,
+  members,
+  plan,
+  photos,
+  locations,
+  expenses,
+}: TripTabsProps) {
   return (
     <Tabs
       value={tab}
@@ -44,7 +75,7 @@ export function TripTabs({ tab, onTabChange, interview, people, members, plan }:
     >
       <TabsList
         aria-label={m.trip_tabs_label()}
-        className="md:max-w-xl print:hidden"
+        className="auto-cols-[minmax(max-content,1fr)] overflow-x-auto md:max-w-3xl print:hidden"
         data-tour={TOUR.tripTabs}
       >
         {TRIP_TABS.map((value) => (
@@ -59,6 +90,9 @@ export function TripTabs({ tab, onTabChange, interview, people, members, plan }:
       <TabsContent value="people">{people}</TabsContent>
       <TabsContent value="members">{members}</TabsContent>
       <TabsContent value="plan">{plan}</TabsContent>
+      <TabsContent value="photos">{photos}</TabsContent>
+      <TabsContent value="locations">{locations}</TabsContent>
+      <TabsContent value="expenses">{expenses}</TabsContent>
     </Tabs>
   )
 }

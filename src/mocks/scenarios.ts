@@ -4,20 +4,29 @@ import {
   type AdminUser,
   adminUsers,
   type CatalogPlace,
+  type Checkin,
   type City,
   catalogPlaces,
   cities,
+  type Expense,
+  expense,
+  familyCheckins,
+  familyExpenses,
   familyMembers,
   familyPreferences,
   familyProfiles,
+  galleryPhotos,
   type Invitation,
   invitation,
+  location,
   type Me,
   type Member,
+  type MemberLocation,
   MOCK_USER_NAME,
   me,
   needsApprovalBudget,
   outing,
+  type Photo,
   type PlaceVoteSummary,
   type Plan,
   PROFILE_IDS,
@@ -40,7 +49,11 @@ export const scenarioNames = [
   'many-trips',
   'needs-approval',
   'no-plan',
+  'others-share-location',
   'member-readonly',
+  'no-expenses',
+  'many-expenses',
+  'settlement-closed',
   'member-pending',
   'cohost',
   'users-admin',
@@ -120,8 +133,22 @@ export interface World {
   places: CatalogPlace[]
   /** Every PUT of preferences or of a place rating answers 500, to see the rollback. */
   preferencesSaveFails: boolean
+  /** Expenses of the main trip (`/trips/{id}/expenses`); the settlement is computed from them. */
+  expenses: Expense[]
+  /** The host has closed the settlement: expense writes answer 409 and `closed_at` is set. */
+  settlementClosed: boolean
   /** The latest plan of the main trip; null until "Policz plan" creates one. */
   plan: Plan | null
+  /** Check-ins (where everyone stays) of the main trip. */
+  checkins: Checkin[]
+  /** Photos of the main trip, in upload order (the handler sorts them). */
+  photos: Photo[]
+  /** Positions members share right now. */
+  locations: MemberLocation[]
+  /** Status the photo upload answers with, for a refusal (413, 422) no scenario has. */
+  photoUploadStatus?: number
+  /** The caller's own location-sharing consent. */
+  consent: { enabled: boolean; until: string | null }
   /** Invitations of the main trip, newest first (the host's list). */
   invitations: Invitation[]
   /** Voting links of the main trip, newest first (the host's panel; never holds a token). */
@@ -182,6 +209,23 @@ function manyTrips(count: number): Trip[] {
   })
 }
 
+/** 45 expenses for the paginated list: payers rotate, one day apart, amounts differ. */
+function manyExpenses(count: number): Expense[] {
+  const payers = [PROFILE_IDS.mama, PROFILE_IDS.tata, PROFILE_IDS.babcia] as const
+  const categories = ['food', 'transport', 'lodging', 'activities', 'shopping', 'other'] as const
+  return Array.from({ length: count }, (_, index) =>
+    expense({
+      id: `5a1c0e11-8b2d-4c3e-9f40-${String(index + 100).padStart(12, '0')}`,
+      description: `Wydatek ${index + 1}`,
+      amount: `${10 + index}.00`,
+      spent_on: `2026-10-${String((index % 28) + 1).padStart(2, '0')}`,
+      created_at: `2026-10-01T10:${String(index).padStart(2, '0')}:00Z`,
+      category: categories[index % categories.length] ?? null,
+      payer_profile_id: payers[index % payers.length] ?? PROFILE_IDS.mama,
+    }),
+  )
+}
+
 export function createWorld(name: ScenarioName): World {
   const main = trip()
   const base: World = {
@@ -198,7 +242,13 @@ export function createWorld(name: ScenarioName): World {
     preferences: familyPreferences(),
     places: catalogPlaces(),
     preferencesSaveFails: false,
+    expenses: familyExpenses(),
+    settlementClosed: false,
     plan: plan(main.id),
+    checkins: familyCheckins(),
+    photos: galleryPhotos(),
+    locations: [],
+    consent: { enabled: false, until: null },
     invitations: [invitation()],
     voteLinks: [],
     voteSummary: voteSummary(),
@@ -225,12 +275,31 @@ export function createWorld(name: ScenarioName): World {
       return { ...base, plan: plan(main.id, { budget: needsApprovalBudget() }) }
     case 'no-plan':
       return { ...base, plan: null }
+    case 'others-share-location':
+      return {
+        ...base,
+        locations: [
+          location(PROFILE_IDS.tata, { display_name: 'Marek' }),
+          location(PROFILE_IDS.babcia, {
+            display_name: 'Babcia Halina',
+            latitude: 52.2319,
+            longitude: 21.0067,
+            recorded_at: new Date(Date.now() - 6 * 60_000).toISOString(),
+          }),
+        ],
+      }
     case 'member-readonly':
       return {
         ...base,
         trips: [trip({ my_role: 'member' }), outing({ my_role: 'member' })],
         members: familyMembers('member'),
       }
+    case 'no-expenses':
+      return { ...base, expenses: [] }
+    case 'settlement-closed':
+      return { ...base, settlementClosed: true }
+    case 'many-expenses':
+      return { ...base, expenses: manyExpenses(45) }
     case 'member-pending': {
       const members = familyMembers('member')
       for (const member of members) if (member.is_me) member.status = 'pending'
