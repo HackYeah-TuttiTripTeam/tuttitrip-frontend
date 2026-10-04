@@ -5,14 +5,27 @@ import type { VoteSummarySort } from '@/api/queries/vote-links'
 import { VOICE_START_FLAG } from '@/lib/constants'
 import { TRIP_TABS, type TripTab } from '@/lib/trip-tabs'
 import { VOTE_SOURCES, VOTE_SUMMARY_SORTS } from '@/lib/vote-constants'
+import {
+  type ExpenseSection,
+  expenseSectionSchema,
+  expensesListDefaults,
+  expensesListShape,
+} from './expenses'
 import type { RouterContext } from './router-context'
 
 /** Values left out of the URL (see stripSearchParams in routes/trips_.$tripId.ts). */
 export const tripSearchDefaults = {
+  ...expensesListDefaults,
+  section: 'list',
   tab: 'interview',
   vpage: 1,
   vsort: 'name',
-} as const satisfies { tab: TripTab; vpage: number; vsort: VoteSummarySort }
+} as const satisfies {
+  tab: TripTab
+  vpage: number
+  vsort: VoteSummarySort
+  section: ExpenseSection
+}
 
 /** /trips/$tripId?tab=&person=&vpage=&vsort=&vsource=&vveto= — a bad tab falls back to the default instead of erroring. */
 export const tripSearchSchema = z.object({
@@ -29,6 +42,9 @@ export const tripSearchSchema = z.object({
   voice: z.literal(VOICE_START_FLAG).optional().catch(undefined),
   vsource: z.enum(VOTE_SOURCES).optional().catch(undefined),
   vveto: z.literal(true).optional().catch(undefined),
+  /** The Wydatki tab: the part (list or settlement) and the list state, see loaders/expenses.ts. */
+  section: expenseSectionSchema,
+  ...expensesListShape,
 })
 
 export type TripSearch = z.output<typeof tripSearchSchema>
