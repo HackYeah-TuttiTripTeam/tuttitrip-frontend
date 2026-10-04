@@ -55,3 +55,21 @@ export const VOICE_KNOWLEDGE_POLL_MS = 4000
 
 /** Path (after `/api/v1/trips/{id}/`) of the voice endpoints. */
 export const VOICE_PATH = 'interview/voice'
+
+/** The mic opens again this long (ms) after the assistant went quiet, so its tail is not heard. */
+export const MIC_REOPEN_DELAY_MS = 400
+
+/** A mic muted for processing opens by itself after this long (ms), whatever the events said. */
+export const MIC_FAILSAFE_MS = 20_000
+
+/** Shortest hold (ms) of the talk button that counts as speech; a shorter tap is dropped. */
+export const PTT_MIN_HOLD_MS = 300
+
+/** "Saved" stays on the call screen this long (ms). */
+export const SAVED_FLASH_MS = 3000
+
+/** `localStorage` key of the chosen voice mode (open microphone or hold to talk). */
+export const VOICE_MODE_KEY = 'tt.voice.mode'
+
+/** Keys that press the hold-to-talk button from the keyboard. */
+export const PTT_PRESS_KEYS = [' ', 'Spacebar']

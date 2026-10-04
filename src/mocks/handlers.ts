@@ -1,5 +1,6 @@
 import { delay, HttpResponse, http, type RequestHandler } from 'msw'
 import type { Schemas } from '@/api/client'
+import type { Veto } from '@/api/queries/vetoes'
 import {
   centsToDecimal,
   compareDecimals,
@@ -38,6 +39,7 @@ import {
 } from './fixtures'
 import { interviewHandlers } from './interview'
 import { permissionHandlers } from './permissions'
+import { buildPlan, type PlanInputs, planInputKey } from './plan-builder'
 import { proposalHandlers } from './proposals'
 import { createWorld, type ScenarioName, type World } from './scenarios'
 
@@ -734,11 +736,29 @@ function normalHandlers(
         const profile = world.profiles.find((p) => p.id === params.profileId)
         if (!profile) return notFound('Profile not found')
         if (!canWrite(params.tripId) && !isMe(world, profile.id)) return forbidden()
-        const place = world.places.find((p) => p.id === params.placeId)
+        const catalog = world.places.find((p) => p.id === params.placeId)
+        // A place of the plan is not always in the city catalog of the mock.
+        const planned = world.plan?.days
+          .flatMap((day) => day.items)
+          .find((stop) => stop.place_id === params.placeId)
+        const place = catalog ?? (planned && { id: planned.place_id, name: planned.name })
         if (!place) return notFound('Place not found')
         if (world.preferencesSaveFails)
           return HttpResponse.json({ detail: 'Internal Server Error' }, { status: 500 })
         const body = (await request.json()) as Schemas['RatingUpdate']
+        world.ratings = world.ratings.filter(
+          (rating) => !(rating.profile_id === profile.id && rating.place_id === place.id),
+        )
+        if (body.value !== 'neutral')
+          world.ratings.push({
+            trip_id: String(params.tripId),
+            profile_id: profile.id,
+            place_id: place.id,
+            value: body.value,
+            reason_code: body.reason_code ?? null,
+            updated_by_sub: MOCK_USER_SUB,
+            updated_at: new Date().toISOString(),
+          })
         const current = storedPreferences(world, profile.id)
         current.example_places = current.example_places.filter((e) => e.place_id !== place.id)
         if (body.value !== 'neutral')
@@ -1147,15 +1167,88 @@ function normalHandlers(
         : notFound('No plan yet')
     }),
 
-    // "Policz plan": the first call creates the plan (201), later calls with the same input
-    // return the existing version (200), like the real API.
+    // "Policz plan": the first call creates the plan (201). Later calls with the same inputs
+    // (alpha, weights, vetoes) return the existing version (200); other inputs build a new one.
     http.post(`${API}/trips/:tripId/plans`, async ({ params }) => {
+      await latency()
+      const found = findTrip(params.tripId)
+      if (!found) return notFound('Trip not found')
+      if (!canWrite(params.tripId)) return forbidden()
+      const tripId = String(params.tripId)
+      if (!world.plan || world.plan.trip_id !== tripId) {
+        const created: Plan = plan(tripId)
+        world.plan = created
+        return HttpResponse.json(created, { status: 201 })
+      }
+      if (world.recomputeFails)
+        return HttpResponse.json({ detail: 'Internal Server Error' }, { status: 500 })
+      const inputs: PlanInputs = {
+        alpha: found.fairness_alpha,
+        weights: Object.fromEntries(world.profiles.map((p) => [p.id, p.weight])),
+        vetoed: world.vetoes.map((veto) => veto.place_id),
+      }
+      if (planInputKey(inputs) === planInputKey(world.planInputs))
+        return HttpResponse.json(world.plan)
+      world.planInputs = inputs
+      world.plan = buildPlan(tripId, world.profiles, inputs, world.plan.version + 1)
+      return HttpResponse.json(world.plan, { status: 201 })
+    }),
+
+    // Weights: a preset or a list, like the API (max/min at most 3, "dzien_babci" needs a person).
+    http.put(`${API}/trips/:tripId/profiles/weights`, async ({ params, request }) => {
       await latency()
       if (!findTrip(params.tripId)) return notFound('Trip not found')
       if (!canWrite(params.tripId)) return forbidden()
-      if (world.plan?.trip_id === params.tripId) return HttpResponse.json(world.plan)
-      const created: Plan = plan(String(params.tripId ?? TRIP_ID))
-      world.plan = created
+      const body = (await request.json()) as Schemas['WeightsUpdate']
+      const next = new Map(world.profiles.map((p) => [p.id, p.weight]))
+      if (body.preset === 'po_rowno') for (const id of next.keys()) next.set(id, 1)
+      else if (body.preset === 'pod_dzieci')
+        for (const p of world.profiles)
+          next.set(p.id, p.age_group === 'toddler' || p.age_group === 'child' ? 2 : 1)
+      else if (body.preset === 'dzien_babci') {
+        if (!body.focus_profile_id)
+          return HttpResponse.json({ detail: 'focus_profile_id is required' }, { status: 422 })
+        for (const id of next.keys()) next.set(id, id === body.focus_profile_id ? 2 : 1)
+      } else for (const item of body.weights ?? []) next.set(item.profile_id, item.weight)
+      const values = [...next.values()]
+      if (Math.max(...values) / Math.min(...values) > 3)
+        return HttpResponse.json({ detail: 'max/min must be at most 3' }, { status: 422 })
+      world.profiles = world.profiles.map((p) => ({ ...p, weight: next.get(p.id) ?? p.weight }))
+      return HttpResponse.json(world.profiles)
+    }),
+
+    http.get(`${API}/trips/:tripId/ratings`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      return HttpResponse.json(world.ratings)
+    }),
+
+    http.get(`${API}/trips/:tripId/vetoes`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      return HttpResponse.json(world.vetoes)
+    }),
+
+    // A veto: your own profile, or any profile as co-host or higher (then on_behalf is true).
+    http.post(`${API}/trips/:tripId/vetoes`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const body = (await request.json()) as Schemas['VetoCreate']
+      const profile = world.profiles.find((p) => p.id === body.profile_id)
+      if (!profile) return notFound('Profile not found')
+      if (!canWrite(params.tripId) && !isMe(world, profile.id)) return forbidden()
+      const created: Veto = {
+        id: `9e0a7c10-5b2d-4a3e-8f61-${String(world.vetoes.length + 1).padStart(12, '0')}`,
+        trip_id: String(params.tripId),
+        profile_id: profile.id,
+        place_id: body.place_id,
+        created_by_sub: MOCK_USER_SUB,
+        on_behalf: !isMe(world, profile.id),
+        created_at: new Date().toISOString(),
+        revoked_at: null,
+        revoked_by_sub: null,
+      }
+      world.vetoes.push(created)
       return HttpResponse.json(created, { status: 201 })
     }),
   ]
