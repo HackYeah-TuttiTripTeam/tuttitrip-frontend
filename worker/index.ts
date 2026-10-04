@@ -116,6 +116,8 @@ async function manifest(request: Request, env: Env, url: URL): Promise<Response>
       'content-type': 'application/manifest+json; charset=utf-8',
       'cache-control': 'no-cache',
       vary: 'Accept-Language',
+      // The _headers rules do not apply to a Worker response.
+      'referrer-policy': 'no-referrer',
     },
   })
 }
@@ -142,7 +144,13 @@ async function publicPage(request: Request, env: Env, url: URL): Promise<Respons
   const locale = requestLocale(url, request.headers.get('accept-language'))
   const seo = pageSeo(url.origin, path, locale)
   const page = new HTMLRewriter()
-    .on('html', { element: (element) => element.setAttribute('lang', locale) })
+    .on('html', {
+      element: (element) => {
+        element.setAttribute('lang', locale)
+        // Tells the language script in index.html that the Worker owns lang and description.
+        element.setAttribute('data-seo', '')
+      },
+    })
     .on('link[rel="manifest"]', {
       element: (element) => element.setAttribute('href', `${MANIFEST_PATH}?lang=${locale}`),
     })

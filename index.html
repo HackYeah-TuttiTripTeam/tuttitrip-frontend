@@ -35,23 +35,27 @@
     <!-- Language (#74): this file is the same for everyone, so before first paint set <html lang>
          and the description to what the app will use: ?lang=, the saved choice (Paraglide's
          localStorage key), then the browser's languages, else Polish. Keep in sync with
-         i18n.config.mjs and src/lib/seo.ts (requestLocale). The Worker sets both itself on the
-         public pages, from ?lang= and Accept-Language. -->
+         i18n.config.mjs and src/lib/seo.ts (requestLocale). Not on the public pages: there
+         the Worker marks <html data-seo> and owns lang and description. -->
     <script>
       ;(() => {
-        const text = { pl: '%DESCRIPTION_PL%', en: '%DESCRIPTION_EN%' }
+        const root = document.documentElement
+        if (root.hasAttribute('data-seo')) return
+        const text = __DESCRIPTIONS__
+        const known = (l) => typeof l === 'string' && Object.hasOwn(text, l)
         let lang = new URLSearchParams(location.search).get('lang')
-        if (!text[lang]) {
+        if (!known(lang)) {
           try {
             lang = localStorage.getItem('PARAGLIDE_LOCALE')
           } catch {}
         }
-        if (!text[lang]) {
-          lang = (navigator.languages || []).map((l) => l.split('-')[0].toLowerCase()).find((l) => text[l])
+        if (!known(lang)) {
+          lang = (navigator.languages || []).map((l) => l.split('-')[0].toLowerCase()).find(known)
         }
-        if (!text[lang]) return
-        document.documentElement.lang = lang
-        document.querySelector('meta[name="description"]').content = text[lang]
+        if (!known(lang)) return
+        root.lang = lang
+        const meta = document.querySelector('meta[name="description"]')
+        if (meta) meta.content = text[lang]
       })()
     </script>
 

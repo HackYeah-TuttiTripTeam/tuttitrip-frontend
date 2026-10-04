@@ -45,7 +45,7 @@ describe('built service worker', () => {
     // The Worker serves the manifest per language, so a precached copy would stay Polish.
     expect(sw).not.toContain('manifest.webmanifest')
     expect(sw).toContain('pwa-192x192.png')
-    expect(headers).toContain('/manifest.webmanifest\n  Cache-Control: no-cache')
+    expect(sw).not.toContain('.webmanifest')
     expect(sw).not.toContain('"index.html"')
     expect(sw).toContain('NetworkFirst')
     expect(headers).toContain('immutable')
@@ -56,7 +56,13 @@ describe('built service worker', () => {
     expect(manifest.lang).toBe('pl')
     expect(manifest.description).toContain('Planowanie wyjazdów')
     expect(index).toContain('<html lang="pl">')
-    expect(index).toContain('Group trip planning')
-    expect(index).not.toContain('%DESCRIPTION_')
+    expect(index).not.toContain('%DESCRIPTION')
+    expect(index).toContain('<link rel="manifest" href="/manifest.webmanifest">')
+    const script =
+      [...index.matchAll(/<script>([\s\S]*?)<\/script>/g)].find((m) =>
+        m[1].includes('PARAGLIDE_LOCALE'),
+      )?.[1] ?? ''
+    expect(script).toContain('Group trip planning')
+    expect(script).toContain('Planowanie wyjazdów')
   }, 120_000)
 })

@@ -9,7 +9,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { paraglideOptions } from './i18n.config.mjs'
 import en from './messages/en.json' with { type: 'json' }
 import pl from './messages/pl.json' with { type: 'json' }
-import { headersFile, includeAssets, isProductionBuild, workboxOptions } from './pwa.config.ts'
+import {
+  headersFile,
+  includeAssets,
+  injectDescriptions,
+  isProductionBuild,
+  workboxOptions,
+} from './pwa.config.ts'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode, command }) => {
@@ -72,9 +78,7 @@ export default defineConfig(({ mode, command }) => {
         // stay in messages/*.json (the only place that has them).
         name: 'tuttitrip:html-messages',
         transformIndexHtml: (html) =>
-          html
-            .replaceAll('%DESCRIPTION_PL%', pl.app_description)
-            .replaceAll('%DESCRIPTION_EN%', en.app_description),
+          injectDescriptions(html, { pl: pl.app_description, en: en.app_description }),
       },
       VitePWA({
         registerType: 'autoUpdate',

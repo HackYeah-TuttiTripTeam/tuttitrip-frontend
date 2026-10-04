@@ -125,7 +125,8 @@ describe('public pages', () => {
   it('injects the metadata and first screen, in the requested language', async () => {
     const response = await worker.fetch(new Request('https://app.test/about?lang=en'), env(page))
     const body = await response.text()
-    expect(body).toContain('<html lang="en">')
+    expect(body).toContain('data-seo')
+    expect(body).toContain('lang="en"')
     expect(body).toContain('property="og:locale" content="en_US"')
     expect(body).toContain('id="seo-shell"')
     expect(response.headers.get('vary')).toContain('Accept-Language')
@@ -263,6 +264,7 @@ describe('manifest', () => {
     expect(response.headers.get('vary')).toContain('Accept-Language')
     expect(response.headers.get('content-type')).toContain('manifest+json')
     expect(response.headers.get('etag')).toBeNull()
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer')
   })
 
   it('passes a missing manifest on as a 404', async () => {

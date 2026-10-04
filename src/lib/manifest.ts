@@ -1,6 +1,6 @@
 // The web manifest in the language of a request. The build emits one manifest (Polish, the
 // base locale: icons, colors, scope). The Worker serves it per language (worker/index.ts)
-// by swapping the four fields the user reads on the install screen.
+// by swapping the two fields that depend on the language (description, lang).
 import { m } from '../paraglide/messages'
 import type { Locale } from '../paraglide/runtime'
 
