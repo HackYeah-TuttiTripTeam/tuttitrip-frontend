@@ -5,22 +5,35 @@ import {
   Printer,
   RefreshCcw,
   TriangleAlert,
+  Users,
 } from '@keyline-icons/react'
 import { useState } from 'react'
 import { ApiError } from '@/api/errors'
+import type { Plan } from '@/api/queries/plans'
 import type { Trip } from '@/api/queries/trips'
+import { DayCost } from '@/components/planning/cost-breakdown'
 import { DayTabs } from '@/components/planning/day-tabs'
 import { PlanHashLabel } from '@/components/planning/plan-hash-label'
 import { PlanPrintout } from '@/components/planning/plan-printout'
 import { PlanSummary } from '@/components/planning/plan-summary'
 import { PlanTimeline } from '@/components/planning/plan-timeline'
+import { ResponsiveModal } from '@/components/shared/responsive-modal'
 import { StatusMessage } from '@/components/shared/status-message'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCreatePlan } from '@/hooks/use-create-plan'
+import { useFairness } from '@/hooks/use-fairness'
+import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
+import { usePlaceFeedback } from '@/hooks/use-place-feedback'
 import { usePlan } from '@/hooks/use-plan'
 import { usePrinting } from '@/hooks/use-printing'
+import { useProfiles } from '@/hooks/use-profiles'
+import { useSession } from '@/hooks/use-session'
+import { percentOf } from '@/lib/fairness'
+import { dayCost, dayTickets } from '@/lib/plan-cost'
 import { m } from '@/paraglide/messages'
+import { FairnessAside } from './trip-view.fairness'
+import { StopActions } from './trip-view.stop-actions'
 
 interface TripPlanViewProps {
   trip: Trip
@@ -30,9 +43,16 @@ interface TripPlanViewProps {
 export function TripPlanView({ trip }: TripPlanViewProps) {
   const { id: tripId, my_role: role } = trip
   const printing = usePrinting()
-  const { plan, isPending, hasNoPlan, forbidden, problem, refetch } = usePlan(tripId)
+  const { plan, isPending, isRecalculating, hasNoPlan, forbidden, problem, refetch } =
+    usePlan(tripId)
   const creation = useCreatePlan(tripId)
+  const session = useSession()
+  const { people } = useProfiles(tripId, session.status)
+  const { ratings, vetoes } = usePlaceFeedback(tripId)
+  const { change } = useFairness(plan)
+  const isDesktop = useMediaQuery(DESKTOP_QUERY)
   const [day, setDay] = useState(1)
+  const [fairnessOpen, setFairnessOpen] = useState(false)
   const canBuild = role !== 'member'
 
   if (isPending) return <PlanSkeleton />
@@ -90,7 +110,7 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
               <Button
                 size="lg"
                 className="h-11 rounded-full px-6"
-                onClick={creation.create}
+                onClick={() => creation.create()}
                 disabled={creation.isPending}
               >
                 {creation.isPending ? m.plan_computing() : m.plan_compute()}
@@ -105,7 +125,22 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
     )
   }
 
-  const recalculating = creation.isPending
+  const recalculating = isRecalculating
+  const meProfileId = people.find((person) => person.isMe)?.profile.id ?? null
+  const names = new Map(plan.fairness.per_person.map((person) => [person.profile_id, person.name]))
+  const placeNames = new Map(
+    plan.days.flatMap((planDay) => planDay.items.map((stop) => [stop.place_id, stop.name])),
+  )
+  const aside = (
+    <FairnessAside
+      trip={trip}
+      plan={plan}
+      change={change}
+      people={people}
+      meProfileId={meProfileId}
+      placeNames={placeNames}
+    />
+  )
   // A recalculation can drop days; never point at one that is gone.
   const current = plan.days.some((candidate) => candidate.index === day)
     ? day
@@ -114,58 +149,132 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
   return (
     <>
       {printing && <PlanPrintout plan={plan} trip={trip} />}
-      <div className="flex flex-col gap-4 print:hidden" aria-busy={recalculating}>
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <p className="flex flex-col text-sm leading-[22px]">
-            <span className="font-medium">{m.plan_version({ n: plan.version })}</span>
-            <PlanHashLabel hash={plan.plan_hash} />
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              className="h-11 rounded-full px-5"
-              onClick={() => window.print()}
-            >
-              <Printer aria-hidden="true" />
-              {m.plan_print()}
-            </Button>
-            {canBuild && (
+      <div
+        className="grid gap-6 md:grid-cols-[minmax(0,1fr)_23rem] md:gap-10 print:hidden"
+        aria-busy={recalculating}
+      >
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <p className="flex flex-col text-sm leading-[22px]">
+              <span className="font-medium">{m.plan_version({ n: plan.version })}</span>
+              <PlanHashLabel hash={plan.plan_hash} />
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="outline"
                 className="h-11 rounded-full px-5"
-                onClick={creation.create}
-                disabled={recalculating}
+                onClick={() => window.print()}
               >
-                <RefreshCcw
-                  aria-hidden="true"
-                  className={recalculating ? 'animate-spin' : undefined}
-                />
-                {recalculating ? m.plan_recomputing() : m.plan_recompute()}
+                <Printer aria-hidden="true" />
+                {m.plan_print()}
               </Button>
-            )}
+              {canBuild && (
+                <Button
+                  variant="outline"
+                  className="h-11 rounded-full px-5"
+                  onClick={() => creation.create()}
+                  disabled={recalculating}
+                >
+                  <RefreshCcw
+                    aria-hidden="true"
+                    className={recalculating ? 'animate-spin' : undefined}
+                  />
+                  {recalculating ? m.plan_recomputing() : m.plan_recompute()}
+                </Button>
+              )}
+            </div>
+          </div>
+          <div
+            role="status"
+            className={recalculating ? 'text-muted-foreground text-sm' : 'sr-only'}
+          >
+            {recalculating && m.plan_recomputing_status()}
+          </div>
+          <PlanSummary plan={plan} />
+          {!isDesktop && <FairnessSummary plan={plan} onOpen={() => setFairnessOpen(true)} />}
+          {failure}
+          <div className={recalculating ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+            <DayTabs
+              days={plan.days}
+              value={current}
+              onValueChange={setDay}
+              renderDayMeta={(planDay) => (
+                <DayCost
+                  cost={dayCost(planDay, plan.fairness.group_size)}
+                  currency={plan.budget.currency}
+                  tickets={dayTickets(plan.transit_tickets, planDay.index)}
+                />
+              )}
+              renderDay={(planDay) =>
+                planDay.items.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">{m.plan_day_empty()}</p>
+                ) : (
+                  <PlanTimeline
+                    stops={planDay.items}
+                    currency={plan.budget.currency}
+                    renderActions={(stop) => (
+                      <StopActions
+                        tripId={tripId}
+                        stop={stop}
+                        currency={plan.budget.currency}
+                        names={names}
+                        meProfileId={meProfileId}
+                        canActForOthers={canBuild}
+                        ratings={ratings}
+                        vetoes={vetoes}
+                        isDesktop={isDesktop}
+                      />
+                    )}
+                  />
+                )
+              }
+            />
           </div>
         </div>
-        <div role="status" className={recalculating ? 'text-muted-foreground text-sm' : 'sr-only'}>
-          {recalculating && m.plan_recomputing_status()}
-        </div>
-        <PlanSummary plan={plan} />
-        {failure}
-        <div className={recalculating ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-          <DayTabs
-            days={plan.days}
-            value={current}
-            onValueChange={setDay}
-            renderDay={(planDay) =>
-              planDay.items.length === 0 ? (
-                <p className="text-muted-foreground text-sm">{m.plan_day_empty()}</p>
-              ) : (
-                <PlanTimeline stops={planDay.items} currency={plan.budget.currency} />
-              )
-            }
-          />
-        </div>
+        {isDesktop && (
+          <aside
+            aria-label={m.fairness_aside_label()}
+            className="md:sticky md:top-6 md:max-h-[calc(100dvh-3rem)] md:self-start md:overflow-y-auto md:pr-1"
+          >
+            {aside}
+          </aside>
+        )}
       </div>
+      {!isDesktop && (
+        <ResponsiveModal
+          open={fairnessOpen}
+          onOpenChange={setFairnessOpen}
+          isDesktop={false}
+          title={m.fairness_aside_label()}
+          description={m.fairness_aside_description()}
+        >
+          <div className="pb-6">{aside}</div>
+        </ResponsiveModal>
+      )}
     </>
+  )
+}
+
+/** Phones: one line that opens the fairness panel in a drawer. */
+function FairnessSummary({ plan, onOpen }: { plan: Plan; onOpen: () => void }) {
+  const { fairness } = plan
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      className="h-auto min-h-12 justify-between rounded-2xl px-4 py-2.5 text-left whitespace-normal"
+      onClick={onOpen}
+    >
+      <span className="flex flex-col">
+        <span className="font-medium">{m.fairness_aside_label()}</span>
+        <span className="font-normal text-muted-foreground text-sm">
+          {fairness.group_size > 1
+            ? m.fairness_summary_group({ pct: percentOf(fairness.min_r) })
+            : m.fairness_summary_solo()}
+        </span>
+      </span>
+      <Users aria-hidden="true" />
+    </Button>
   )
 }
 

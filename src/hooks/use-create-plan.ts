@@ -1,8 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { $api } from '@/api/client'
-import { planQueryOptions } from '@/api/queries/plans'
+import { type PlanCreate, planQueryOptions } from '@/api/queries/plans'
 
-/** Builds the plan and puts the answer straight into the "latest plan" cache. */
+/**
+ * Builds the plan and puts the answer straight into the "latest plan" cache. Without a body the
+ * API uses the trip's own settings (its `fairness_alpha`, the stored weights).
+ */
 export function useCreatePlan(tripId: string) {
   const queryClient = useQueryClient()
   const mutation = $api.useMutation('post', '/api/v1/trips/{trip_id}/plans', {
@@ -13,10 +16,13 @@ export function useCreatePlan(tripId: string) {
       queryClient.setQueryData(queryKey, plan)
     },
   })
+  const request = (body: PlanCreate | null) => ({ params: { path: { trip_id: tripId } }, body })
 
   return {
-    create: () => mutation.mutate({ params: { path: { trip_id: tripId } }, body: null }),
+    create: (body: PlanCreate | null = null) => mutation.mutate(request(body)),
+    createAsync: (body: PlanCreate | null = null) => mutation.mutateAsync(request(body)),
     isPending: mutation.isPending,
     error: mutation.error,
+    reset: mutation.reset,
   }
 }

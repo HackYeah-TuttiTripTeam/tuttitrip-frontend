@@ -83,6 +83,29 @@ export function formatPercent(share: number): string {
   }).format(share)
 }
 
+/** "+4" / "−3" / "0": a change with its sign (the minus is a real minus sign). */
+export function formatSigned(value: number, maximumFractionDigits = 0): string {
+  return new Intl.NumberFormat(INTL_TAG[getLocale()], {
+    signDisplay: 'exceptZero',
+    maximumFractionDigits,
+    useGrouping: 'always',
+  }).format(value)
+}
+
+/** A number with exactly `digits` decimal places: "0,90" / "0.90", "74" for 0 digits. */
+export function formatFixed(value: number, digits: number): string {
+  return new Intl.NumberFormat(INTL_TAG[getLocale()], {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value)
+}
+
+/** "+90 zł" / "−45 zł" / "0 zł": a change of money with its sign. */
+export function formatMoneyDelta(delta: number, currency = 'PLN'): string {
+  if (delta === 0) return formatMoney(0, currency)
+  return `${delta > 0 ? '+' : '−'}${formatMoney(Math.abs(delta), currency)}`
+}
+
 /** Locale-aware, accent- and case-insensitive comparison for sorting names. */
 export function compareText(a: string, b: string): number {
   return collator().compare(a, b)

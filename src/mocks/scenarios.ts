@@ -1,4 +1,5 @@
 import type { Schemas } from '@/api/client'
+import type { Rating, Veto } from '@/api/queries/vetoes'
 import {
   type CatalogPlace,
   type City,
@@ -20,6 +21,7 @@ import {
   type Trip,
   trip,
 } from './fixtures'
+import { buildPlan, neutralInputs, type PlanInputs } from './plan-builder'
 
 export const scenarioNames = [
   'family-warsaw',
@@ -27,6 +29,9 @@ export const scenarioNames = [
   'needs-approval',
   'no-plan',
   'member-readonly',
+  'solo',
+  'floors-missed',
+  'recompute-error',
   'preferences-save-error',
   'server-error',
   'offline',
@@ -79,6 +84,14 @@ export interface World {
   preferencesSaveFails: boolean
   /** The latest plan of the main trip; null until "Policz plan" creates one. */
   plan: Plan | null
+  /** The inputs the current plan was built from; a POST with the same inputs returns it again. */
+  planInputs: PlanInputs
+  /** Vetoes in force on the main trip, with their authors. */
+  vetoes: Veto[]
+  /** Ratings of the main trip's places, by every profile. */
+  ratings: Rating[]
+  /** POST /plans fails with 500 once there is a plan: a veto or a slider saves, the plan stays old. */
+  recomputeFails: boolean
   /** Invitations of the main trip, newest first (the host's list). */
   invitations: Invitation[]
   /** Whether POST /auth/demo accepts the invitation token (false: switched off, answers 404). */
@@ -135,6 +148,10 @@ export function createWorld(name: ScenarioName): World {
     places: catalogPlaces(),
     preferencesSaveFails: false,
     plan: plan(main.id),
+    planInputs: neutralInputs(familyProfiles(), main.fairness_alpha),
+    vetoes: [],
+    ratings: [],
+    recomputeFails: false,
     invitations: [invitation()],
     demoEnabled: true,
     demoRateLimited: false,
@@ -162,6 +179,33 @@ export function createWorld(name: ScenarioName): World {
         trips: [trip({ my_role: 'member' }), outing({ my_role: 'member' })],
         members: familyMembers('member'),
       }
+    case 'solo': {
+      const alone = familyProfiles().slice(0, 1)
+      return {
+        ...base,
+        profiles: alone,
+        members: familyMembers().slice(0, 1),
+        planInputs: neutralInputs(alone, main.fairness_alpha),
+        plan: buildPlan(main.id, alone, neutralInputs(alone, main.fairness_alpha), 1),
+      }
+    }
+    case 'floors-missed':
+      return {
+        ...base,
+        plan: plan(main.id, {
+          floors_missed: [
+            { kind: 'floor', profile_id: PROFILE_IDS.babcia, shortfall: 6 },
+            { kind: 'own_place_day', profile_id: PROFILE_IDS.antek, shortfall: 1, day: 2 },
+          ],
+          violation: 0.35,
+          conflicts: [
+            { reason_code: 'floor_unreachable', profile_ids: [PROFILE_IDS.babcia] },
+            { reason_code: 'unknown_price', profile_ids: [] },
+          ],
+        }),
+      }
+    case 'recompute-error':
+      return { ...base, recomputeFails: true }
     case 'preferences-save-error':
       return { ...base, preferencesSaveFails: true }
     case 'server-error':

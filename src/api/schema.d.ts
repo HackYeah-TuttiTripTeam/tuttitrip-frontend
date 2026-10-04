@@ -2546,7 +2546,7 @@ export interface components {
          * @description Why a conflict is reported; the UI writes the text (PL/EN).
          * @enum {string}
          */
-        ConflictCode: "lodging_hard_requirement" | "veto_blocks_place" | "budget_limit" | "floor_unreachable" | "other";
+        ConflictCode: "lodging_hard_requirement" | "veto_blocks_place" | "budget_limit" | "floor_unreachable" | "unknown_price" | "other";
         /**
          * Constraints
          * @description Health and access limits.
@@ -4120,7 +4120,8 @@ export interface components {
              * @description Days with a place of their own (m >= 0.6).
              */
             own_place_days: number;
-            weakest_domain: components["schemas"]["PlanDomainCode"];
+            /** @description The applicable domain with the lowest q; null if none applies. */
+            weakest_domain: components["schemas"]["PlanDomainCode"] | null;
         };
         /**
          * PersonUtility
@@ -4401,14 +4402,20 @@ export interface components {
             b_from: string;
             /**
              * B To
-             * @description B_do.
+             * @description B_do; null for a trip without a budget.
              */
-            b_to: string;
+            b_to: string | null;
             /**
              * B Max
-             * @description B_max (hard).
+             * @description B_max (hard); null for a trip without a budget.
              */
-            b_max: string;
+            b_max: string | null;
+            /**
+             * Unlimited
+             * @description The trip has no budget: nothing limits the cost, q_cost is n/a.
+             * @default false
+             */
+            unlimited: boolean;
             zone: components["schemas"]["BudgetZone"];
             /**
              * Over Budget
@@ -4467,11 +4474,13 @@ export interface components {
         PlanCreate: {
             /**
              * Alpha
-             * @description Fairness slider: 0 utility, 1 Nash, 3 near-egalitarian.
-             * @default 1
+             * @description Fairness slider: 0 utility, 1 Nash, 3 near-egalitarian. Omitted: the trip's own `fairness_alpha`.
              */
-            alpha: number;
-            /** @default default */
+            alpha?: number | null;
+            /**
+             * @description Recorded with the plan and part of its input hash, but it has no effect on the computation yet: the weights come from the profiles (`PUT /trips/{id}/profiles/weights`).
+             * @default default
+             */
             weight_preset: components["schemas"]["WeightPreset"];
         };
         /**
@@ -4726,7 +4735,7 @@ export interface components {
         PlanTelemetry: {
             /**
              * Solver
-             * @description Solver name; 'stub' while the response is fixed.
+             * @description Solver name and version.
              */
             solver: string;
             /** Steps */
