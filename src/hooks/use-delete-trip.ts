@@ -5,7 +5,7 @@ import { tripsListKey } from '@/api/queries/trips'
 const TRIP_PREFIX = '/api/v1/trips/{trip_id}'
 
 /** Every cached query under /api/v1/trips/{trip_id} (the trip, its plans, people...) for one trip. */
-function isQueryOfTrip(queryKey: QueryKey, tripId: string): boolean {
+export function isQueryOfTrip(queryKey: QueryKey, tripId: string): boolean {
   const [, path, init] = queryKey
   const params = typeof init === 'object' && init !== null && 'params' in init ? init.params : null
   const inPath =

@@ -49,7 +49,9 @@ export function TripsView() {
   const hasFilters =
     search.q.trim() !== '' ||
     search.role.length > 0 ||
-    [search.city, search.kind, search.start_from, search.start_to].some(Boolean)
+    [search.city, search.kind, search.when, search.status, search.start_from, search.start_to].some(
+      Boolean,
+    )
 
   const openCreate = () => {
     createTrip.reset()

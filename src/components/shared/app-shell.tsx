@@ -67,6 +67,14 @@ export function AppShell({
             >
               {m.nav_trips()}
             </Link>
+            {account.canAdminUsers && (
+              <Link
+                to="/admin/users"
+                className="ml-6 flex h-full items-center border-transparent border-b-2 text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:underline [&.active]:border-primary [&.active]:text-foreground"
+              >
+                {m.admin_users_link()}
+              </Link>
+            )}
           </nav>
 
           <div className="ml-auto flex items-center gap-1 md:gap-3">

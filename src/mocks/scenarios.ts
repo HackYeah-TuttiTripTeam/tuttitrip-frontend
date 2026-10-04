@@ -1,6 +1,8 @@
 import type { Schemas } from '@/api/client'
 import {
   type CatalogPlace,
+  type AdminUser,
+  adminUsers,
   type City,
   catalogPlaces,
   cities,
@@ -9,7 +11,10 @@ import {
   familyProfiles,
   type Invitation,
   invitation,
+  type Me,
   type Member,
+  MOCK_USER_NAME,
+  me,
   needsApprovalBudget,
   outing,
   type Plan,
@@ -27,6 +32,11 @@ export const scenarioNames = [
   'needs-approval',
   'no-plan',
   'member-readonly',
+  'member-pending',
+  'cohost',
+  'admin',
+  'admin-read-only',
+  'google-account',
   'preferences-save-error',
   'server-error',
   'offline',
@@ -71,6 +81,12 @@ export interface World {
   profiles: Profile[]
   /** People with an account and their trip role (the Osoby view joins them with profiles on profile_id). */
   members: Member[]
+  /** What `GET /me` answers: the roles and access that decide which admin screens exist. */
+  me: Me
+  /** The accounts of the admin panel (`GET /admin/users`). */
+  adminUsers: AdminUser[]
+  /** The caller's display name, changed by `PATCH /me/account`. */
+  accountName: string
   /** Preferences of everyone on the main trip (constraints, diet, interests). */
   preferences: Preferences[]
   /** The catalog of the main trip's city (`GET /places`). */
@@ -131,6 +147,9 @@ export function createWorld(name: ScenarioName): World {
     failures: {},
     profiles: familyProfiles(),
     members: familyMembers(),
+    me: me(),
+    adminUsers: adminUsers(),
+    accountName: MOCK_USER_NAME,
     preferences: familyPreferences(),
     places: catalogPlaces(),
     preferencesSaveFails: false,
@@ -162,6 +181,27 @@ export function createWorld(name: ScenarioName): World {
         trips: [trip({ my_role: 'member' }), outing({ my_role: 'member' })],
         members: familyMembers('member'),
       }
+    case 'member-pending': {
+      const members = familyMembers('member')
+      for (const member of members) if (member.is_me) member.status = 'pending'
+      return {
+        ...base,
+        trips: [trip({ my_role: 'member', my_status: 'pending' }), outing({ my_role: 'member' })],
+        members,
+      }
+    }
+    case 'cohost':
+      return {
+        ...base,
+        trips: [trip({ my_role: 'co_host' }), outing({ my_role: 'co_host' })],
+        members: familyMembers('co_host'),
+      }
+    case 'admin':
+      return { ...base, me: me({ is_admin: true, roles: ['admin'] }) }
+    case 'admin-read-only':
+      return { ...base, me: me({ access: { 'admin.users': 'READ' } }) }
+    case 'google-account':
+      return { ...base, me: me({ sub: 'google-oauth2|mock-user' }) }
     case 'preferences-save-error':
       return { ...base, preferencesSaveFails: true }
     case 'server-error':

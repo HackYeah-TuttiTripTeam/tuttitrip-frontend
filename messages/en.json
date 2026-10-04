@@ -21,8 +21,13 @@
   "trips_tagline": "Plans you put together as a group.",
   "trips_count": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} trip",
         "countPlural=*": "{count} trips"
@@ -31,8 +36,14 @@
   ],
   "trips_count_filtered": [
     {
-      "declarations": ["input count", "input total", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "input total",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} trip of {total}",
         "countPlural=*": "{count} trips of {total}"
@@ -180,8 +191,13 @@
   "plan_total": "Plan cost for the whole group: {amount}",
   "plan_lodging": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "Lodging: {name}, {count} night. {cost}",
         "countPlural=*": "Lodging: {name}, {count} nights. {cost}"
@@ -192,8 +208,13 @@
   "plan_lodging_cost_none": "Lodging price: no data",
   "people_count": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} person",
         "countPlural=*": "{count} people"
@@ -208,8 +229,13 @@
   "people_list_label": "People on this trip",
   "people_age": [
     {
-      "declarations": ["input age", "local agePlural = age: plural"],
-      "selectors": ["agePlural"],
+      "declarations": [
+        "input age",
+        "local agePlural = age: plural"
+      ],
+      "selectors": [
+        "agePlural"
+      ],
       "match": {
         "agePlural=one": "{age} year old",
         "agePlural=*": "{age} years old"
@@ -695,8 +721,13 @@
   "prefs_pool_less": "Take a point: {domain}",
   "prefs_pool_remaining": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} dot left to give out",
         "countPlural=*": "{count} dots left to give out"
@@ -730,5 +761,119 @@
   "trips_filter_city": "City",
   "trips_filter_city_all": "All cities",
   "trips_filter_start_from": "Starts from",
-  "trips_filter_start_to": "Starts until"
+  "trips_filter_start_to": "Starts until",
+  "trip_tab_members": "Members",
+  "trip_status_pending": "Waiting for your confirmation",
+  "members_list_label": "Trip members",
+  "members_you": "(you)",
+  "members_status_confirmed": "Participation confirmed",
+  "members_status_pending": "Waiting for confirmation",
+  "members_actions_label": "Actions for {name}",
+  "members_action_make_co_host": "Make co-host",
+  "members_action_revoke_co_host": "Remove co-host role",
+  "members_action_transfer_host": "Transfer host role",
+  "members_action_remove": "Remove from trip",
+  "members_empty_title": "Nobody has joined yet",
+  "members_empty_body": "People with an account show up here once they accept an invitation.",
+  "members_load_failed_title": "Couldn't load the members",
+  "members_error_forbidden": "You aren't allowed to make this change.",
+  "members_error_gone": "That person or trip no longer exists. Refresh the view.",
+  "members_error_conflict": "This can't be done right now. The host has to transfer the host role first.",
+  "members_remove_title": "Remove {name} from the trip?",
+  "members_remove_body": "{name} will lose access to the trip. Their profile, expenses and balance stay in the trip.",
+  "members_remove_confirm": "Remove from trip",
+  "members_transfer_title": "Make {name} the host?",
+  "members_transfer_body": "{name} becomes the host of the trip and you become a co-host. The new host can remove members and the trip.",
+  "members_transfer_confirm": "Transfer host role",
+  "membership_pending_title": "Confirm that you're going",
+  "membership_pending_body": "You were added to this trip. The host sees who is really coming, so confirm your place or leave the trip.",
+  "membership_confirmed_title": "You're going",
+  "membership_confirmed_body": "You confirmed your place. If plans change, you can leave the trip.",
+  "membership_host_body": "You're the host. To leave the trip, first transfer the host role to someone else.",
+  "membership_confirm": "Confirm participation",
+  "membership_leave": "Leave trip",
+  "membership_leave_title": "Leave the trip?",
+  "membership_leave_body": "You'll lose access to “{name}”. Your profile, expenses and balance stay in the trip, and the profile can be taken over from an invitation.",
+  "membership_leave_confirm": "Leave trip",
+  "membership_pending_notice": "We're waiting for you to confirm that you're going on this trip.",
+  "membership_pending_open": "Go to members",
+  "action_working": "One moment…",
+  "trips_filter_when": "When",
+  "trips_filter_when_all": "All dates",
+  "trips_filter_when_upcoming": "Upcoming",
+  "trips_filter_when_past": "Past",
+  "trips_filter_status": "Your participation",
+  "trips_filter_status_all": "Any participation",
+  "trips_filter_status_confirmed": "Confirmed",
+  "trips_filter_status_pending": "Waiting for confirmation",
+  "admin_users_link": "Users",
+  "admin_users_title": "Users",
+  "admin_users_tagline": "TuttiTrip accounts: find one, block it or delete it.",
+  "admin_users_count": [
+    {
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
+      "match": {
+        "countPlural=one": "{count} account",
+        "countPlural=*": "{count} accounts"
+      }
+    }
+  ],
+  "admin_users_search_label": "Search accounts",
+  "admin_users_search_placeholder": "Search by e-mail or name",
+  "admin_users_filter_status": "Account status",
+  "admin_users_filter_all": "All",
+  "admin_users_status_active": "Active",
+  "admin_users_status_blocked": "Blocked",
+  "admin_users_sort_email": "E-mail",
+  "admin_users_sort_created_at": "Created",
+  "admin_users_sort_last_login": "Last login",
+  "admin_users_col_provider": "Login",
+  "admin_users_col_status": "Status",
+  "admin_users_col_actions": "Actions",
+  "admin_users_never": "Never",
+  "admin_users_actions_label": "Actions for account {name}",
+  "admin_users_action_block": "Block account",
+  "admin_users_action_unblock": "Unblock account",
+  "admin_users_action_delete": "Delete account",
+  "admin_users_load_failed_title": "Couldn't load the accounts",
+  "admin_users_empty_title": "No accounts",
+  "admin_users_empty_body": "The account list is empty.",
+  "admin_users_no_match_title": "No account matches your filters",
+  "admin_users_no_match_body": "We search e-mails and names. Change the filters or clear them.",
+  "admin_users_block_title": "Block the account?",
+  "admin_users_block_body": "The account {name} loses access to the app right away, even with a valid token. The data stays and you can unblock it.",
+  "admin_users_block_confirm": "Block account",
+  "admin_users_delete_title": "Delete the account?",
+  "admin_users_delete_body": "The account {name} will be deleted for good. Trips it hosts pass to a co-host or disappear; memberships disappear, expenses stay.",
+  "admin_users_delete_type_label": "Type the account's e-mail to confirm",
+  "admin_users_delete_confirm": "Delete account for good",
+  "admin_users_error_forbidden": "You aren't allowed to change accounts.",
+  "admin_users_error_gone": "That account no longer exists. Refresh the list.",
+  "admin_users_error_protected": "This account can't be blocked or deleted: it is your own or a superadmin's.",
+  "admin_users_error_auth0": "Auth0 isn't answering or isn't configured. Try again in a moment.",
+  "provider_google": "Google",
+  "provider_discord": "Discord",
+  "provider_password": "E-mail and password",
+  "provider_other": "Other provider",
+  "account_settings_link": "Account settings",
+  "account_settings_title": "Account settings",
+  "account_settings_load_failed": "Couldn't load the account",
+  "account_settings_name_title": "Name",
+  "account_settings_name_label": "Display name",
+  "account_settings_name_hint": "You'll see the new name everywhere after you sign in again.",
+  "account_settings_name_required": "Enter a name.",
+  "account_settings_save": "Save name",
+  "account_settings_saved": "Saved. The new name appears after you sign in again.",
+  "account_settings_error_provider": "The login provider sets this account's name. Change it there.",
+  "account_settings_error_invalid": "That name isn't valid. Use 1 to 100 characters.",
+  "account_settings_provider_managed": "This account's details come from {provider}. Change them there; TuttiTrip leaves them as they are.",
+  "account_settings_login_title": "Sign-in",
+  "account_settings_provider_label": "Account created with:",
+  "account_settings_password_hint": "Change your e-mail or password on the sign-in screen: sign out, then choose “Forgot your password?” on the Auth0 screen."
 }

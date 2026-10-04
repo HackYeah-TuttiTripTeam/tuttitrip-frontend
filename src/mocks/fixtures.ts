@@ -13,6 +13,7 @@ export type PersonFairness = Schemas['PersonFairness']
 export type PlanDomainCode = Schemas['PlanDomainCode']
 export type Me = Schemas['MeResponse']
 export type Member = Schemas['MemberRead']
+export type AdminUser = Schemas['AdminUserRead']
 export type Invitation = Schemas['InvitationRead']
 export type City = Schemas['CityRead']
 export type Preferences = Schemas['PreferencesRead']
@@ -63,6 +64,7 @@ export const trip = (overrides: Partial<Trip> = {}): Trip => ({
   budget_flex_pct: 10,
   fairness_alpha: 1,
   my_role: 'host',
+  my_status: 'confirmed',
   kind: 'trip',
   ...overrides,
 })
@@ -167,14 +169,27 @@ export const familyProfiles = (): Profile[] => [
  * Marek is the host unless Ola is, then he is a co-host. The grandmother is a plain member.
  */
 export const familyMembers = (myRole: Trip['my_role'] = 'host'): Member[] => [
-  { profile_id: PROFILE_IDS.mama, display_name: 'Ola', role: myRole, is_me: true },
+  {
+    profile_id: PROFILE_IDS.mama,
+    display_name: 'Ola',
+    role: myRole,
+    status: 'confirmed',
+    is_me: true,
+  },
   {
     profile_id: PROFILE_IDS.tata,
     display_name: 'Marek',
     role: myRole === 'host' ? 'co_host' : 'host',
+    status: 'confirmed',
     is_me: false,
   },
-  { profile_id: PROFILE_IDS.babcia, display_name: 'Babcia Halina', role: 'member', is_me: false },
+  {
+    profile_id: PROFILE_IDS.babcia,
+    display_name: 'Babcia Halina',
+    role: 'member',
+    status: 'pending',
+    is_me: false,
+  },
 ]
 
 /** What the API answers for a person nobody has filled in yet: the age defaults, nothing ticked. */
@@ -451,14 +466,33 @@ export const plan = (tripId: string = TRIP_ID, overrides: Partial<Plan> = {}): P
   ...overrides,
 })
 
-export const me = (): Me => ({
+export const me = (overrides: Partial<Me> = {}): Me => ({
   sub: MOCK_USER_SUB,
   scopes: [],
   permissions: [],
   roles: [],
   is_admin: false,
   access: { trips: 'WRITE', 'trips.core': 'WRITE', 'profiles.core': 'WRITE' },
+  ...overrides,
 })
+
+/** Accounts of the admin panel: 23 of them, every seventh blocked, three login providers. */
+export const adminUsers = (count = 23): AdminUser[] => {
+  const providers = ['auth0', 'google-oauth2', 'discord'] as const
+  return Array.from({ length: count }, (_, index) => {
+    const provider = providers[index % providers.length] ?? 'auth0'
+    const day = String((index % 28) + 1).padStart(2, '0')
+    return {
+      sub: `${provider}|user-${index}`,
+      email: `osoba${String(index).padStart(2, '0')}@example.com`,
+      name: `Osoba ${index}`,
+      provider,
+      last_login: index % 5 === 4 ? null : `2026-10-${day}T09:00:00Z`,
+      created_at: `2026-09-${day}T10:00:00Z`,
+      blocked: index % 7 === 6,
+    }
+  })
+}
 
 export const INVITATION_ID = 'c5d8e1a0-3b7f-4a29-9e64-0d2f6b8a1c33'
 /** The token of the invitation every scenario's host already holds (shown only once in reality). */

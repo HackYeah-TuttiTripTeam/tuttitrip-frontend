@@ -10,6 +10,7 @@ import { useTrip } from '@/hooks/use-trip'
 import { isDev } from '@/lib/env'
 import type { TripTab } from '@/lib/trip-tabs'
 import { m } from '@/paraglide/messages'
+import { TripMembersView } from './trip-view.members'
 import { TripPeopleView } from './trip-view.people'
 import { TripPlanView } from './trip-view.plan'
 import { TripSettings } from './trip-view.settings'
@@ -119,6 +120,17 @@ export function TripView() {
       <div className="print:hidden">
         <TripHeader trip={trip} actions={<TripSettings trip={trip} />} />
       </div>
+      {trip.my_status === 'pending' && tab !== 'members' && (
+        <div
+          role="status"
+          className="flex flex-col gap-2 rounded-lg border border-dashed p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p className="text-sm">{m.membership_pending_notice()}</p>
+          <Button variant="outline" onClick={() => setTab('members')} className="h-11 sm:h-9">
+            {m.membership_pending_open()}
+          </Button>
+        </div>
+      )}
       <TripTabs
         tab={tab}
         onTabChange={setTab}
@@ -131,6 +143,15 @@ export function TripView() {
             citySlug={trip.city_slug}
             personId={person}
             onPersonChange={setPerson}
+          />
+        }
+        members={
+          <TripMembersView
+            key={trip.id}
+            tripId={trip.id}
+            tripName={trip.name}
+            myRole={trip.my_role}
+            myStatus={trip.my_status}
           />
         }
         plan={<TripPlanView key={trip.id} trip={trip} />}

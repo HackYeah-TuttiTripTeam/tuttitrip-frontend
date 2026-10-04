@@ -5,7 +5,6 @@ import {
   invitation,
   MOCK_DEMO_TOKEN,
   MOCK_USER_SUB,
-  me,
   type Plan,
   PROFILE_IDS,
   type Preferences,
@@ -76,6 +75,8 @@ function listTrips(all: Trip[], params: URLSearchParams) {
       (!q || t.name.toLowerCase().includes(q) || (t.destination ?? '').toLowerCase().includes(q)) &&
       (!params.get('city') || t.city_slug === params.get('city')) &&
       (!params.get('kind') || t.kind === params.get('kind')) &&
+      (!params.get('status') || t.my_status === params.get('status')) &&
+      matchesWhen(t, params.get('when')) &&
       (roles.length === 0 || roles.includes(t.my_role)) &&
       (!from || (t.start_date != null && t.start_date >= from)) &&
       (!to || (t.start_date != null && t.start_date <= to)),
@@ -99,6 +100,68 @@ function listTrips(all: Trip[], params: URLSearchParams) {
     size,
     pages: Math.ceil(matching.length / size),
   })
+}
+
+/** `past`: ended before today. `upcoming`: ends today or later, or has no dates (like the API). */
+function matchesWhen(t: Trip, when: string | null): boolean {
+  if (!when) return true
+  const today = new Date().toISOString().slice(0, 10)
+  const ended = t.end_date != null && t.end_date < today
+  return when === 'past' ? ended : !ended
+}
+
+type Level = 'NONE' | 'READ' | 'WRITE'
+
+const adminLevel = (world: World): Level =>
+  world.me.is_admin ? 'WRITE' : (world.me.access['admin.users'] ?? 'NONE')
+
+/** GET /admin/users like the API: search, blocked filter, sort and the page come from the query. */
+function listAdminUsers(all: Schemas['AdminUserRead'][], params: URLSearchParams) {
+  const q = params.get('q')?.toLowerCase()
+  const blocked = params.get('blocked')
+  const matching = all.filter(
+    (user) =>
+      (!q ||
+        (user.email ?? '').toLowerCase().includes(q) ||
+        (user.name ?? '').toLowerCase().includes(q)) &&
+      (blocked === null || user.blocked === (blocked === 'true')),
+  )
+  const sort = params.get('sort') ?? 'created_at'
+  const sign = params.get('dir') === 'asc' ? 1 : -1
+  const key = (user: Schemas['AdminUserRead']) =>
+    sort === 'email' ? user.email : sort === 'last_login' ? user.last_login : user.created_at
+  // An account that never logged in goes last in both directions.
+  matching.sort((a, b) => {
+    const [x, y] = [key(a), key(b)]
+    if (x == null || y == null) return x == null ? (y == null ? 0 : 1) : -1
+    return sign * x.localeCompare(y)
+  })
+  const size = Math.min(100, Math.max(1, Number(params.get('size')) || 20))
+  const page = Math.max(1, Number(params.get('page')) || 1)
+  return HttpResponse.json({
+    items: matching.slice((page - 1) * size, page * size),
+    total: matching.length,
+    page,
+    size,
+    pages: Math.ceil(matching.length / size),
+  })
+}
+
+/** Block, unblock and delete share the rules: WRITE only, no own account, 404 for a missing one. */
+function changeAccount(
+  world: World,
+  rawSub: string,
+  change: (user: Schemas['AdminUserRead']) => void,
+) {
+  if (adminLevel(world) !== 'WRITE') return forbidden()
+  const sub = decodeURIComponent(rawSub)
+  const user = world.adminUsers.find((candidate) => candidate.sub === sub)
+  if (!user) return notFound('Account not found')
+  if (sub === world.me.sub) {
+    return HttpResponse.json({ detail: 'You cannot change your own account' }, { status: 409 })
+  }
+  change(user)
+  return new HttpResponse(null, { status: 204 })
 }
 
 function brokenHandlers(behaviour: 'server-error' | 'offline', latency: () => Promise<void>) {
@@ -136,7 +199,7 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
 
     http.get(`${API}/me`, async () => {
       await latency()
-      return HttpResponse.json(me())
+      return HttpResponse.json(world.me)
     }),
 
     http.get(`${API}/trips`, async ({ request }) => {
@@ -301,6 +364,88 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       const profile = world.profiles.find((p) => p.id === params.profileId)
       if (profile) profile.user_sub = null
       return new HttpResponse(null, { status: 204 })
+    }),
+
+    http.post(`${API}/trips/:tripId/membership/confirm`, async ({ params }) => {
+      await latency()
+      const found = findTrip(params.tripId)
+      const mine = world.members.find((member) => member.is_me)
+      if (!found || !mine) return notFound('Trip not found')
+      mine.status = 'confirmed'
+      found.my_status = 'confirmed'
+      return HttpResponse.json(mine)
+    }),
+
+    // The membership goes; the trip is a 404 for the caller from then on. The host must hand over first.
+    http.post(`${API}/trips/:tripId/membership/leave`, async ({ params }) => {
+      await latency()
+      const found = findTrip(params.tripId)
+      const mine = world.members.find((member) => member.is_me)
+      if (!found || !mine) return notFound('Trip not found')
+      if (mine.role === 'host') {
+        return HttpResponse.json({ detail: 'Transfer the host role first' }, { status: 409 })
+      }
+      world.members = world.members.filter((member) => !member.is_me)
+      world.trips = world.trips.filter((t) => t.id !== found.id)
+      return new HttpResponse(null, { status: 204 })
+    }),
+
+    // The host gives the role away and stays a co-host.
+    http.post(`${API}/trips/:tripId/members/:profileId/host`, async ({ params }) => {
+      await latency()
+      const found = findTrip(params.tripId)
+      if (!found) return notFound('Trip not found')
+      if (found.my_role !== 'host') return forbidden()
+      const target = world.members.find((member) => member.profile_id === params.profileId)
+      if (!target) return notFound('Member not found')
+      for (const member of world.members) if (member.role === 'host') member.role = 'co_host'
+      target.role = 'host'
+      found.my_role = 'co_host'
+      return HttpResponse.json(target)
+    }),
+
+    // Admin panel: accounts of the Auth0 tenant. READ lists; only WRITE blocks and deletes.
+    http.get(`${API}/admin/users`, async ({ request }) => {
+      await latency()
+      if (adminLevel(world) === 'NONE') return forbidden()
+      return listAdminUsers(world.adminUsers, new URL(request.url).searchParams)
+    }),
+
+    http.post(`${API}/admin/users/:sub/block`, async ({ params }) => {
+      await latency()
+      return changeAccount(world, String(params.sub), (user) => {
+        user.blocked = true
+      })
+    }),
+
+    http.delete(`${API}/admin/users/:sub/block`, async ({ params }) => {
+      await latency()
+      return changeAccount(world, String(params.sub), (user) => {
+        user.blocked = false
+      })
+    }),
+
+    http.delete(`${API}/admin/users/:sub`, async ({ params }) => {
+      await latency()
+      return changeAccount(world, String(params.sub), (user) => {
+        world.adminUsers = world.adminUsers.filter((candidate) => candidate.sub !== user.sub)
+      })
+    }),
+
+    // The caller's own name; Google and Discord own theirs.
+    http.patch(`${API}/me/account`, async ({ request }) => {
+      await latency()
+      const provider = world.me.sub.split('|')[0]
+      if (provider === 'google-oauth2' || provider === 'discord') {
+        return HttpResponse.json({ detail: 'The name comes from the provider' }, { status: 409 })
+      }
+      const body = (await request.json()) as Schemas['AccountUpdate']
+      world.accountName = body.name.trim()
+      return HttpResponse.json({
+        sub: world.me.sub,
+        name: world.accountName,
+        provider: provider ?? 'auth0',
+      })
     }),
 
     // Preferences. Constraints are hidden from a plain member looking at someone else, like in the API.
