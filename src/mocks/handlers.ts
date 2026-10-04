@@ -15,9 +15,9 @@ import {
   type Trip,
   trip,
 } from './fixtures'
-import { permissionHandlers } from './permissions'
 import { accommodationHandlers } from './handlers.accommodation'
 import { planningHandlers } from './handlers.planning'
+import { permissionHandlers } from './permissions'
 import { createWorld, type ScenarioName, type World } from './scenarios'
 
 const API = '*/api/v1'
