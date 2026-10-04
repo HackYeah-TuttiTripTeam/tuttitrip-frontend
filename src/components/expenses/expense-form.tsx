@@ -27,9 +27,11 @@ import {
 } from '@/lib/expense-form'
 import { formatDecimal, formatDecimalNumber } from '@/lib/format'
 import { centsToDecimal, compareDecimals } from '@/lib/money'
+import type { ReceiptField } from '@/lib/receipt-confidence'
 import { m } from '@/paraglide/messages'
 import { CATEGORY_LABELS, METHOD_LABELS } from './category-labels'
 import type { PersonOption } from './person-option'
+import { UncertainMark } from './uncertain-mark'
 
 interface ExpenseFormProps {
   people: PersonOption[]
@@ -43,6 +45,8 @@ interface ExpenseFormProps {
   submitLabel: string
   submittingLabel: string
   onSubmit: (values: ExpenseFormValues) => void
+  /** Fields a receipt reader was unsure about; each gets a "check this" mark. */
+  uncertain?: ReadonlySet<ReceiptField> | undefined
 }
 
 const UNIT: Record<'percent' | 'weights', () => string> = {
@@ -65,6 +69,7 @@ export function ExpenseForm({
   submitLabel,
   submittingLabel,
   onSubmit,
+  uncertain,
 }: ExpenseFormProps) {
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
@@ -99,7 +104,10 @@ export function ExpenseForm({
     <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6">
       <FieldGroup className="gap-5">
         <Field data-invalid={Boolean(errors.amount)}>
-          <FieldLabel htmlFor="expense-amount">{m.expense_form_amount({ currency })}</FieldLabel>
+          <FieldLabel htmlFor="expense-amount">
+            {m.expense_form_amount({ currency })}
+            {uncertain?.has('amount') && <UncertainMark />}
+          </FieldLabel>
           <Input
             id="expense-amount"
             inputMode="decimal"
@@ -115,7 +123,10 @@ export function ExpenseForm({
 
         {tripCurrency === null && (
           <Field data-invalid={Boolean(fieldErrors.currency)}>
-            <FieldLabel htmlFor="expense-currency">{m.expense_form_currency()}</FieldLabel>
+            <FieldLabel htmlFor="expense-currency">
+              {m.expense_form_currency()}
+              {uncertain?.has('currency') && <UncertainMark />}
+            </FieldLabel>
             <Controller
               control={form.control}
               name="currency"
@@ -172,7 +183,10 @@ export function ExpenseForm({
 
         <div className="grid grid-cols-2 gap-3">
           <Field data-invalid={Boolean(errors.spentOn)}>
-            <FieldLabel htmlFor="expense-date">{m.expense_form_date()}</FieldLabel>
+            <FieldLabel htmlFor="expense-date">
+              {m.expense_form_date()}
+              {uncertain?.has('spentOn') && <UncertainMark />}
+            </FieldLabel>
             <Input
               id="expense-date"
               type="date"
@@ -183,7 +197,10 @@ export function ExpenseForm({
             <FieldError errors={[errors.spentOn]} />
           </Field>
           <Field>
-            <FieldLabel htmlFor="expense-category">{m.expense_form_category()}</FieldLabel>
+            <FieldLabel htmlFor="expense-category">
+              {m.expense_form_category()}
+              {uncertain?.has('category') && <UncertainMark />}
+            </FieldLabel>
             <Controller
               control={form.control}
               name="category"
@@ -212,7 +229,10 @@ export function ExpenseForm({
         </div>
 
         <Field data-invalid={Boolean(errors.description)}>
-          <FieldLabel htmlFor="expense-description">{m.expense_form_description()}</FieldLabel>
+          <FieldLabel htmlFor="expense-description">
+            {m.expense_form_description()}
+            {uncertain?.has('description') && <UncertainMark />}
+          </FieldLabel>
           <Input
             id="expense-description"
             autoComplete="off"

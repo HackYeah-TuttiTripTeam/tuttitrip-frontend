@@ -1,4 +1,4 @@
-import { Bin, Pen } from '@keyline-icons/react'
+import { Bin, Check, CircleAlert, Pen } from '@keyline-icons/react'
 import type { Expense } from '@/api/queries/expenses'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -38,6 +38,12 @@ export function ExpenseList({ expenses, people, canManage, onEdit, onDelete }: E
           <li key={expense.id} className="flex items-start gap-3 border-b py-3">
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <p className="truncate font-medium text-sm">{title}</p>
+              {expense.status === 'draft' && (
+                <p className="inline-flex w-fit items-center gap-1 rounded-sm bg-warning-soft px-1.5 py-0.5 font-medium text-warning-ink text-xs">
+                  <CircleAlert aria-hidden="true" className="size-3.5" />
+                  {m.expense_draft_badge()}
+                </p>
+              )}
               <p className="text-muted-foreground text-sm">
                 {formatDate(`${expense.spent_on}T12:00:00`)}
                 {' · '}
@@ -57,10 +63,14 @@ export function ExpenseList({ expenses, people, canManage, onEdit, onDelete }: E
                     variant="ghost"
                     size="icon"
                     className="size-11 md:size-9"
-                    aria-label={m.expense_edit_label({ title })}
+                    aria-label={
+                      expense.status === 'draft'
+                        ? m.expense_draft_confirm_label({ title })
+                        : m.expense_edit_label({ title })
+                    }
                     onClick={() => onEdit(expense)}
                   >
-                    <Pen />
+                    {expense.status === 'draft' ? <Check /> : <Pen />}
                   </Button>
                   <Button
                     variant="ghost"

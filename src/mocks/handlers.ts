@@ -29,7 +29,12 @@ import {
   votePlaces,
 } from './fixtures'
 import { interviewHandlers } from './interview'
+import { jobHandlers } from './job-handlers'
+import { linterHandlers } from './linter-handlers'
 import { permissionHandlers } from './permissions'
+import { catalogMissingAnswer, placesHandlers } from './places-handlers'
+import { receiptHandlers } from './receipt-handlers'
+import { replanHandlers } from './replan-handlers'
 import { createWorld, type ScenarioName, type World } from './scenarios'
 
 const API = '*/api/v1'
@@ -833,6 +838,8 @@ function normalHandlers(
       if (!findTrip(params.tripId)) return notFound('Trip not found')
       if (!canWrite(params.tripId)) return forbidden()
       if (world.plan?.trip_id === params.tripId) return HttpResponse.json(world.plan)
+      const missing = catalogMissingAnswer(world)
+      if (missing) return missing
       const created: Plan = plan(String(params.tripId ?? TRIP_ID))
       world.plan = created
       return HttpResponse.json(created, { status: 201 })
@@ -1018,6 +1025,12 @@ function settle(world: World, tripId: string) {
       balance.set(part.profile_id, (balance.get(part.profile_id) ?? 0n) - toCents(part.amount))
     }
   }
+  // A payment moves money from the payer to the receiver, so the debt it covers is gone.
+  for (const payment of world.payments.filter((p) => p.trip_id === tripId)) {
+    const cents = toCents(payment.amount)
+    balance.set(payment.from_profile_id, (balance.get(payment.from_profile_id) ?? 0n) + cents)
+    balance.set(payment.to_profile_id, (balance.get(payment.to_profile_id) ?? 0n) - cents)
+  }
   const creditors = [...balance]
     .filter(([, cents]) => cents > 0n)
     .sort((a, b) => (a[1] > b[1] ? -1 : 1))
@@ -1052,6 +1065,105 @@ function settle(world: World, tripId: string) {
       })),
     transfers,
   }
+}
+
+/** Close, reopen and payments of the settlement (backend #88, #192): host-only state, 409 when frozen. */
+function settlementHandlers(
+  world: World,
+  latency: () => Promise<void>,
+  findTrip: (id: unknown) => Trip | undefined,
+): RequestHandler[] {
+  const isHost = (id: unknown) => findTrip(id)?.my_role === 'host'
+  const myProfileId = () => world.members.find((member) => member.is_me)?.profile_id
+  const frozen = () => HttpResponse.json({ detail: 'The settlement is closed' }, { status: 409 })
+  const setClosed = (closed: boolean, tripId: string, draftsBlock: boolean) => {
+    const drafts = world.expenses.filter((e) => e.status === 'draft').length
+    if (draftsBlock && drafts > 0) {
+      return HttpResponse.json({ detail: `${drafts} drafts are waiting` }, { status: 409 })
+    }
+    world.settlementClosed = closed
+    return HttpResponse.json(settle(world, tripId))
+  }
+
+  return [
+    http.post(`${API}/trips/:tripId/expenses/settlement/close`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!isHost(params.tripId)) return forbidden()
+      return setClosed(true, String(params.tripId), true)
+    }),
+
+    http.post(`${API}/trips/:tripId/expenses/settlement/reopen`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!isHost(params.tripId)) return forbidden()
+      return setClosed(false, String(params.tripId), false)
+    }),
+
+    http.get(`${API}/trips/:tripId/expenses/settlement/payments`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const items = world.payments
+        .filter((p) => p.trip_id === params.tripId)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      return HttpResponse.json({ items, total: items.length, page: 1, size: 50, pages: 1 })
+    }),
+
+    http.post(`${API}/trips/:tripId/expenses/settlement/payments`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const body = (await request.json()) as Schemas['PaymentCreate']
+      const mine = myProfileId()
+      if (
+        !isHost(params.tripId) &&
+        ![body.from_profile_id, body.to_profile_id].includes(mine ?? '')
+      ) {
+        return forbidden()
+      }
+      if (world.settlementClosed) return frozen()
+      if (body.from_profile_id === body.to_profile_id) {
+        return HttpResponse.json(
+          {
+            detail: [
+              { type: 'payment.same_person', loc: ['body', 'to_profile_id'], msg: 'Same person' },
+            ],
+          },
+          { status: 422 },
+        )
+      }
+      const created: Schemas['PaymentRead'] = {
+        id: crypto.randomUUID(),
+        trip_id: String(params.tripId),
+        from_profile_id: body.from_profile_id,
+        to_profile_id: body.to_profile_id,
+        amount: parseDecimalInput(String(body.amount)) ?? '0',
+        paid_on: body.paid_on ?? new Date().toISOString().slice(0, 10),
+        marked_by_sub: MOCK_USER_SUB,
+        created_at: new Date().toISOString(),
+      }
+      world.payments.push(created)
+      return HttpResponse.json(created, { status: 201 })
+    }),
+
+    http.delete(
+      `${API}/trips/:tripId/expenses/settlement/payments/:paymentId`,
+      async ({ params }) => {
+        await latency()
+        const current = world.payments.find((p) => p.id === params.paymentId)
+        if (!current) return notFound('Payment not found')
+        const mine = myProfileId()
+        if (
+          !isHost(params.tripId) &&
+          ![current.from_profile_id, current.to_profile_id].includes(mine ?? '')
+        ) {
+          return forbidden()
+        }
+        if (world.settlementClosed) return frozen()
+        world.payments = world.payments.filter((p) => p.id !== current.id)
+        return new HttpResponse(null, { status: 204 })
+      },
+    ),
+  ]
 }
 
 function listExpenses(all: Expense[], params: URLSearchParams) {
@@ -1201,5 +1313,12 @@ function expenseHandlers(
       if (!findTrip(params.tripId)) return notFound('Trip not found')
       return HttpResponse.json(settle(world, String(params.tripId)))
     }),
+
+    ...settlementHandlers(world, latency, findTrip),
+    ...receiptHandlers(world, latency, findTrip),
+    ...jobHandlers(world, latency),
+    ...linterHandlers(world, latency, findTrip),
+    ...placesHandlers(world, latency),
+    ...replanHandlers(world, latency, findTrip),
   ]
 }

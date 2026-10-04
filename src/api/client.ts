@@ -9,9 +9,13 @@ import {
 } from '@/lib/demo-session'
 import { getLocale } from '@/paraglide/runtime'
 import { ApiError } from './errors'
+import type { PendingPaths } from './pending-paths'
 import type { components, paths } from './schema'
 
 export type Schemas = components['schemas']
+
+/** The generated paths plus the endpoints of backend issues still being built (pending-paths.ts). */
+type ApiPaths = paths & PendingPaths
 
 type AccessTokenGetter = () => Promise<string | undefined>
 
@@ -126,7 +130,7 @@ const demoMiddleware: Middleware = {
 
 // Same origin: the paths in schema.d.ts start with /api/v1, and /api/* is proxied
 // to the backend by the Worker (deployed) or the Vite dev server (local).
-export const fetchClient = createFetchClient<paths>()
+export const fetchClient = createFetchClient<ApiPaths>()
 fetchClient.use(languageMiddleware)
 fetchClient.use(authMiddleware)
 fetchClient.use(errorMiddleware)
@@ -144,7 +148,7 @@ export function createPublicClient<P extends object>() {
 }
 
 /** For the entry call only: no demo token, no retry, so a bad link never touches a session. */
-const bareClient = createFetchClient<paths>()
+const bareClient = createFetchClient<ApiPaths>()
 bareClient.use(languageMiddleware)
 bareClient.use(errorMiddleware)
 
