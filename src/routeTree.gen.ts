@@ -14,6 +14,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as JoinRouteImport } from './routes/join'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as PrywatnoscRouteImport } from './routes/prywatnosc'
 import { Route as TripsRouteImport } from './routes/trips'
 import { Route as TripsTripIdRouteImport } from './routes/trips_.$tripId'
@@ -43,6 +44,11 @@ const JoinRoute = JoinRouteImport.update({
   path: '/join',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrywatnoscRoute = PrywatnoscRouteImport.update({
   id: '/prywatnosc',
   path: '/prywatnosc',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
   '/join': typeof JoinRoute
+  '/notifications': typeof NotificationsRoute
   '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
   '/trips/$tripId': typeof TripsTripIdRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
   '/join': typeof JoinRoute
+  '/notifications': typeof NotificationsRoute
   '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
   '/trips/$tripId': typeof TripsTripIdRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
   '/join': typeof JoinRoute
+  '/notifications': typeof NotificationsRoute
   '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
   '/trips_/$tripId': typeof TripsTripIdRoute
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/demo'
     | '/join'
+    | '/notifications'
     | '/prywatnosc'
     | '/trips'
     | '/trips/$tripId'
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/demo'
     | '/join'
+    | '/notifications'
     | '/prywatnosc'
     | '/trips'
     | '/trips/$tripId'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/demo'
     | '/join'
+    | '/notifications'
     | '/prywatnosc'
     | '/trips'
     | '/trips_/$tripId'
@@ -129,6 +141,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   DemoRoute: typeof DemoRoute
   JoinRoute: typeof JoinRoute
+  NotificationsRoute: typeof NotificationsRoute
   PrywatnoscRoute: typeof PrywatnoscRoute
   TripsRoute: typeof TripsRoute
   TripsTripIdRoute: typeof TripsTripIdRoute
@@ -171,6 +184,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JoinRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/prywatnosc': {
       id: '/prywatnosc'
       path: '/prywatnosc'
@@ -201,6 +221,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   DemoRoute: DemoRoute,
   JoinRoute: JoinRoute,
+  NotificationsRoute: NotificationsRoute,
   PrywatnoscRoute: PrywatnoscRoute,
   TripsRoute: TripsRoute,
   TripsTripIdRoute: TripsTripIdRoute,

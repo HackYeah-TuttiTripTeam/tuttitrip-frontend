@@ -76,6 +76,12 @@ export const notificationsQueryOptions = (search: NotificationsSearch) =>
     }),
   )
 
+/** One notification of the caller (404 when it is missing or someone else's): the `?open=` dialog. */
+export const notificationQueryOptions = (id: string) =>
+  $api.queryOptions('get', '/api/v1/notifications/{notification_id}', {
+    params: { path: { notification_id: id } },
+  })
+
 /** The five latest, newest first: the bell panel, a fixed view without URL parameters. */
 export const LATEST: NotificationsSearch = {
   page: 1,

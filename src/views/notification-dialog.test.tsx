@@ -11,7 +11,7 @@ import { m } from '@/paraglide/messages'
 
 const SLOW = 20_000
 const FIRST = notifications(134, 40)[0]
-const FAR = notifications(134, 40)[90] // read, and far beyond the first page, within the latest hundred
+const FAR = notifications(134, 40)[120] // read, far beyond the first page: fetched by id
 
 beforeEach(() => {
   resetDemoSessionForTests()

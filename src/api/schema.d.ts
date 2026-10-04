@@ -971,6 +971,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/checkins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where everyone stays
+         * @description List the check-ins of the trip's members (any member sees them all).
+         *
+         *     Entries are deleted once the trip has ended.
+         *
+         *     Args:
+         *         membership: The caller's membership of `{trip_id}`.
+         *         session: Database session.
+         *         query: Page, sort and filters.
+         *
+         *     Returns:
+         *         One page of entries, by accommodation by default.
+         *
+         *     Wymagane uprawnienie: `trips.members:READ`.
+         */
+        get: operations["list_checkins_api_v1_trips__trip_id__checkins_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/checkins/{profile_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Checkin
+         * @description Set or replace where a profile stays and its room number.
+         *
+         *     A member sets their own profile; the host also those without an account.
+         *
+         *     Args:
+         *         profile_id: Profile the entry is for (`profile_id` from the members list).
+         *         data: Accommodation and room.
+         *         membership: The caller's membership of `{trip_id}`.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The stored entry.
+         *
+         *     Wymagane uprawnienie: `trips.members:WRITE`.
+         */
+        put: operations["set_checkin_api_v1_trips__trip_id__checkins__profile_id__put"];
+        post?: never;
+        /**
+         * Delete Checkin
+         * @description Remove a profile's entry (same rules as setting it; idempotent).
+         *
+         *     Args:
+         *         profile_id: Profile whose entry goes.
+         *         membership: The caller's membership of `{trip_id}`.
+         *         session: Database session.
+         *
+         *     Wymagane uprawnienie: `trips.members:WRITE`.
+         */
+        delete: operations["delete_checkin_api_v1_trips__trip_id__checkins__profile_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/vote-links": {
         parameters: {
             query?: never;
@@ -1856,6 +1932,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/accommodation/offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a pasted lodging offer against the requirements
+         * @description Takes a pasted offer (`document_id` from `POST /planning/linter/trips/{trip_id}/documents`, kind `offer`), the nights it is for and optionally its link and the amenities the host confirmed by hand. Platform requirements are decided by the link's domain, so they never wait for the worker. Amenities without a host answer go to the worker job `extract_offer_evidence` (`job_id`); poll `GET .../offers/{offer_id}`. Every requirement is `met` or `unmet` with a quote, or `unconfirmed` with a `reason`; silence in the offer is `unconfirmed` (`no_mention`), never `unmet`. 422 for an outing, nights outside the trip or an unknown document; 503 while the worker is missing (only when a job is needed).
+         *
+         *     Wymagane uprawnienie: `accommodation:WRITE`.
+         */
+        post: operations["create_offer_api_v1_trips__trip_id__accommodation_offers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/accommodation/offers/{offer_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A pasted offer and its three-state check
+         * @description Checks are computed on every read against the current requirements: `stale` says they changed since the offer was checked, and a requirement added later is `unconfirmed` (`not_checked`). `score` is S_h of E2 (met 1, unconfirmed 0.4, unmet 0).
+         *
+         *     Wymagane uprawnienie: `accommodation:READ`.
+         */
+        get: operations["get_offer_api_v1_trips__trip_id__accommodation_offers__offer_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/expenses": {
         parameters: {
             query?: never;
@@ -1865,24 +1985,95 @@ export interface paths {
         };
         /**
          * List Expenses
-         * @description List expenses of a trip the caller belongs to.
+         * @description List the expenses of a trip: paginated, filterable and sortable.
+         *
+         *     Filters: `date_from`/`date_to` (day spent, inclusive), `payer_profile_id`,
+         *     `participant_profile_id` and `category`. Sort by `spent_on` (default,
+         *     newest first), `amount` or `created_at`.
          *
          *     Args:
          *         membership: The caller's membership of ``{trip_id}``.
          *         session: Database session.
+         *         query: Paging, sorting and filters.
          *
          *     Returns:
-         *         The trip's expenses.
+         *         One page of the trip's expenses.
          *
          *     Wymagane uprawnienie: `expenses.core:READ`.
          */
         get: operations["list_expenses_api_v1_trips__trip_id__expenses_get"];
         put?: never;
-        post?: never;
+        /**
+         * Create Expense
+         * @description Add an expense; the caller becomes its author.
+         *
+         *     The payer and participants are trip profiles. A person left out of
+         *     `participants` does not pay. A broken rule answers 422 with an
+         *     `ExpenseErrorCode` in `type`.
+         *
+         *     Args:
+         *         data: The expense.
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The created expense.
+         *
+         *     Wymagane uprawnienie: `expenses.core:WRITE`.
+         */
+        post: operations["create_expense_api_v1_trips__trip_id__expenses_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/expenses/{expense_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Expense
+         * @description Delete an expense; only the author, a co-host or the host may.
+         *
+         *     Args:
+         *         expense_id: Expense to delete.
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         An empty 204 response.
+         *
+         *     Wymagane uprawnienie: `expenses.core:WRITE`.
+         */
+        delete: operations["delete_expense_api_v1_trips__trip_id__expenses__expense_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Expense
+         * @description Change an expense; only the author, a co-host or the host may.
+         *
+         *     Send only what changes. `participants` replaces the whole list; the merged
+         *     expense must pass the same rules as on creation.
+         *
+         *     Args:
+         *         expense_id: Expense to change.
+         *         data: Fields to change.
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The changed expense.
+         *
+         *     Wymagane uprawnienie: `expenses.core:WRITE`.
+         */
+        patch: operations["update_expense_api_v1_trips__trip_id__expenses__expense_id__patch"];
         trace?: never;
     };
     "/api/v1/expenses/settlement/balances": {
@@ -1997,6 +2188,175 @@ export interface paths {
          *     Wymagane uprawnienie: `places.catalog:READ`.
          */
         get: operations["get_place_api_v1_places__place_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Notifications
+         * @description List the caller's notifications, newest first by default.
+         *
+         *     Only the caller's own notifications exist for this endpoint; there is no
+         *     403 for someone else's. `type` can be repeated (`?type=a&type=b`).
+         *
+         *     Args:
+         *         user: The signed-in user.
+         *         session: Database session.
+         *         query: Paging, sorting (`created_at` or `type`) and filters.
+         *
+         *     Returns:
+         *         One page with the total of matching notifications.
+         *
+         *     Wymagane uprawnienie: `notifications:READ`.
+         */
+        get: operations["list_notifications_api_v1_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Unread Count
+         * @description Count the caller's unread notifications (for the badge).
+         *
+         *     Args:
+         *         user: The signed-in user.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The number of unread notifications.
+         *
+         *     Wymagane uprawnienie: `notifications:READ`.
+         */
+        get: operations["unread_count_api_v1_notifications_unread_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/mark": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Notifications
+         * @description Mark notifications read or unread, selected by ids or by filters.
+         *
+         *     One `UPDATE`, idempotent. Ids that are not the caller's are skipped without
+         *     a trace (no difference between missing and foreign). A filter selection
+         *     covers everything matching now, including notifications that arrived after
+         *     the list was last refreshed.
+         *
+         *     Args:
+         *         body: `read` plus exactly one of `ids` (max 100) and `filters`.
+         *         user: The signed-in user.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         How many notifications actually changed state.
+         *
+         *     Wymagane uprawnienie: `notifications:WRITE`.
+         */
+        post: operations["mark_notifications_api_v1_notifications_mark_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream Notifications
+         * @description Live stream (Server-Sent Events) of the caller's new notifications.
+         *
+         *     Authorized by the usual `Authorization: Bearer` header, so read it with
+         *     `fetch`, not `EventSource`. Events: `ready` (`{"unread": n}`),
+         *     `notification` (id = notification id, data = a notification) and `resync`
+         *     (reload the list and the counter). A comment `ping` arrives every 15 s. The
+         *     stream ends at the token's expiry and after 30 minutes at the latest;
+         *     reconnect with `Last-Event-ID` (or `since`) to get what was missed.
+         *
+         *     Args:
+         *         user: The signed-in user.
+         *         session: Database session (released at once: a stream holds none).
+         *         hub: Source of live notifications.
+         *         last_event_id: Id of the last notification the client has.
+         *         since: Alternative to `last_event_id`.
+         *
+         *     Yields:
+         *         The events.
+         *
+         *     Wymagane uprawnienie: `notifications:READ`.
+         */
+        get: operations["stream_notifications_api_v1_notifications_stream_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{notification_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Notification
+         * @description Read one of the caller's notifications, however old.
+         *
+         *     Args:
+         *         notification_id: The notification.
+         *         user: The signed-in user.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The notification.
+         *
+         *     Raises:
+         *         HTTPException: 404 when it does not exist or belongs to someone else.
+         *
+         *     Wymagane uprawnienie: `notifications:READ`.
+         */
+        get: operations["get_notification_api_v1_notifications__notification_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2249,6 +2609,55 @@ export interface components {
          */
         BudgetZone: "below_b_from" | "up_to_b_to" | "in_margin";
         /**
+         * CheckinRead
+         * @description One check-in as the trip's members see it.
+         */
+        CheckinRead: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Display Name */
+            display_name: string;
+            /** Accommodation */
+            accommodation: string;
+            /** Room */
+            room: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Is Me
+             * @description Whether this is the caller's own entry.
+             */
+            is_me: boolean;
+        };
+        /**
+         * CheckinSort
+         * @description Sort keys of the check-in list.
+         * @enum {string}
+         */
+        CheckinSort: "updated_at" | "accommodation" | "room";
+        /**
+         * CheckinUpdate
+         * @description What a person tells the group: where they stay and the room number.
+         */
+        CheckinUpdate: {
+            /**
+             * Accommodation
+             * @description Hotel, apartment or other place they stay at.
+             */
+            accommodation: string;
+            /**
+             * Room
+             * @description Room number or name; omit when there is none.
+             */
+            room?: string | null;
+        };
+        /**
          * CityRead
          * @description A city the planner covers.
          */
@@ -2477,6 +2886,60 @@ export interface components {
          */
         ExampleVerdict: "like" | "dislike";
         /**
+         * ExpenseCategory
+         * @description What the money was spent on (optional label of an expense).
+         * @enum {string}
+         */
+        ExpenseCategory: "food" | "transport" | "lodging" | "activities" | "shopping" | "other";
+        /**
+         * ExpenseCreate
+         * @description POST payload: one expense of the trip.
+         */
+        ExpenseCreate: {
+            /**
+             * Payer Profile Id
+             * Format: uuid
+             */
+            payer_profile_id: string;
+            /**
+             * Amount
+             * @description Positive, at most 2 decimal places.
+             */
+            amount: number | string;
+            /**
+             * Currency
+             * @description The trip's currency (taken from the trip if empty).
+             */
+            currency?: string | null;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Spent On
+             * Format: date
+             * @description The day the money was spent.
+             */
+            spent_on: string;
+            category?: components["schemas"]["ExpenseCategory"] | null;
+            /** @default equal */
+            split_method: components["schemas"]["SplitMethod"];
+            /**
+             * Participants
+             * @description Who shares the cost; anyone left out does not pay.
+             */
+            participants: components["schemas"]["ShareInput"][];
+        };
+        /**
+         * ExpenseErrorCode
+         * @description Stable code of an expense rule violation, sent as the 422 item's ``type``.
+         *
+         *     Clients map errors by this code and ``loc``, never by ``msg``.
+         * @enum {string}
+         */
+        ExpenseErrorCode: "expense.null_not_allowed" | "expense.amount_not_positive" | "expense.currency_required" | "expense.currency_mismatch" | "expense.payer_not_on_trip" | "expense.participants_required" | "expense.participant_not_on_trip" | "expense.participant_duplicated" | "expense.share_value_required" | "expense.share_value_not_allowed" | "expense.percent_sum" | "expense.share_value_not_positive";
+        /**
          * ExpenseRead
          * @description An expense as returned by the API.
          */
@@ -2496,17 +2959,85 @@ export interface components {
              * Format: uuid
              */
             payer_profile_id: string;
-            /** Amount */
+            /**
+             * Amount
+             * @description In `currency`.
+             */
             amount: string;
             /** Currency */
             currency: string;
             /** Description */
             description: string;
             /**
+             * Spent On
+             * Format: date
+             */
+            spent_on: string;
+            category: components["schemas"]["ExpenseCategory"] | null;
+            split_method: components["schemas"]["SplitMethod"];
+            /** Participants */
+            participants: components["schemas"]["ParticipantRead"][];
+            /** Created By Sub */
+            created_by_sub: string;
+            /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+        };
+        /**
+         * ExpenseSort
+         * @description Sort keys of the expense list.
+         * @enum {string}
+         */
+        ExpenseSort: "spent_on" | "amount" | "created_at";
+        /**
+         * ExpenseUpdate
+         * @description PATCH payload: send only what changes (``participants`` replaces the list).
+         */
+        ExpenseUpdate: {
+            /** Payer Profile Id */
+            payer_profile_id?: string | null;
+            /** Amount */
+            amount?: number | string | null;
+            /**
+             * Currency
+             * @description Only checked against the trip when sent.
+             */
+            currency?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Spent On */
+            spent_on?: string | null;
+            category?: components["schemas"]["ExpenseCategory"] | null;
+            split_method?: components["schemas"]["SplitMethod"] | null;
+            /** Participants */
+            participants?: components["schemas"]["ShareInput"][] | null;
+        };
+        /**
+         * ExpenseValidationError
+         * @description One 422 item of an expense rule violation.
+         */
+        ExpenseValidationError: {
+            type: components["schemas"]["ExpenseErrorCode"];
+            /**
+             * Loc
+             * @description `["body", field]`
+             */
+            loc: string[];
+            /**
+             * Msg
+             * @description For people; may change, do not parse it.
+             */
+            msg: string;
+        };
+        /**
+         * ExpenseValidationErrors
+         * @description The 422 body of ``POST`` and ``PATCH`` ``/trips/{trip_id}/expenses``.
+         */
+        ExpenseValidationErrors: {
+            /** Detail */
+            detail: components["schemas"]["ExpenseValidationError"][];
         };
         /**
          * ExplainEntry
@@ -2565,7 +3096,7 @@ export interface components {
          * @description A node of the feature tree. The value is its dotted code.
          * @enum {string}
          */
-        Feature: "*" | "accounts" | "accounts.profile" | "admin" | "admin.permissions" | "admin.users" | "admin.planning_weights" | "trips" | "trips.core" | "trips.members" | "trips.invitations" | "trips.vote_links" | "profiles" | "profiles.core" | "profiles.preferences" | "profiles.feedback" | "interview" | "planning" | "planning.proposals" | "planning.plans" | "planning.fairness" | "planning.linter" | "accommodation" | "search" | "expenses" | "expenses.core" | "expenses.settlement" | "jobs" | "places" | "places.catalog" | "mcp";
+        Feature: "*" | "accounts" | "accounts.profile" | "admin" | "admin.permissions" | "admin.users" | "admin.planning_weights" | "trips" | "trips.core" | "trips.members" | "trips.invitations" | "trips.vote_links" | "profiles" | "profiles.core" | "profiles.preferences" | "profiles.feedback" | "interview" | "planning" | "planning.proposals" | "planning.plans" | "planning.fairness" | "planning.linter" | "accommodation" | "search" | "expenses" | "expenses.core" | "expenses.settlement" | "jobs" | "places" | "places.catalog" | "mcp" | "notifications";
         /**
          * FeatureGrant
          * @description ``level`` on ``feature`` and everything below it.
@@ -3055,6 +3586,8 @@ export interface components {
              * @description IANA zone of the city; hours are local.
              */
             timezone: string;
+            /** @description Lodging offers per night; null disables the lodging check. */
+            lodging?: components["schemas"]["LintLodging"] | null;
             /**
              * Budget
              * @description B_do.
@@ -3117,6 +3650,24 @@ export interface components {
             price_verified: boolean;
         };
         /**
+         * LintLodging
+         * @description Nights of the trip, its lodging requirements and the checked offers.
+         */
+        LintLodging: {
+            /**
+             * Nights
+             * @description Every night that needs a bed.
+             */
+            nights: string[];
+            /**
+             * Requirements
+             * @description As in `GET .../accommodation/requirements`; only hard ones count.
+             */
+            requirements: components["schemas"]["RequirementItem"][];
+            /** Offers */
+            offers?: components["schemas"]["LintOffer"][];
+        };
+        /**
          * LintLunch
          * @description Lunch the group needs: a free gap that starts in ``[earliest, latest]``.
          */
@@ -3133,6 +3684,18 @@ export interface components {
             latest: string;
             /** Minutes */
             minutes: number;
+        };
+        /**
+         * LintOffer
+         * @description A checked lodging offer: copy ``nights`` and ``checks`` from ``OfferRead``.
+         */
+        LintOffer: {
+            /** Id */
+            id?: string | null;
+            /** Nights */
+            nights: string[];
+            /** Checks */
+            checks: components["schemas"]["RequirementCheck"][];
         };
         /**
          * LintPerson
@@ -3230,6 +3793,14 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /**
+         * MarkResult
+         * @description How many notifications actually changed state.
+         */
+        MarkResult: {
+            /** Updated */
+            updated: number;
         };
         /**
          * MeResponse
@@ -3354,6 +3925,223 @@ export interface components {
             basis: components["schemas"]["PriceBasis"];
         };
         /**
+         * NotificationAction
+         * @description One button on a notification.
+         */
+        NotificationAction: {
+            code: components["schemas"]["NotificationActionCode"];
+            /**
+             * Params
+             * @description Small values the action needs, e.g. ids.
+             */
+            params?: {
+                [key: string]: string;
+            };
+        };
+        /**
+         * NotificationActionCode
+         * @description What the user can do from a notification (the frontend maps it).
+         * @enum {string}
+         */
+        NotificationActionCode: "open_trip" | "open_people" | "open_plan" | "approve_proposal" | "reject_proposal" | "approve_budget" | "reject_budget";
+        /**
+         * NotificationFilter
+         * @description Which of the caller's notifications; shared by the list and bulk marking.
+         *
+         *     Dates are ISO 8601 in UTC (a value without an offset is read as UTC); the
+         *     frontend turns the user's local days into this range.
+         */
+        NotificationFilter: {
+            /**
+             * Read
+             * @description true: read, false: unread, absent: all.
+             */
+            read?: boolean | null;
+            /**
+             * Type
+             * @description Repeatable: any of these types.
+             */
+            type?: string[] | null;
+            /** Trip Id */
+            trip_id?: string | null;
+            /**
+             * Created From
+             * @description Created at or after this moment (inclusive).
+             */
+            created_from?: string | null;
+            /**
+             * Created To
+             * @description Created before this moment (exclusive).
+             */
+            created_to?: string | null;
+        };
+        /**
+         * NotificationMark
+         * @description Mark notifications read or unread: by `ids` (max 100) or by `filters`.
+         *
+         *     Exactly one of `ids` and `filters`; `filters: {}` means every notification of
+         *     the caller. The filter is the one the list takes (without paging and sort).
+         */
+        NotificationMark: {
+            /** Ids */
+            ids?: string[] | null;
+            filters?: components["schemas"]["NotificationFilter"] | null;
+            /**
+             * Read
+             * @description true marks as read, false as unread.
+             */
+            read: boolean;
+        };
+        /**
+         * NotificationRead
+         * @description A notification as the owner sees it.
+         */
+        NotificationRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Type
+             * @description A `NotificationType` value; open for new types.
+             */
+            type: string;
+            /** Trip Id */
+            trip_id: string | null;
+            /**
+             * Params
+             * @description Small values for the text: names, ids, amounts as strings.
+             */
+            params: {
+                [key: string]: string;
+            };
+            /** Actions */
+            actions: components["schemas"]["NotificationAction"][];
+            /** Read At */
+            read_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * NotificationSort
+         * @description What the list can be sorted by (mapped to columns in ``db.py``).
+         * @enum {string}
+         */
+        NotificationSort: "created_at" | "type";
+        /**
+         * OfferCheckState
+         * @description Where the check of an offer is.
+         * @enum {string}
+         */
+        OfferCheckState: "pending" | "done" | "failed";
+        /**
+         * OfferCreate
+         * @description A pasted lodging offer to check for some nights of the trip.
+         */
+        OfferCreate: {
+            /**
+             * Document Id
+             * Format: uuid
+             * @description Id of the pasted text (`POST .../documents`, kind `offer`).
+             */
+            document_id: string;
+            /**
+             * Nights
+             * @description Dates of the nights (check-in date of each night).
+             */
+            nights: string[];
+            /**
+             * Url
+             * @description Link to the offer; its domain decides platform requirements.
+             */
+            url?: string | null;
+            /** @description Amenities the host confirmed by hand; these skip the model. */
+            features?: components["schemas"]["OfferFeatures"];
+            /**
+             * Provider
+             * @default openrouter
+             * @enum {string}
+             */
+            provider: "openrouter" | "local";
+        };
+        /**
+         * OfferFeatures
+         * @description What we know about an offer: confirmed present or confirmed absent.
+         *
+         *     Typed by the host (for example when no model is available); a key listed
+         *     here is decided by the host and not sent to the worker.
+         */
+        OfferFeatures: {
+            /** Present */
+            present?: string[];
+            /** Absent */
+            absent?: string[];
+        };
+        /**
+         * OfferRead
+         * @description A pasted offer and its three-state check against the current requirements.
+         */
+        OfferRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Nights */
+            nights: string[];
+            /** Url */
+            url: string | null;
+            /** @description Platform from the link's domain; null without a known one. */
+            platform: components["schemas"]["Platform"] | null;
+            state: components["schemas"]["OfferCheckState"];
+            /**
+             * Job Id
+             * @description Worker job (`GET /jobs/{id}`); null when no model was needed.
+             */
+            job_id: string | null;
+            /**
+             * Error Code
+             * @description Worker error code when `state` is `failed`.
+             */
+            error_code?: string | null;
+            /**
+             * Requirements Version
+             * @description Version the check was started with.
+             */
+            requirements_version: number;
+            /**
+             * Stale
+             * @description True when the requirements changed since; requirements added later are `unconfirmed` (`not_checked`).
+             */
+            stale: boolean;
+            /** Checks */
+            checks: components["schemas"]["RequirementCheck"][];
+            /**
+             * Score
+             * @description S_h of E2: product over hard requirements times the mean over soft ones; met 1, unconfirmed 0.4, unmet 0.
+             */
+            score: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
          * OpeningHours
          * @description Simple weekly opening hours in the city's local time zone.
          *
@@ -3402,10 +4190,67 @@ export interface components {
              */
             pages: number;
         };
+        /** Page[CheckinRead] */
+        Page_CheckinRead_: {
+            /** Items */
+            items: components["schemas"]["CheckinRead"][];
+            /**
+             * Total
+             * @description Rows matching the filters.
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /**
+             * Pages
+             * @description Pages in total; 0 when empty.
+             */
+            pages: number;
+        };
         /** Page[DisplayMessage] */
         Page_DisplayMessage_: {
             /** Items */
             items: components["schemas"]["DisplayMessage"][];
+            /**
+             * Total
+             * @description Rows matching the filters.
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /**
+             * Pages
+             * @description Pages in total; 0 when empty.
+             */
+            pages: number;
+        };
+        /** Page[ExpenseRead] */
+        Page_ExpenseRead_: {
+            /** Items */
+            items: components["schemas"]["ExpenseRead"][];
+            /**
+             * Total
+             * @description Rows matching the filters.
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /**
+             * Pages
+             * @description Pages in total; 0 when empty.
+             */
+            pages: number;
+        };
+        /** Page[NotificationRead] */
+        Page_NotificationRead_: {
+            /** Items */
+            items: components["schemas"]["NotificationRead"][];
             /**
              * Total
              * @description Rows matching the filters.
@@ -3496,6 +4341,27 @@ export interface components {
              * @description Pages in total; 0 when empty.
              */
             pages: number;
+        };
+        /**
+         * ParticipantRead
+         * @description A participant with their entered share and the amount they owe.
+         */
+        ParticipantRead: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /**
+             * Value
+             * @description As entered; empty for `equal`.
+             */
+            value: string | null;
+            /**
+             * Amount
+             * @description Their part of the cost, rounded to cents.
+             */
+            amount: string;
         };
         /**
          * Payment
@@ -4507,6 +5373,36 @@ export interface components {
          */
         ReasonCode: "too_expensive" | "too_far" | "not_my_style" | "too_crowded" | "too_hard_for_child" | "other";
         /**
+         * RequirementCheck
+         * @description Result for one requirement: ``met`` and ``unmet`` come with a quote.
+         *
+         *     The quote is a verbatim span of the pasted offer (or the link's domain for a
+         *     platform requirement). It is null only when the host typed the answer in
+         *     ``features``. ``unconfirmed`` always has a ``reason`` and may carry the
+         *     quote that was not convincing.
+         */
+        RequirementCheck: {
+            /** Feature */
+            feature: string;
+            /** @default amenity */
+            kind: components["schemas"]["RequirementKind"];
+            /**
+             * Hard
+             * @default true
+             */
+            hard: boolean;
+            status: components["schemas"]["RequirementStatus"];
+            /** Quote */
+            quote?: string | null;
+            /**
+             * Confidence
+             * @description Decision model's margin from its threshold, scaled to 0..1; not a probability. Null for host answers, links and missing assessments.
+             */
+            confidence?: number | null;
+            /** @description Set exactly when `status` is `unconfirmed`. */
+            reason?: components["schemas"]["UnconfirmedReason"] | null;
+        };
+        /**
          * RequirementItem
          * @description One lodging requirement of a trip (a switch the host turned on).
          *
@@ -4793,11 +5689,36 @@ export interface components {
          */
         Severity: "violation" | "warning";
         /**
+         * ShareInput
+         * @description One participant: a trip profile and, unless equal, their share.
+         */
+        ShareInput: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /**
+             * Value
+             * @description Empty for `equal`, percent for `percent` (all must sum to exactly 100), weight for `weights`.
+             */
+            value?: number | string | null;
+        };
+        /**
          * SortDir
          * @description Sort direction.
          * @enum {string}
          */
         SortDir: "asc" | "desc";
+        /**
+         * SplitMethod
+         * @description How an expense is divided among its participants.
+         *
+         *     A person who does not take part has no share row. The shares are costs
+         *     entered on the expense, not the voice weights of the planning algorithm.
+         * @enum {string}
+         */
+        SplitMethod: "equal" | "percent" | "weights";
         /**
          * StopTransfer
          * @description The leg to a stop from the previous one.
@@ -5067,6 +5988,34 @@ export interface components {
         TripValidationErrors: {
             /** Detail */
             detail: components["schemas"]["TripValidationError"][];
+        };
+        /**
+         * UnconfirmedReason
+         * @description Why a requirement is ``unconfirmed`` (the UI label is in parentheses).
+         *
+         *     * ``no_mention``: the offer says nothing about it
+         *       ("brak wzmianki w ofercie");
+         *     * ``low_confidence``: a quote exists, but the assessment is below the
+         *       confidence threshold ("niepewna ocena");
+         *     * ``not_assessed``: a quote exists, but no model could assess it
+         *       ("cytat bez oceny");
+         *     * ``conflicting``: confident quotes say both yes and no ("sprzeczne cytaty");
+         *     * ``no_link``: a platform requirement and the offer has no link ("brak linku");
+         *     * ``not_checked``: nothing in a pasted offer can tell (distance), or the
+         *       requirement was added after the check ("nie sprawdzono");
+         *     * ``pending``: the check is still running ("sprawdzanie trwa");
+         *     * ``check_failed``: the check failed ("sprawdzenie nie powiodło się");
+         *     * ``no_offer``: a night without any offer, only in the plan check ("brak oferty").
+         * @enum {string}
+         */
+        UnconfirmedReason: "no_mention" | "low_confidence" | "not_assessed" | "conflicting" | "no_link" | "not_checked" | "pending" | "check_failed" | "no_offer";
+        /**
+         * UnreadCount
+         * @description How many notifications the caller has not read.
+         */
+        UnreadCount: {
+            /** Count */
+            count: number;
         };
         /**
          * UserPermissionsRead
@@ -6982,6 +7931,175 @@ export interface operations {
             };
         };
     };
+    list_checkins_api_v1_trips__trip_id__checkins_get: {
+        parameters: {
+            query?: {
+                /** @description Case-insensitive part of the accommodation name. */
+                accommodation?: string | null;
+                /** @description Page number, from 1. */
+                page?: number;
+                /** @description Items per page (max 100). */
+                size?: number;
+                dir?: components["schemas"]["SortDir"];
+                sort?: components["schemas"]["CheckinSort"];
+            };
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_CheckinRead_"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.members:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_checkin_api_v1_trips__trip_id__checkins__profile_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckinUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckinRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the caller's own entry; the host may also change entries of profiles without an account. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a member of the trip, or the profile is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The trip is over */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_checkin_api_v1_trips__trip_id__checkins__profile_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the caller's own entry; the host may also change entries of profiles without an account. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a member of the trip, or the profile is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_vote_links_api_v1_trips__trip_id__vote_links_get: {
         parameters: {
             query?: {
@@ -8707,9 +9825,147 @@ export interface operations {
             };
         };
     };
-    list_expenses_api_v1_trips__trip_id__expenses_get: {
+    create_offer_api_v1_trips__trip_id__accommodation_offers_post: {
         parameters: {
             query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `accommodation:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description The worker or the job queue is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_offer_api_v1_trips__trip_id__accommodation_offers__offer_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offer_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `accommodation:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip or offer not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description The worker or the job queue is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_expenses_api_v1_trips__trip_id__expenses_get: {
+        parameters: {
+            query?: {
+                /** @description From this day, inclusive. */
+                date_from?: string | null;
+                /** @description Up to this day, inclusive. */
+                date_to?: string | null;
+                payer_profile_id?: string | null;
+                /** @description Expenses this person takes part in. */
+                participant_profile_id?: string | null;
+                category?: components["schemas"]["ExpenseCategory"] | null;
+                /** @description Page number, from 1. */
+                page?: number;
+                /** @description Items per page (max 100). */
+                size?: number;
+                dir?: components["schemas"]["SortDir"];
+                sort?: components["schemas"]["ExpenseSort"];
+            };
             header?: never;
             path: {
                 trip_id: string;
@@ -8724,7 +9980,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ExpenseRead"][];
+                    "application/json": components["schemas"]["Page_ExpenseRead_"];
                 };
             };
             /** @description Brak tokenu albo zły token */
@@ -8748,6 +10004,149 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_expense_api_v1_trips__trip_id__expenses_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExpenseCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `expenses.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An expense rule is broken. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseValidationErrors"];
+                };
+            };
+        };
+    };
+    delete_expense_api_v1_trips__trip_id__expenses__expense_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expense_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `expenses.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_expense_api_v1_trips__trip_id__expenses__expense_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expense_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExpenseUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `expenses.core:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description An expense rule is broken. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseValidationErrors"];
                 };
             };
         };
@@ -8910,6 +10309,241 @@ export interface operations {
                 content?: never;
             };
             /** @description Brak uprawnienia `places.catalog:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notifications_api_v1_notifications_get: {
+        parameters: {
+            query?: {
+                /** @description true: read, false: unread, absent: all. */
+                read?: boolean | null;
+                /** @description Repeatable: any of these types. */
+                type?: string[] | null;
+                trip_id?: string | null;
+                /** @description Created at or after this moment (inclusive). */
+                created_from?: string | null;
+                /** @description Created before this moment (exclusive). */
+                created_to?: string | null;
+                /** @description Page number, from 1. */
+                page?: number;
+                /** @description Items per page (max 100). */
+                size?: number;
+                /** @description Sort direction. */
+                dir?: components["schemas"]["SortDir"];
+                sort?: components["schemas"]["NotificationSort"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_NotificationRead_"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `notifications:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unread_count_api_v1_notifications_unread_count_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadCount"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `notifications:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    mark_notifications_api_v1_notifications_mark_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationMark"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkResult"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `notifications:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_notifications_api_v1_notifications_stream_get: {
+        parameters: {
+            query?: {
+                /** @description Alternative to Last-Event-ID: send what was created since. */
+                since?: string | null;
+            };
+            header?: {
+                /** @description Id of the last notification the client received (sent by EventSource itself; fetch clients set it by hand). */
+                "last-event-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `notifications:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_notification_api_v1_notifications__notification_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `notifications:READ` */
             403: {
                 headers: {
                     [name: string]: unknown;

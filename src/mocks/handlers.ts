@@ -258,6 +258,13 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       })
     }),
 
+    http.get(`${API}/notifications/:id`, async ({ params }) => {
+      await latency()
+      if (world.notificationsFail) return failure(500)
+      const found = world.notifications.find((item) => item.id === params.id)
+      return found ? HttpResponse.json(found) : notFound('Notification not found')
+    }),
+
     // Exactly one of `ids` and `filters`; `filters: {}` is everything. Idempotent, like the API.
     http.post(`${API}/notifications/mark`, async ({ request }) => {
       await latency()

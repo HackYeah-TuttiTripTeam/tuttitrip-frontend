@@ -1,8 +1,9 @@
 import { Bell, CloudOff, KeyRound, SearchX, TriangleAlert } from '@keyline-icons/react'
+import { useQuery } from '@tanstack/react-query'
 import { getRouteApi, useRouter } from '@tanstack/react-router'
 import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { LATEST, notificationFilter } from '@/api/queries/notifications'
+import { notificationFilter, notificationQueryOptions } from '@/api/queries/notifications'
 import { NotificationDialog } from '@/components/notifications/notification-dialog'
 import { NotificationSelectionBar } from '@/components/notifications/notification-selection-bar'
 import {
@@ -41,18 +42,17 @@ export function NotificationsView() {
   // Opening the dialog does not touch the selection: `open` is not part of what the list shows.
   const selection = useKeyedSelection(JSON.stringify({ ...search, open: undefined }))
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
-  const navigate = route.useNavigate()
-
-  // The dialog's notification: on this page, or else among the latest hundred (a shared link).
+  // The dialog's notification: from the loaded page when it is there, else asked for by id.
   const openId = search.open
   const onPage = notifications.find((item) => item.id === openId)
-  const latest = useNotifications(
-    { ...LATEST, size: 100 },
-    session.status,
-    Boolean(openId) && !onPage && !isPending,
-  )
-  const opened = onPage ?? latest.notifications.find((item) => item.id === openId) ?? null
-  const lookingUp = Boolean(openId) && !opened && (isPending || !latest.isSettled)
+  const single = useQuery({
+    ...notificationQueryOptions(openId ?? ''),
+    enabled: Boolean(openId) && !onPage && !isPending && session.status !== 'loading',
+    retry: false,
+  })
+  const opened = onPage ?? single.data ?? null
+  const lookingUp = Boolean(openId) && !opened && (isPending || single.isPending)
+  const navigate = route.useNavigate()
   // Opened from a row on this page: that was a history entry of its own, so closing steps back
   // over it and Back needs one press. A link, a reload or an open from the bell/toast is replaced.
   const router = useRouter()

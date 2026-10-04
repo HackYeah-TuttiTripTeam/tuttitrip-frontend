@@ -30,6 +30,11 @@ export function useMarkNotifications() {
         const ids = new Set(body.ids)
         const readAt = body.read ? new Date().toISOString() : null
         for (const [key, page] of lists) {
+          // One notification (the detail dialog's query), not a page.
+          if (page && 'id' in page && ids.has(String(page.id))) {
+            queryClient.setQueryData(key, { ...page, read_at: readAt })
+            continue
+          }
           if (!page?.items) continue
           queryClient.setQueryData<NotificationsPage>(key, {
             ...page,
