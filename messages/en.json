@@ -851,7 +851,7 @@
   "admin_users_block_confirm": "Block account",
   "admin_users_delete_title": "Delete the account?",
   "admin_users_delete_body": "The account {name} will be deleted for good. Trips it hosts pass to a co-host or disappear; memberships disappear, expenses stay.",
-  "admin_users_delete_type_label": "Type the account's e-mail to confirm",
+  "admin_users_delete_type_label": "Type “{value}” to confirm",
   "admin_users_delete_confirm": "Delete account for good",
   "admin_users_error_forbidden": "You aren't allowed to change accounts.",
   "admin_users_error_gone": "That account no longer exists. Refresh the list.",

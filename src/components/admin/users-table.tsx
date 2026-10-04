@@ -62,6 +62,8 @@ interface UsersTableProps {
   onSortChange: (sort: UserSortKey, dir: SortDirection) => void
   /** Whether the caller may block and delete (WRITE on admin.users); READ only lists. */
   canWrite: boolean
+  /** The caller's own `sub` (from `GET /me`): their row offers no block or delete. */
+  mySub: string | undefined
   busy: boolean
   onBlock: (user: AdminUser) => void
   onUnblock: (user: AdminUser) => void
@@ -77,6 +79,7 @@ export function UsersTable({
   dir,
   onSortChange,
   canWrite,
+  mySub,
   busy,
   onBlock,
   onUnblock,
@@ -99,7 +102,7 @@ export function UsersTable({
     column.accessor('provider', {
       header: () => m.admin_users_col_provider(),
       enableSorting: false,
-      cell: ({ row }) => PROVIDER_LABELS[providerOf(row.original.sub)](),
+      cell: ({ row }) => PROVIDER_LABELS[providerOf(row.original.provider ?? row.original.sub)](),
     }),
     column.accessor('created_at', {
       header: () => USER_SORT_LABELS.created_at(),
@@ -129,7 +132,8 @@ export function UsersTable({
       id: 'actions',
       header: () => <span className="sr-only">{m.admin_users_col_actions()}</span>,
       cell: ({ row }) =>
-        canWrite && (
+        canWrite &&
+        row.original.sub !== mySub && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

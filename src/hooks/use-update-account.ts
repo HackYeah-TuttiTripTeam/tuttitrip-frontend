@@ -16,6 +16,9 @@ export function useUpdateAccount() {
       if (error instanceof ApiError && error.status === 409) {
         return { ok: false, message: m.account_settings_error_provider() }
       }
+      if (error instanceof ApiError && (error.status === 502 || error.status === 503)) {
+        return { ok: false, message: m.admin_users_error_auth0() }
+      }
       if (error instanceof ApiError && error.status === 422) {
         return { ok: false, message: m.account_settings_error_invalid() }
       }

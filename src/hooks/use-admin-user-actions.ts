@@ -31,7 +31,8 @@ async function attempt(run: () => Promise<unknown>): Promise<ActionResult> {
 /** Block, unblock and delete an account; the list is refetched after each. */
 export function useAdminUserActions() {
   const queryClient = useQueryClient()
-  const options = { onSuccess: () => queryClient.invalidateQueries({ queryKey: adminUsersKey }) }
+  // onSettled: a 404 (the account is gone already) must refresh the list too.
+  const options = { onSettled: () => queryClient.invalidateQueries({ queryKey: adminUsersKey }) }
   const block = $api.useMutation('post', '/api/v1/admin/users/{sub}/block', options)
   const unblock = $api.useMutation('delete', '/api/v1/admin/users/{sub}/block', options)
   const remove = $api.useMutation('delete', '/api/v1/admin/users/{sub}', options)

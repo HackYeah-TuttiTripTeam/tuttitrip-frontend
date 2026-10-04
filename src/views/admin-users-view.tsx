@@ -27,7 +27,13 @@ const nameOf = (user: AdminUser) => user.email ?? user.name ?? user.sub
 export function AdminUsersView() {
   const session = useSession()
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
-  const { access, isPending: accessPending } = useAdminAccess(session.status)
+  const {
+    access,
+    sub: mySub,
+    isPending: accessPending,
+    failed: accessFailed,
+    refetch: refetchAccess,
+  } = useAdminAccess(session.status)
   const allowed = access !== 'NONE'
   const { search, setPage, setSize, setSort, setFilters, reset } = useListSearch(route, {
     filterDefaults: adminUserFilterDefaults,
@@ -75,6 +81,23 @@ export function AdminUsersView() {
   }
 
   if (session.status === 'loading' || accessPending) return <UsersTableSkeleton />
+
+  if (accessFailed) {
+    return (
+      <StatusMessage
+        role="alert"
+        icon={<TriangleAlert />}
+        title={m.admin_users_load_failed_title()}
+        action={
+          <Button variant="outline" onClick={refetchAccess}>
+            {m.action_retry()}
+          </Button>
+        }
+      >
+        {m.trips_load_failed_body()}
+      </StatusMessage>
+    )
+  }
 
   // The API decides (403); this only spares people who are not administrators an empty screen.
   if (!allowed || errorStatus === 403) return <Navigate to="/trips" replace />
@@ -166,6 +189,7 @@ export function AdminUsersView() {
             dir={search.dir}
             onSortChange={setSort}
             canWrite={access === 'WRITE'}
+            mySub={mySub}
             busy={actions.isPending}
             onBlock={(user) => setPending({ kind: 'block', user })}
             onUnblock={(user) => void unblock(user)}
@@ -207,7 +231,10 @@ export function AdminUsersView() {
         error={dialogError}
         typeToConfirm={
           pending?.kind === 'delete'
-            ? { expected: nameOf(pending.user), label: m.admin_users_delete_type_label() }
+            ? {
+                expected: nameOf(pending.user),
+                label: m.admin_users_delete_type_label({ value: nameOf(pending.user) }),
+              }
             : undefined
         }
         onConfirm={() => void confirm()}

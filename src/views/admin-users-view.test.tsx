@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import { configure, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { HttpResponse, http } from 'msw'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { resetDemoSessionForTests, setDemoSession } from '@/lib/demo-session'
+import { MOCK_USER_SUB } from '@/mocks/fixtures'
 import { server, useScenario } from '@/mocks/node'
 import { renderApp } from '@/mocks/render-app'
 import { m } from '@/paraglide/messages'
@@ -168,11 +170,18 @@ describe('admin users', () => {
     expect((confirm as HTMLButtonElement).disabled).toBe(true)
 
     await user.type(
-      within(dialog).getByLabelText(m.admin_users_delete_type_label()),
+      within(dialog).getByLabelText(
+        m.admin_users_delete_type_label({ value: 'osoba03@example.com' }),
+      ),
       'osoba03@example.co',
     )
     expect((confirm as HTMLButtonElement).disabled).toBe(true)
-    await user.type(within(dialog).getByLabelText(m.admin_users_delete_type_label()), 'm')
+    await user.type(
+      within(dialog).getByLabelText(
+        m.admin_users_delete_type_label({ value: 'osoba03@example.com' }),
+      ),
+      'm',
+    )
     expect((confirm as HTMLButtonElement).disabled).toBe(false)
     await user.click(confirm)
 
@@ -180,5 +189,29 @@ describe('admin users', () => {
     expect(
       calls.some((call) => call.method === 'DELETE' && call.path.endsWith('/auth0|user-3')),
     ).toBe(true)
+  })
+
+  it("offers no block or delete on the caller's own row", async () => {
+    useScenario('admin', {
+      tweak: (world) => {
+        const own = world.adminUsers.find((u) => u.email === 'osoba22@example.com')
+        if (own) own.sub = MOCK_USER_SUB
+      },
+    })
+    renderApp('/admin/users')
+    await screen.findByText('osoba22@example.com')
+    const own = screen.getByText('osoba22@example.com').closest('tr') as HTMLElement
+    expect(within(own).queryByRole('button')).toBeNull()
+    expect(actionsOf('osoba21@example.com')).toBeTruthy()
+  })
+
+  it('shows a retry, not a redirect, when GET /me fails', async () => {
+    useScenario('admin')
+    server.use(
+      http.get('*/api/v1/me', () => HttpResponse.json({ detail: 'down' }, { status: 500 })),
+    )
+    const { router } = renderApp('/admin/users')
+    expect(await screen.findByRole('button', { name: m.action_retry() })).toBeTruthy()
+    expect(router.state.location.pathname).toBe('/admin/users')
   })
 })

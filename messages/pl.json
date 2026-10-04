@@ -865,7 +865,7 @@
   "admin_users_block_confirm": "Zablokuj konto",
   "admin_users_delete_title": "Usunąć konto?",
   "admin_users_delete_body": "Konto {name} zostanie usunięte na stałe. Wyjazdy, w których jest hostem, przejmie co-host albo znikną; członkostwa znikną, wydatki zostają.",
-  "admin_users_delete_type_label": "Wpisz e-mail konta, żeby potwierdzić",
+  "admin_users_delete_type_label": "Wpisz „{value}”, żeby potwierdzić",
   "admin_users_delete_confirm": "Usuń konto na stałe",
   "admin_users_error_forbidden": "Nie masz uprawnień do zmiany kont.",
   "admin_users_error_gone": "Tego konta już nie ma. Odśwież listę.",

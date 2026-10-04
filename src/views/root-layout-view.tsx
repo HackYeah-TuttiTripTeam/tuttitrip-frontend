@@ -93,7 +93,7 @@ export function RootLayoutView() {
           onCreateTrip={() => {
             // Creating a trip needs an account; ask guests to sign in first.
             if (session.status === 'anonymous') return session.login()
-            void navigate({ to: '/trips', search: true })
+            void navigate({ to: '/trips', search: {} })
             setCreateTripOpen(true)
           }}
         >
