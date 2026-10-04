@@ -1849,6 +1849,107 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/interview/agui": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Turn
+         * @description Run one turn of the text interview and stream it as AG-UI events (SSE).
+         *
+         *     Body: AG-UI `RunAgentInput` with `threadId` = the session id from
+         *     `POST .../sessions`. Only the text of the **last user message** is used:
+         *     the server keeps the history, the tools and the state, and ignores the
+         *     client's `state`, `tools`, `resume` and earlier messages. The answer to a
+         *     card is that text too. Events: `RUN_STARTED`, `TEXT_MESSAGE_*`,
+         *     `TOOL_CALL_*`, `STATE_SNAPSHOT` (`InterviewState`) after every tool that
+         *     changes the panel or the card, and `RUN_FINISHED` or `RUN_ERROR` (Polish
+         *     `message`, `code`: `spend_limit`, `timeout`, `unavailable`, `error`). One
+         *     turn per session at a time.
+         *
+         *     Args:
+         *         request: The AG-UI request.
+         *         membership: The caller's membership (co-host or above).
+         *         session: Database session (history is read before the stream starts).
+         *
+         *     Returns:
+         *         The SSE stream.
+         *
+         *     Wymagane uprawnienie: `interview:WRITE`.
+         */
+        post: operations["run_turn_api_v1_trips__trip_id__interview_agui_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/interview/voice/offer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Voice Offer
+         * @description Start a voice interview: relay the browser's WebRTC offer.
+         *
+         *     The browser sends audio straight to OpenAI; the server attaches a sideband
+         *     that runs the interview tools with the caller's membership. The answer is
+         *     returned once the sideband is attached. The conversation is stored in the
+         *     interview session when it ends (hang-up, time limit). The panel is not
+         *     pushed during a call: re-read `GET .../knowledge`.
+         *
+         *     Args:
+         *         body: The SDP offer.
+         *         membership: The caller's membership (co-host or above).
+         *
+         *     Returns:
+         *         The SDP answer and the call id.
+         *
+         *     Wymagane uprawnienie: `interview:WRITE`.
+         */
+        post: operations["voice_offer_api_v1_trips__trip_id__interview_voice_offer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/interview/voice/{call_id}/hangup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Voice Hangup
+         * @description End a voice interview and store its transcript in the session.
+         *
+         *     Args:
+         *         call_id: The id from the offer's answer.
+         *         membership: The caller's membership (co-host or above).
+         *
+         *     Wymagane uprawnienie: `interview:WRITE`.
+         */
+        post: operations["voice_hangup_api_v1_trips__trip_id__interview_voice__call_id__hangup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/planning/jobs": {
         parameters: {
             query?: never;
@@ -1921,10 +2022,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Generate a plan with the fairness measure (STUB)
-         * @description STUB: until backend#50 the content is a fixed sample (section 7 of `docs/algorytm.md`); the shape is final. The variant is chosen from the trip: `sha256(str(trip_id).encode())[0] % 3` (first byte of the digest) gives `group`, `solo` or `approval` (`needs_approval` with `kappa`), so one trip always returns the same plan and `plan_hash`. `group` and `approval` include an unverified price and a free stop; `solo` (two days) has neither; all variants have a stop without an hours source and transfers with and without a cost.
-         *
-         *     Generates a plan with the fairness measure, ledger, verdicts and budget. Repeating the call with the same `input_hash` returns 200 with the existing version instead of 201 (the stub always returns 201).
+         * Generate a plan with the fairness measure
+         * @description Runs the algorithm of `docs/algorytm.md` (one solo run per person, then the group plan) and stores a new version. The same input (trip, people, preferences, ratings, vetoes, catalog, `alpha`, preset) returns the latest version with 200 and the same `plan_hash`; an input that went back to an older state gets a new version. Any member may ask (a member's veto triggers the recompute): the input is read with a host-level view, so the result does not depend on who asks. `explain` is limited to the caller's own cards below the co-host role, because the effort of a person depends on their health limits; the ledger (`u`, `r`, domains) is visible to all. The examples show the response shape.
          *
          *     Wymagane uprawnienie: `planning.plans:WRITE`.
          */
@@ -1943,14 +2042,45 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Latest plan of the trip (STUB)
-         * @description STUB: until backend#50 the content is a fixed sample (section 7 of `docs/algorytm.md`); the shape is final. The variant is chosen from the trip: `sha256(str(trip_id).encode())[0] % 3` (first byte of the digest) gives `group`, `solo` or `approval` (`needs_approval` with `kappa`), so one trip always returns the same plan and `plan_hash`. `group` and `approval` include an unverified price and a free stop; `solo` (two days) has neither; all variants have a stop without an hours source and transfers with and without a cost.
-         *
-         *     Returns 404 `No plan yet` when the trip has no plan (the empty state of the plan view); the stub always has one and never returns it.
+         * Latest plan of the trip
+         * @description Returns 404 `No plan yet` when the trip has no plan (the empty state of the plan view).
          *
          *     Wymagane uprawnienie: `planning.plans:READ`.
          */
         get: operations["get_latest_plan_api_v1_trips__trip_id__plans_latest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One stored plan version
+         * @description One stored version.
+         *
+         *     Args:
+         *         session: Database session.
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         plan_id: Version id.
+         *
+         *     Returns:
+         *         The version.
+         *
+         *     Raises:
+         *         HTTPException: 404 when the trip has no such version.
+         *
+         *     Wymagane uprawnienie: `planning.plans:READ`.
+         */
+        get: operations["get_plan_api_v1_trips__trip_id__plans__plan_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2620,6 +2750,12 @@ export interface components {
          */
         BudgetZone: "below_b_from" | "up_to_b_to" | "in_margin";
         /**
+         * CardKind
+         * @description UI card the web client renders for a question (the cards of plan.md).
+         * @enum {string}
+         */
+        CardKind: "family_builder" | "slider" | "requirement_toggles" | "swipe" | "dot_pool" | "budget_range" | "choice" | "confirm";
+        /**
          * CheckinRead
          * @description One check-in as the trip's members see it.
          */
@@ -2726,7 +2862,7 @@ export interface components {
          * @description Why a conflict is reported; the UI writes the text (PL/EN).
          * @enum {string}
          */
-        ConflictCode: "lodging_hard_requirement" | "veto_blocks_place" | "budget_limit" | "floor_unreachable" | "other";
+        ConflictCode: "lodging_hard_requirement" | "veto_blocks_place" | "budget_limit" | "floor_unreachable" | "unknown_price" | "other";
         /**
          * Constraints
          * @description Health and access limits.
@@ -3306,6 +3442,19 @@ export interface components {
              */
             message_count: number;
             messages: components["schemas"]["Page_DisplayMessage_"];
+        };
+        /**
+         * InterviewState
+         * @description The AG-UI shared state, sent as ``STATE_SNAPSHOT`` after the tools.
+         *
+         *     Built by the server on every turn. The ``state`` of a client request is
+         *     ignored.
+         */
+        InterviewState: {
+            /** @description The "What we already know" panel. */
+            knowledge?: components["schemas"]["KnowledgeRead"] | null;
+            /** @description The card to render. */
+            card?: components["schemas"]["ShownCard"] | null;
         };
         /**
          * InvitationAccept
@@ -4318,7 +4467,8 @@ export interface components {
              * @description Days with a place of their own (m >= 0.6).
              */
             own_place_days: number;
-            weakest_domain: components["schemas"]["PlanDomainCode"];
+            /** @description The applicable domain with the lowest q; null if none applies. */
+            weakest_domain: components["schemas"]["PlanDomainCode"] | null;
         };
         /**
          * PersonUtility
@@ -4599,14 +4749,20 @@ export interface components {
             b_from: string;
             /**
              * B To
-             * @description B_do.
+             * @description B_do; null for a trip without a budget.
              */
-            b_to: string;
+            b_to: string | null;
             /**
              * B Max
-             * @description B_max (hard).
+             * @description B_max (hard); null for a trip without a budget.
              */
-            b_max: string;
+            b_max: string | null;
+            /**
+             * Unlimited
+             * @description The trip has no budget: nothing limits the cost, q_cost is n/a.
+             * @default false
+             */
+            unlimited: boolean;
             zone: components["schemas"]["BudgetZone"];
             /**
              * Over Budget
@@ -4665,11 +4821,13 @@ export interface components {
         PlanCreate: {
             /**
              * Alpha
-             * @description Fairness slider: 0 utility, 1 Nash, 3 near-egalitarian.
-             * @default 1
+             * @description Fairness slider: 0 utility, 1 Nash, 3 near-egalitarian. Omitted: the trip's own `fairness_alpha`.
              */
-            alpha: number;
-            /** @default default */
+            alpha?: number | null;
+            /**
+             * @description Recorded with the plan and part of its input hash, but it has no effect on the computation yet: the weights come from the profiles (`PUT /trips/{id}/profiles/weights`).
+             * @default default
+             */
             weight_preset: components["schemas"]["WeightPreset"];
         };
         /**
@@ -4791,9 +4949,13 @@ export interface components {
         };
         /**
          * PlanRead
-         * @description A plan with the fairness measure, ledger, verdicts and budget.
+         * @description A stored plan version with the fairness measure, ledger and budget.
          *
-         *     STUB: until backend#50 the content is a fixed sample; the shape is final.
+         *     The content is a copy made when the plan was computed. ``verdicts`` stay
+         *     null until backend#51 fills them; ``lodging`` is null until a lodging base
+         *     can be chosen (backend#70), and then the lodging domain of every person is
+         *     "not applicable". ``budget.needs_approval`` is set by backend#53; places
+         *     without a price are reported as ``unknown_price`` conflicts.
          */
         PlanRead: {
             /**
@@ -4924,7 +5086,7 @@ export interface components {
         PlanTelemetry: {
             /**
              * Solver
-             * @description Solver name; 'stub' while the response is fixed.
+             * @description Solver name and version.
              */
             solver: string;
             /** Steps */
@@ -5215,6 +5377,12 @@ export interface components {
         ProviderManagedError: {
             detail: components["schemas"]["ProviderManagedDetail"];
         };
+        /**
+         * QuestionField
+         * @description What a question is about; finer than ``KnowledgeField``.
+         * @enum {string}
+         */
+        QuestionField: "destination" | "dates" | "people" | "budget" | "pace" | "importance" | "requirements" | "interests" | "diet";
         /**
          * RatingRead
          * @description A stored rating.
@@ -5597,6 +5765,23 @@ export interface components {
              * @description Empty for `equal`, percent for `percent` (all must sum to exactly 100), weight for `weights`.
              */
             value?: number | string | null;
+        };
+        /**
+         * ShownCard
+         * @description The card the assistant put on screen (``show_card`` of the AG-UI state).
+         *
+         *     The host's answer is not a tool result: the client sends it as the text of
+         *     the next user message (a JSON object is fine; the assistant reads it).
+         */
+        ShownCard: {
+            kind: components["schemas"]["CardKind"];
+            /** Question */
+            question: string;
+            field?: components["schemas"]["QuestionField"] | null;
+            /** Person Id */
+            person_id?: string | null;
+            /** Options */
+            options?: string[];
         };
         /**
          * SortDir
@@ -6026,6 +6211,33 @@ export interface components {
             revoked_at: string | null;
             /** Revoked By Sub */
             revoked_by_sub: string | null;
+        };
+        /**
+         * VoiceAnswer
+         * @description The provider's answer; the server's sideband is already attached.
+         */
+        VoiceAnswer: {
+            /**
+             * Sdp
+             * @description SDP answer: set it as the remote description.
+             */
+            sdp: string;
+            /**
+             * Call Id
+             * @description Use it to hang up.
+             */
+            call_id: string;
+        };
+        /**
+         * VoiceOffer
+         * @description The browser's WebRTC offer.
+         */
+        VoiceOffer: {
+            /**
+             * Sdp
+             * @description SDP offer.
+             */
+            sdp: string;
         };
         /**
          * VoteLinkCreate
@@ -9489,6 +9701,184 @@ export interface operations {
             };
         };
     };
+    run_turn_api_v1_trips__trip_id__interview_agui_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description AG-UI 1.0 events (SSE) of one turn. The schema is the `snapshot` of `STATE_SNAPSHOT`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["InterviewState"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `interview:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such session on this trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A turn is running, or the history is unreadable. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a RunAgentInput, bad threadId, or no user text. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    voice_offer_api_v1_trips__trip_id__interview_voice_offer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceOffer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceAnswer"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `interview:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A call or a text turn is running. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Voice time used up. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The voice service refused, or the assistant did not join. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    voice_hangup_api_v1_trips__trip_id__interview_voice__call_id__hangup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `interview:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such call on this trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     start_plan_job_api_v1_planning_jobs_post: {
         parameters: {
             query?: never;
@@ -9623,7 +10013,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Brak uprawnienia `planning.plans:WRITE` */
+            /** @description Missing the `planning.plans:WRITE` permission. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -9637,14 +10027,12 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Validation Error */
+            /** @description The trip lacks dates, a city or people. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
+                content?: never;
             };
         };
     };
@@ -9683,6 +10071,59 @@ export interface operations {
                 content?: never;
             };
             /** @description No plan yet, trip not found or caller not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_plan_api_v1_trips__trip_id__plans__plan_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan, trip not found or caller not on it. */
             404: {
                 headers: {
                     [name: string]: unknown;

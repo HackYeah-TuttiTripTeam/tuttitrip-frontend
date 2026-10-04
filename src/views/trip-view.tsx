@@ -1,5 +1,6 @@
 import { CloudOff, KeyRound, SearchX, TriangleAlert } from '@keyline-icons/react'
 import { getRouteApi, Link } from '@tanstack/react-router'
+import { lazy, Suspense } from 'react'
 import { StatusMessage } from '@/components/shared/status-message'
 import { TripHeader, TripHeaderSkeleton } from '@/components/trips/trip-header'
 import { TripTabs } from '@/components/trips/trip-tabs'
@@ -19,6 +20,11 @@ import { TripPlanView } from './trip-view.plan'
 import { TripSettings } from './trip-view.settings'
 
 const route = getRouteApi('/trips_/$tripId')
+
+// The interview brings the AG-UI client (about 280 KB), so it loads as a chunk of its own.
+const TripInterviewView = lazy(() =>
+  import('./trip-view.interview').then((module) => ({ default: module.TripInterviewView })),
+)
 
 export function TripView() {
   const { tripId } = route.useParams()
@@ -139,6 +145,18 @@ export function TripView() {
       <TripTabs
         tab={tab}
         onTabChange={setTab}
+        interview={
+          <Suspense fallback={<Skeleton aria-hidden="true" className="h-40 w-full" />}>
+            <TripInterviewView
+              key={trip.id}
+              tripId={trip.id}
+              canManage={trip.my_role !== 'member'}
+              onOpenPerson={(id) =>
+                void navigate({ search: (prev) => ({ ...prev, tab: 'people', person: id }) })
+              }
+            />
+          </Suspense>
+        }
         people={
           <TripPeopleView
             key={trip.id}

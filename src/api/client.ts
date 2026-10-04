@@ -29,6 +29,18 @@ export function canCallProtectedApi(): boolean {
   return getAccessToken !== null || getDemoToken() !== undefined
 }
 
+/**
+ * A fresh Bearer token for requests that bypass openapi-fetch (the AG-UI stream): the demo session
+ * first, then Auth0. Throws when Auth0 cannot refresh the token (expired session), so the caller
+ * can ask the user to sign in again instead of sending a request that is sure to fail.
+ */
+export async function currentAccessToken(): Promise<string | undefined> {
+  if (!getDemoToken() && getDemoInvitation()) await renewDemoSession()
+  const demoToken = getDemoToken()
+  if (demoToken) return demoToken
+  return getAccessToken ? getAccessToken() : undefined
+}
+
 const authMiddleware: Middleware = {
   async onRequest({ request }) {
     // The demo session (lib/demo-session.ts) is the second token source next to Auth0's.

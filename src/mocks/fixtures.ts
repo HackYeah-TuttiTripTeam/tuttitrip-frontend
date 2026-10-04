@@ -396,6 +396,7 @@ const days = (): PlanDay[] => [
 ]
 
 const withinBudget = (): PlanBudget => ({
+  unlimited: false,
   currency: 'PLN',
   cost: '1480.00',
   b_from: '1200.00',
