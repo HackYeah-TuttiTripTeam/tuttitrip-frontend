@@ -8,7 +8,7 @@
 //                 (200 index.html), so it becomes a 404 (assetsOr404). Nothing is injected here;
 //   /manifest.webmanifest
 //                 the build's manifest in the language of the request (manifest);
-//   /, /about, /contact (and the trailing-slash forms), /robots.txt, /sitemap.xml
+//   /, /about, /contact, /prywatnosc (and the trailing-slash forms), /robots.txt, /sitemap.xml
 //                 the public pages with their own metadata and first screen (publicPage).
 // Every other path is served by the assets layer without this script.
 

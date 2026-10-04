@@ -18,10 +18,11 @@ describe('shellFor', () => {
     expect(shellFor('/', 'authenticated', false)).toBe('bare')
   })
 
-  it('uses the public layout for /about and /contact in every state', () => {
+  it('uses the public layout for /about, /contact and /prywatnosc in every state', () => {
     for (const status of ['loading', 'anonymous', 'authenticated', 'disabled'] as const) {
       expect(shellFor('/about', status)).toBe('public')
       expect(shellFor('/contact/', status)).toBe('public')
+      expect(shellFor('/prywatnosc', status)).toBe('public')
     }
   })
 
