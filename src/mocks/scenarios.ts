@@ -1,8 +1,8 @@
 import type { Schemas } from '@/api/client'
 import {
-  type CatalogPlace,
   type AdminUser,
   adminUsers,
+  type CatalogPlace,
   type City,
   catalogPlaces,
   cities,
