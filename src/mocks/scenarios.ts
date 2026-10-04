@@ -1,4 +1,5 @@
 import type { Schemas } from '@/api/client'
+import type { VotePlace } from '@/api/vote-contract'
 import {
   type CatalogPlace,
   type City,
@@ -14,6 +15,7 @@ import {
   me,
   needsApprovalBudget,
   outing,
+  type PlaceVoteSummary,
   type Plan,
   PROFILE_IDS,
   type Preferences,
@@ -21,6 +23,10 @@ import {
   plan,
   type Trip,
   trip,
+  type VoteLink,
+  voteLink,
+  votePlaces,
+  voteSummary,
 } from './fixtures'
 import { adminMe, createPermissionsWorld, type PermissionsWorld } from './permissions'
 
@@ -45,6 +51,9 @@ export const scenarioNames = [
   'join-named-taken',
   'admin',
   'admin-readonly',
+  'vote-with-link',
+  'vote-dead',
+  'vote-write-error',
 ] as const
 
 export type ScenarioName = (typeof scenarioNames)[number]
@@ -90,6 +99,19 @@ export interface World {
   plan: Plan | null
   /** Invitations of the main trip, newest first (the host's list). */
   invitations: Invitation[]
+  /** Voting links of the main trip, newest first (the host's panel; never holds a token). */
+  voteLinks: VoteLink[]
+  /** The group's answers per place (`GET /vote-summary`). */
+  voteSummary: PlaceVoteSummary[]
+  /** The voting page of a person without an account (`/vote/*`, the contract of backend#81). */
+  vote: {
+    /** "dead": expired or revoked, which the API answers with 401. */
+    link: 'ok' | 'dead'
+    profileName: string
+    places: VotePlace[]
+    /** Every write answers 500. */
+    writeFails: boolean
+  }
   /** Whether POST /auth/demo accepts the invitation token (false: switched off, answers 404). */
   demoEnabled: boolean
   /** POST /auth/demo answers 429: too many attempts from this address. */
@@ -147,6 +169,9 @@ export function createWorld(name: ScenarioName): World {
     preferencesSaveFails: false,
     plan: plan(main.id),
     invitations: [invitation()],
+    voteLinks: [],
+    voteSummary: voteSummary(),
+    vote: { link: 'ok', profileName: 'Zosia', places: votePlaces(), writeFails: false },
     demoEnabled: true,
     demoRateLimited: false,
     join: {
@@ -212,6 +237,12 @@ export function createWorld(name: ScenarioName): World {
           namedFor: PROFILE_IDS.zosia,
         },
       }
+    case 'vote-with-link':
+      return { ...base, voteLinks: [voteLink({ last_used_at: '2026-10-02T12:00:00Z' })] }
+    case 'vote-dead':
+      return { ...base, vote: { ...base.vote, link: 'dead' } }
+    case 'vote-write-error':
+      return { ...base, vote: { ...base.vote, writeFails: true } }
     case 'join-named':
       return {
         ...base,
