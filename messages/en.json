@@ -1044,6 +1044,7 @@
   "help_settlement_body": "From the recorded receipts we work out who pays whom how much, with as few transfers as possible.",
   "trip_tab_members": "Members",
   "trip_status_pending": "Waiting for your confirmation",
+  "trip_sample_badge": "Sample",
   "members_list_label": "Trip members",
   "members_you": "(you)",
   "members_status_confirmed": "Participation confirmed",

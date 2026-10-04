@@ -52,6 +52,7 @@ import { answer, type ProposalState, sentProposal, staleProposal } from './propo
 export const scenarioNames = [
   'family-warsaw',
   'many-trips',
+  'sample-trip',
   'needs-approval',
   'no-plan',
   'others-share-location',
@@ -314,6 +315,11 @@ export function createWorld(name: ScenarioName): World {
       return base
     case 'many-trips':
       return { ...base, trips: manyTrips(45) }
+    case 'sample-trip':
+      return {
+        ...base,
+        trips: [trip({ name: 'Przykład: Warszawa z rodziną', is_sample: true }), outing()],
+      }
     case 'needs-approval':
       return { ...base, plan: plan(main.id, { budget: needsApprovalBudget() }) }
     case 'no-plan':
