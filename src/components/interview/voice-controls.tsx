@@ -169,15 +169,16 @@ export function VoiceControls({
                 {held ? m.voice_ptt_held() : m.voice_ptt_button()}
               </Button>
               {held ? (
-                <div
-                  role="meter"
-                  aria-label={m.voice_ptt_level()}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Math.round(level * 100)}
-                  className="h-2 w-full overflow-hidden rounded-full bg-muted"
-                >
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <meter
+                    className="sr-only"
+                    aria-label={m.voice_ptt_level()}
+                    min={0}
+                    max={100}
+                    value={Math.round(level * 100)}
+                  />
                   <div
+                    aria-hidden="true"
                     className="h-full rounded-full bg-primary motion-safe:transition-[width] motion-safe:duration-75"
                     style={{ width: `${Math.round(level * 100)}%` }}
                   />

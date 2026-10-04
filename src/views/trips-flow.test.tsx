@@ -26,6 +26,19 @@ describe('trips flow', () => {
     expect(await within(plan).findByText('Zamek Królewski')).toBeTruthy()
   })
 
+  it('labels the sample trip in the list and on its page, and no other trip', async () => {
+    useScenario('sample-trip')
+    const user = userEvent.setup()
+    renderApp('/trips')
+
+    const sample = await screen.findByRole('link', { name: /Przykład: Warszawa z rodziną/ })
+    expect(screen.getAllByText(m.trip_sample_badge())).toHaveLength(1)
+
+    await user.click(sample)
+    await screen.findByRole('tab', { name: m.trip_tab_interview() })
+    expect(screen.getAllByText(m.trip_sample_badge())).toHaveLength(1)
+  })
+
   it('builds the first plan with "Policz plan" and shows it without a reload', async () => {
     useScenario('no-plan')
     const user = userEvent.setup()

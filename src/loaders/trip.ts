@@ -3,7 +3,8 @@ import { canCallProtectedApi } from '@/api/client'
 import { tripQueryOptions } from '@/api/queries/trips'
 import type { VoteSummarySort } from '@/api/queries/vote-links'
 import { VOICE_START_FLAG } from '@/lib/constants'
-import { PAGE_SIZES } from '@/lib/pagination'
+import { DECISION_KINDS } from '@/lib/decisions'
+import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from '@/lib/pagination'
 import { ANSWER_FILTERS, ANSWER_SORTS } from '@/lib/proposals'
 import { TRIP_TABS, type TripTab } from '@/lib/trip-tabs'
 import { VOTE_SOURCES, VOTE_SUMMARY_SORTS } from '@/lib/vote-constants'
@@ -19,6 +20,13 @@ import type { RouterContext } from './router-context'
 export const CHECKIN_SORT_KEYS = ['accommodation', 'room', 'updated_at'] as const
 export const PHOTO_SORT_KEYS = ['created_at', 'size_bytes'] as const
 export const PHOTO_OWNERS = ['all', 'mine', 'others'] as const
+/** Every param of the decision log set to "absent", for a tab switch: the next tab's URL stays clean. */
+export const decisionLogReset = {
+  dl_page: undefined,
+  dl_size: undefined,
+  dl_dir: undefined,
+  dl_kind: undefined,
+}
 export const PLAN_VIEWS = ['list', 'map'] as const
 export const SORT_DIRS = ['asc', 'desc'] as const
 
@@ -38,6 +46,9 @@ export const tripSearchDefaults = {
   ph_sort: 'created_at',
   ph_dir: 'desc',
   ph_owner: 'all',
+  dl_page: 1,
+  dl_size: DEFAULT_PAGE_SIZE,
+  dl_dir: 'desc',
 } as const satisfies {
   tab: TripTab
   vpage: number
@@ -51,6 +62,9 @@ export const tripSearchDefaults = {
   ph_sort: (typeof PHOTO_SORT_KEYS)[number]
   ph_dir: (typeof SORT_DIRS)[number]
   ph_owner: (typeof PHOTO_OWNERS)[number]
+  dl_page: number
+  dl_size: (typeof PAGE_SIZES)[number]
+  dl_dir: (typeof SORT_DIRS)[number]
   section: ExpenseSection
 }
 
@@ -66,6 +80,21 @@ export const tripSearchSchema = z.object({
   tab: z.enum(TRIP_TABS).default(tripSearchDefaults.tab).catch(tripSearchDefaults.tab),
   /** The open person of the Osoby tab (a profile id); a bad value shows the list. */
   person: z.uuid().optional().catch(undefined),
+  /** The checked offer of the Noclegi tab, so a reload shows the same result. */
+  offer: z.uuid().optional().catch(undefined),
+  /** The decision log of the Plan tab: page, size, order and a filter by kind. */
+  dl_page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(tripSearchDefaults.dl_page)
+    .catch(tripSearchDefaults.dl_page),
+  dl_size: z
+    .literal(PAGE_SIZES)
+    .default(tripSearchDefaults.dl_size)
+    .catch(tripSearchDefaults.dl_size),
+  dl_dir: z.enum(SORT_DIRS).default(tripSearchDefaults.dl_dir).catch(tripSearchDefaults.dl_dir),
+  dl_kind: z.enum(DECISION_KINDS).optional().catch(undefined),
   /** The vote summary of the Osoby tab: page, sort, source filter and "only with a veto". */
   vpage: z.number().int().min(1).default(tripSearchDefaults.vpage).catch(tripSearchDefaults.vpage),
   vsort: z
