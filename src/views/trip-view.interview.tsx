@@ -8,7 +8,7 @@ import { InterviewCard } from '@/components/interview/interview-card'
 import { KnowledgePanel } from '@/components/interview/knowledge-panel'
 import { LiveCaptions } from '@/components/interview/live-captions'
 import { ResumeHeader } from '@/components/interview/resume-header'
-import { VoiceButton } from '@/components/interview/voice-button'
+import { VoiceControls } from '@/components/interview/voice-controls'
 import { EditPersonForm } from '@/components/profiles/person-form'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
 import { StatusMessage } from '@/components/shared/status-message'
@@ -131,6 +131,7 @@ function InterviewWorkspace({
     tripId,
     startSession: history.startSession,
     onEnded: () => void refreshKnowledge.current(),
+    onToolFinished: () => void refreshKnowledge.current(),
   })
   // While the call runs the panel asks the API, because the tools save data without a snapshot.
   const knowledge = useKnowledge(
@@ -146,6 +147,12 @@ function InterviewWorkspace({
     onKnowledge: knowledge.applySnapshot,
     onRunEnd: knowledge.refresh,
   })
+  const busyText = interview.error === 'busy'
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshBusy is stable per trip
+  useEffect(() => {
+    if (busyText) void voice.refreshBusy()
+  }, [busyText])
+
   // The plan is built from what the trip holds, so it waits until the assistant (or the call) has
   // finished writing: a half-saved answer would be missing from it.
   const build = useBuildPlanNow({
@@ -298,14 +305,39 @@ function InterviewWorkspace({
               </Button>
             </div>
           )}
-          <VoiceButton
+          <VoiceControls
             status={voice.status}
-            speaking={voice.speaking}
+            activity={voice.activity}
+            toolName={voice.toolName}
+            saved={voice.saved && { name: voice.saved.name, ok: voice.saved.status === 'done' }}
+            mode={voice.mode}
+            held={voice.held}
+            micMuted={voice.micMuted}
+            canOverride={voice.canOverride}
             disabled={interview.running}
             onStart={() => void voice.start()}
             onStop={() => void voice.stop()}
+            onModeChange={voice.setMode}
+            onPressStart={voice.pressStart}
+            onPressEnd={voice.pressEnd}
+            onSpeakAnyway={voice.speakAnyway}
           />
-          {voice.problem && (
+          {voice.elsewhere && (
+            <div
+              role="alert"
+              className="flex flex-col items-start gap-3 rounded-lg border border-destructive/40 p-4 text-sm"
+            >
+              <p>
+                {voice.elsewhere === 'voice' ? m.voice_elsewhere_voice() : m.voice_elsewhere_text()}
+              </p>
+              {voice.elsewhere === 'voice' && (
+                <Button className="h-11" onClick={() => void voice.takeOver()}>
+                  {m.voice_elsewhere_end()}
+                </Button>
+              )}
+            </div>
+          )}
+          {voice.problem && !(voice.problem === 'busy' && voice.elsewhere) && (
             <div
               role="alert"
               className="flex flex-col items-start gap-3 rounded-lg border border-destructive/40 p-4 text-sm"

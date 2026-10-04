@@ -92,6 +92,7 @@ export const scenarioNames = [
   'vote-write-error',
   'interview-empty',
   'interview-resumed',
+  'interview-voice-elsewhere',
   'interview-resumed-partial',
   'interview-city-only',
   'proposal-none',
@@ -446,6 +447,13 @@ export function createWorld(name: ScenarioName): World {
         trips: [fresh, outing()],
         profiles: familyProfiles().slice(0, 1),
         preferences: [],
+      }
+    }
+    case 'interview-voice-elsewhere': {
+      const messages = resumedMessages(6)
+      return {
+        ...base,
+        interview: { ...emptyInterviewWorld(), started: true, messages, running: 'voice' },
       }
     }
     case 'interview-resumed': {

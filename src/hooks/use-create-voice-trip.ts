@@ -16,7 +16,7 @@ export function useCreateVoiceTrip(onCreated: () => void) {
   const submit = async (name: string) => {
     setSubmitError(null)
     try {
-      const trip = await create.mutateAsync({ body: { name } })
+      const trip = await create.mutateAsync({ body: { name, propose_cheaper_alternatives: null } })
       onCreated()
       await navigate({
         to: '/trips/$tripId',
