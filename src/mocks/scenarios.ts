@@ -43,6 +43,7 @@ import {
 } from './fixtures'
 import { emptyInterviewWorld, emptyTrip, type InterviewWorld, resumedMessages } from './interview'
 import { adminMe, createPermissionsWorld, type PermissionsWorld } from './permissions'
+import { answer, type ProposalState, sentProposal, staleProposal } from './proposals'
 
 export const scenarioNames = [
   'family-warsaw',
@@ -79,6 +80,15 @@ export const scenarioNames = [
   'vote-write-error',
   'interview-empty',
   'interview-resumed',
+  'interview-resumed-partial',
+  'interview-city-only',
+  'proposal-none',
+  'proposal-sent',
+  'proposal-approved',
+  'proposal-outdated',
+  'proposal-many-answers',
+  'proposal-member',
+  'proposal-draft',
   'city-search-geocoder-down',
   'city-search-error',
 ] as const
@@ -159,6 +169,8 @@ export interface World {
     /** Every write answers 500. */
     writeFails: boolean
   }
+  /** The proposal last sent for the main trip; null until the host sends one. */
+  proposal: ProposalState | null
   /** The interview of the main trip: session, scripted assistant, knowledge sources. */
   interview: InterviewWorld
   /** Whether POST /auth/demo accepts the invitation token (false: switched off, answers 404). */
@@ -247,6 +259,7 @@ export function createWorld(name: ScenarioName): World {
     voteLinks: [],
     voteSummary: voteSummary(),
     vote: { link: 'ok', profileName: 'Zosia', places: votePlaces(), writeFails: false },
+    proposal: null,
     interview: emptyInterviewWorld(),
     demoEnabled: true,
     demoRateLimited: false,
@@ -376,6 +389,81 @@ export function createWorld(name: ScenarioName): World {
       const messages = resumedMessages(40)
       return { ...base, interview: { ...emptyInterviewWorld(), started: true, messages } }
     }
+    case 'interview-resumed-partial': {
+      // Back to a talk where the city, the dates and two people are settled and the budget is not.
+      const partial = trip({
+        budget_total_min: null,
+        budget_total_max: null,
+        budget_day_min: null,
+        budget_day_max: null,
+      })
+      const messages = resumedMessages(6)
+      return {
+        ...base,
+        trips: [partial, outing()],
+        profiles: familyProfiles().slice(0, 3),
+        interview: { ...emptyInterviewWorld(), started: true, messages },
+      }
+    }
+    case 'interview-city-only': {
+      // Only the city is known: "Build plan now" works and lists what it had to assume.
+      const cityOnly = emptyTrip()
+      cityOnly.city_slug = 'warszawa'
+      cityOnly.destination = 'Warszawa'
+      return {
+        ...base,
+        trips: [cityOnly, outing()],
+        profiles: familyProfiles().slice(0, 1),
+        preferences: [],
+        plan: null,
+      }
+    }
+    case 'proposal-none':
+      return base
+    case 'proposal-sent':
+      return { ...base, proposal: sentProposal(base, [answer('Marek', 'approve', '10:00')]) }
+    case 'proposal-approved':
+      return {
+        ...base,
+        proposal: sentProposal(base, [
+          answer('Marek', 'approve', '10:00'),
+          answer('Babcia Halina', 'approve', '10:30'),
+          answer('Ola', 'approve', '11:00', null, true),
+        ]),
+      }
+    case 'proposal-outdated':
+      return { ...base, proposal: staleProposal(base) }
+    case 'proposal-many-answers':
+      return {
+        ...base,
+        proposal: sentProposal(
+          base,
+          Array.from({ length: 25 }, (_, index) =>
+            answer(
+              `Osoba ${String(index + 1).padStart(2, '0')}`,
+              index % 5 === 0 ? 'reject' : index % 3 === 0 ? 'comment' : 'approve',
+              `${String(8 + (index % 12)).padStart(2, '0')}:00`,
+              index % 3 === 0 ? `Uwaga numer ${index + 1}` : null,
+            ),
+          ),
+        ),
+      }
+    case 'proposal-member': {
+      const member = {
+        ...base,
+        trips: [trip({ my_role: 'member' }), outing({ my_role: 'member' })],
+        members: familyMembers('member'),
+      }
+      return {
+        ...member,
+        proposal: sentProposal(member, [answer('Marek', 'reject', '10:00', 'Za dużo chodzenia')]),
+      }
+    }
+    case 'proposal-draft':
+      return {
+        ...base,
+        plan: plan(main.id, { params: { alpha: 1, weight_preset: 'default', draft: true } }),
+      }
     case 'join-named':
       return {
         ...base,
