@@ -1,5 +1,6 @@
 import type { Schemas } from '@/api/client'
 import type { VotePlace } from '@/api/vote-contract'
+import type { Replan } from '@/api/queries/replan'
 import {
   type AdminUser,
   adminUsers,
@@ -27,6 +28,7 @@ import {
   type Preferences,
   type Profile,
   plan,
+  rainReplan,
   type Trip,
   trip,
   type VoteLink,
@@ -36,6 +38,16 @@ import {
 } from './fixtures'
 import { emptyInterviewWorld, emptyTrip, type InterviewWorld, resumedMessages } from './interview'
 import { adminMe, createPermissionsWorld, type PermissionsWorld } from './permissions'
+
+/** A background job as the mock API reports it: running for a few asks, then finished. */
+export interface MockJob {
+  name: string
+  /** How many more asks answer `PENDING` before the final status. */
+  pendingPolls: number
+  outcome: 'SUCCESS' | 'ERROR'
+  errorCode?: string
+  output?: Record<string, unknown>
+}
 
 export const scenarioNames = [
   'family-warsaw',
@@ -51,6 +63,9 @@ export const scenarioNames = [
   'users-admin',
   'users-admin-read-only',
   'google-account',
+  'replan-pending',
+  'new-city',
+  'new-city-fetch-error',
   'preferences-save-error',
   'server-error',
   'offline',
@@ -122,6 +137,29 @@ export interface World {
   settlementClosed: boolean
   /** Payments marked as made on the main trip; the settlement subtracts them from the transfers. */
   payments: Schemas['PaymentRead'][]
+  /** Jobs started by the mock API (receipts, pasted plans, city fetches), by workflow id. */
+  jobs: Record<string, MockJob>
+  /** What reading a receipt ends with: a draft the reader is unsure about, a sure one, or a failure. */
+  receiptOutcome: 'unsure' | 'confident' | 'failed'
+  /** Receipt uploads by evidence id, to build the draft on the first ask after the job. */
+  receipts: Record<string, { workflowId: string; draftId: string | null }>
+  /** Pasted plans by paste id: the job that reads them and the unrecognised items the host matched. */
+  pastes: Record<string, { workflowId: string; resolved: number[] }>
+  /**
+   * A destination outside the catalogue: until its places are fetched, "Policz plan" answers 409
+   * `catalog_missing`. `failFirst`: the first job fails (Overpass busy), the retry works.
+   */
+  newCity: {
+    slug: string
+    name: string
+    fetched: boolean
+    failFirst: boolean
+    /** Jobs started so far, and the one that runs now. */
+    jobs: number
+    workflowId: string | null
+  } | null
+  /** Rain replans of the main trip, newest first; the host sees those with status `pending_host`. */
+  replans: Replan[]
   /** The latest plan of the main trip; null until "Policz plan" creates one. */
   plan: Plan | null
   /** Invitations of the main trip, newest first (the host's list). */
@@ -218,6 +256,12 @@ export function createWorld(name: ScenarioName): World {
     expenses: familyExpenses(),
     settlementClosed: false,
     payments: [],
+    jobs: {},
+    receiptOutcome: 'unsure',
+    receipts: {},
+    pastes: {},
+    newCity: null,
+    replans: [],
     plan: plan(main.id),
     invitations: [invitation()],
     voteLinks: [],
@@ -254,6 +298,26 @@ export function createWorld(name: ScenarioName): World {
       return { ...base, expenses: [] }
     case 'settlement-closed':
       return { ...base, settlementClosed: true }
+    case 'replan-pending':
+      return {
+        ...base,
+        replans: base.plan ? [rainReplan(base.plan, 1, 'pending_host', 'Marek')] : [],
+      }
+    case 'new-city':
+    case 'new-city-fetch-error':
+      return {
+        ...base,
+        trips: [trip({ destination: 'Gliwice', city_slug: 'gliwice' }), outing()],
+        plan: null,
+        newCity: {
+          slug: 'gliwice',
+          name: 'Gliwice',
+          fetched: false,
+          failFirst: name === 'new-city-fetch-error',
+          jobs: 0,
+          workflowId: null,
+        },
+      }
     case 'many-expenses':
       return { ...base, expenses: manyExpenses(45) }
     case 'member-pending': {

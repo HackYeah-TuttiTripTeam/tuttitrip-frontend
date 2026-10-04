@@ -1372,5 +1372,161 @@
   "settlement_error_drafts": "Confirm or delete the expense drafts from receipts first, then close the settlement.",
   "settlement_error_state_failed": "Could not change the state of the settlement. Try again.",
   "settlement_error_payment_failed": "Could not save the payment. Try again.",
-  "settlement_state_description": "Change the state of the trip's settlement."
+  "settlement_state_description": "Change the state of the trip's settlement.",
+  "receipt_add": "Receipt photo",
+  "receipt_title": "Receipt",
+  "receipt_description": "A photo of a receipt turned into an entry to confirm.",
+  "receipt_preparing": "Shrinking the photo…",
+  "receipt_uploading": "Sending the photo…",
+  "receipt_reading": "Reading the receipt…",
+  "receipt_failed_title": "Could not add the receipt",
+  "receipt_failure_offline": "No connection. The photo is waiting on this phone, send it again when the network is back.",
+  "receipt_failure_unreadable": "We could not read that photo. Take a new one or enter the expense by hand.",
+  "receipt_failure_too_large": "The photo is too large even after shrinking. Take a new one from closer or enter the expense by hand.",
+  "receipt_failure_type": "Choose a JPEG, PNG or WebP photo.",
+  "receipt_failure_too_many": "Too many unconfirmed receipts are waiting on this trip. Confirm or delete the drafts in the expense list.",
+  "receipt_failure_unavailable": "Reading receipts is not available right now. Try again in a moment or enter the expense by hand.",
+  "receipt_failure_forbidden": "You may not add expenses on this trip.",
+  "receipt_failure_unknown": "Something went wrong. Try again or enter the expense by hand.",
+  "receipt_enter_manually": "Enter by hand",
+  "receipt_card_title": "Confirm the receipt",
+  "receipt_unsure_title": "We are not sure about the reading",
+  "receipt_unsure_body": "Check the marked fields and correct them before you confirm. The expense counts in the settlement only after you confirm.",
+  "receipt_sure_title": "Receipt read",
+  "receipt_sure_body": "Check the details and confirm. The expense counts in the settlement only after you confirm.",
+  "receipt_check_field": "Check",
+  "receipt_confirm": "Confirm the expense",
+  "receipt_image_alt": "Photo of the receipt",
+  "expense_draft_badge": "Draft from a receipt, waiting for confirmation",
+  "expense_draft_confirm_label": "Confirm the draft: {title}",
+  "plan_views_label": "Plan view",
+  "plan_view_plan": "Plan",
+  "plan_view_check": "Plan check",
+  "lint_paste_open": "Paste a chatbot plan",
+  "lint_paste_again": "Paste another plan",
+  "lint_paste_title": "Plan from a chatbot",
+  "lint_paste_description": "Paste a plan from another tool and we check it with the TuttiTrip rules.",
+  "lint_paste_label": "Plan text",
+  "lint_paste_placeholder": "Day 1: 9:00 Royal Castle, 12:30 lunch…",
+  "lint_paste_count": "{count} of {max} characters",
+  "lint_paste_too_long": "The text is too long. Shorten it to {max} characters or paste the plan day by day.",
+  "lint_paste_submit": "Check the plan",
+  "lint_paste_sending": "Sending…",
+  "lint_empty_title": "Check a chatbot plan",
+  "lint_empty_body": "Paste a plan from another tool. We count the rules it breaks and compare it with the TuttiTrip plan. Code counts, not a model.",
+  "lint_reading": "Reading the pasted plan…",
+  "lint_gone_title": "That report is gone",
+  "lint_gone_body": "The report expired or belongs to another trip. Paste the plan again.",
+  "lint_failed_title": "Could not check the plan",
+  "lint_failed_body": "We could not read that text. Paste the plan again, ideally day by day.",
+  "lint_load_failed_body": "Could not load the report. Try again.",
+  "lint_compare_title": "Plan comparison",
+  "lint_compare_pasted": "Chatbot plan",
+  "lint_compare_ours": "TuttiTrip plan",
+  "lint_compare_no_plan": "This trip has no TuttiTrip plan yet.",
+  "lint_state_clean": "No violations",
+  "lint_state_violations": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} violation",
+        "countPlural=*": "{count} violations"
+      }
+    }
+  ],
+  "lint_rules_title": "Rules",
+  "lint_rule_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} violation",
+        "countPlural=*": "{count} violations"
+      }
+    }
+  ],
+  "lint_warning": "Warning",
+  "lint_rule_closed_day": "Place open on the day of the visit",
+  "lint_rule_opening_hours": "Opening hours",
+  "lint_rule_transfer": "Travel time",
+  "lint_rule_budget": "Budget",
+  "lint_rule_unknown_place": "Recognised places",
+  "lint_rule_distance": "Distance per day",
+  "lint_rule_pace": "Pace of the day",
+  "lint_rule_rest_window": "Rest and lunch",
+  "lint_rule_accessibility": "Accessibility",
+  "lint_rule_accommodation_requirements": "Lodging requirements",
+  "lint_unrecognized_title": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} item not recognised",
+        "countPlural=*": "{count} items not recognised"
+      }
+    }
+  ],
+  "lint_unrecognized_body": "Choose the place the chatbot meant. The counter and the rule list are recounted at once.",
+  "lint_unrecognized_body_member": "The host or a co-host chooses the matching place.",
+  "lint_unrecognized_none": "We found no matching places in the catalogue.",
+  "lint_unrecognized_pick": "This one",
+  "lint_unrecognized_pick_label": "Choose {place} for the item {item}",
+  "lint_choose_failed": "Could not save the choice. Try again.",
+  "lint_failure_offline": "No connection. The text is still in the field, send it again when the network is back.",
+  "lint_failure_too_long": "The text is too long or empty.",
+  "lint_failure_unavailable": "Reading plans is not available right now. The text is saved, try again in a moment.",
+  "lint_failure_forbidden": "You may not check plans on this trip.",
+  "lint_failure_unknown": "Something went wrong. Try again.",
+  "places_city_unknown": "this city",
+  "places_fetching_title": "Fetching places for {city}",
+  "places_fetching_body": "We are looking for museums, parks and restaurants in OpenStreetMap. It takes from a few to a few dozen seconds, and the plan is computed on its own.",
+  "places_ready_body": "The places are in the catalogue. Computing the plan…",
+  "places_found": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Found {count} place",
+        "countPlural=*": "Found {count} places"
+      }
+    }
+  ],
+  "places_unverified_note": "Prices and opening hours in a new city are unverified. The plan marks it at every place.",
+  "places_failed_title": "Could not fetch places for {city}",
+  "places_failure_external": "The data comes from an external service (OpenStreetMap), which is sometimes overloaded. Try again in a few minutes.",
+  "places_failure_city_not_found": "We did not find that city in OpenStreetMap. Check the destination in the trip settings.",
+  "places_failure_no_places": "We found no places to visit in this city. Try again or pick a larger city.",
+  "places_failure_unknown": "Something went wrong while fetching places. Try again.",
+  "places_osm_attribution": "© OpenStreetMap contributors",
+  "replan_rain": "Rain",
+  "replan_title": "Rain: rest of day {day}",
+  "replan_description": "The new rest of the day with the list of changes: was and is.",
+  "replan_working": "Replanning the rest of the day…",
+  "replan_applied": "The change is in the plan.",
+  "replan_waiting_for_host": "This change affects other people, so it waits for the host to approve it. The plan has not changed yet.",
+  "replan_no_changes": "Nothing changed. The rest of the day stays as it was.",
+  "replan_instead_of": "instead of",
+  "replan_moved": "{from} → {to} ({minutes} min)",
+  "replan_removed": "dropped",
+  "replan_added": "added",
+  "replan_affects": "Affects: {names}",
+  "replan_failed": "Could not replan the day. Try again.",
+  "replan_failed_offline": "No connection. Replanning needs the network, try again when it is back.",
+  "replan_failed_forbidden": "You may not change the plan on this trip.",
+  "replan_pending_card": "Rain: day {day}",
+  "replan_pending_meta": "Proposed by {name}, {date}",
+  "replan_someone": "someone in the group",
+  "replan_approve": "Approve",
+  "replan_reject": "Reject",
+  "replan_pending_title": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} change waits for your decision",
+        "countPlural=*": "{count} changes wait for your decision"
+      }
+    }
+  ]
 }

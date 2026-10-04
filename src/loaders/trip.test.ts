@@ -44,4 +44,16 @@ describe('tripSearchSchema', () => {
       tripSearchSchema.parse({ section: 'x', page: 'abc', sort: 'name', size: 7 }),
     ).toMatchObject({ section: 'list', page: 1, sort: 'spent_on', size: 20 })
   })
+
+  it('reads the Plan tab view and the open pasted report, and ignores nonsense', () => {
+    const paste = '7b0a1f2e-3c4d-4e5f-8a9b-0c1d2e3f4a5b'
+    expect(tripSearchSchema.parse({ tab: 'plan', view: 'check', paste })).toMatchObject({
+      view: 'check',
+      paste,
+    })
+    expect(tripSearchSchema.parse({ view: 'x', paste: 'not-a-uuid' })).toMatchObject({
+      view: 'plan',
+      paste: undefined,
+    })
+  })
 })

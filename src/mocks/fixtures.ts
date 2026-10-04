@@ -3,6 +3,7 @@
 // Amounts are decimal strings, like in the API.
 import type { Schemas } from '@/api/client'
 import type { VotePlace } from '@/api/vote-contract'
+import type { Replan } from '@/api/queries/replan'
 import { allocate, centsToDecimal, toCents } from '@/lib/money'
 
 export type Trip = Schemas['TripRead']
@@ -768,3 +769,45 @@ export const votePlaces = (): VotePlace[] =>
     reason_code: null,
     veto_id: null,
   }))
+
+/** The rain change of one day: an outdoor stop becomes an indoor one and lunch moves back. */
+export function rainReplan(
+  plan: Plan,
+  day: number,
+  status: Replan['status'],
+  by: string | null,
+): Replan {
+  const items = plan.days.find((candidate) => candidate.index === day)?.items ?? []
+  const outdoor = items[0]
+  return {
+    id: crypto.randomUUID(),
+    plan_id: plan.id,
+    day,
+    context: 'rain',
+    status,
+    changes: [
+      {
+        kind: 'replaced',
+        name: 'Centrum Nauki Kopernik',
+        was_name: outdoor?.name ?? 'Park',
+        start: outdoor?.start ?? '10:00:00',
+        shift_minutes: 0,
+        person_ids: [],
+        person_names: ['Babcia Halina'],
+      },
+      {
+        kind: 'moved',
+        name: items[1]?.name ?? 'Obiad',
+        was_start: items[1]?.start ?? '13:00:00',
+        start: '13:30:00',
+        shift_minutes: 30,
+        person_ids: [],
+        person_names: [],
+      },
+    ],
+    items,
+    cost: 3,
+    requested_by_name: by,
+    created_at: '2026-10-12T08:00:00Z',
+  }
+}

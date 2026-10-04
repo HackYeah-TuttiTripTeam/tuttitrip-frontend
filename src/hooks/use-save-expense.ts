@@ -15,8 +15,8 @@ import { m } from '@/paraglide/messages'
 
 export type ExpenseFieldErrors = Partial<Record<ExpenseFormField, string>>
 
-/** Create (expenseId null) or edit one expense; a 422 is mapped onto the fields it names. */
-export function useSaveExpense(tripId: string, expenseId: string | null) {
+/** Create (expenseId null), edit or, for a draft read from a receipt (`confirming`), confirm one expense; a 422 is mapped onto the fields it names. */
+export function useSaveExpense(tripId: string, expenseId: string | null, confirming = false) {
   const queryClient = useQueryClient()
   const refresh = async () => {
     await Promise.all([
@@ -30,6 +30,11 @@ export function useSaveExpense(tripId: string, expenseId: string | null) {
   const update = $api.useMutation('patch', '/api/v1/trips/{trip_id}/expenses/{expense_id}', {
     onSuccess: refresh,
   })
+  const confirm = $api.useMutation(
+    'post',
+    '/api/v1/trips/{trip_id}/expenses/{expense_id}/confirm',
+    { onSuccess: refresh },
+  )
   const [fieldErrors, setFieldErrors] = useState<ExpenseFieldErrors>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -45,6 +50,12 @@ export function useSaveExpense(tripId: string, expenseId: string | null) {
       if (expenseId === null) {
         await create.mutateAsync({
           params: { path: { trip_id: tripId } },
+          body: formValuesToBody(values),
+        })
+      } else if (confirming) {
+        // The card sends every field as shown: what the person saw is what is stored.
+        await confirm.mutateAsync({
+          params: { path: { trip_id: tripId, expense_id: expenseId } },
           body: formValuesToBody(values),
         })
       } else {
@@ -66,7 +77,7 @@ export function useSaveExpense(tripId: string, expenseId: string | null) {
   return {
     submit,
     reset,
-    isPending: create.isPending || update.isPending,
+    isPending: create.isPending || update.isPending || confirm.isPending,
     fieldErrors,
     submitError,
   }

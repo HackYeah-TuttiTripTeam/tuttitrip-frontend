@@ -30,6 +30,11 @@ import {
 } from './fixtures'
 import { interviewHandlers } from './interview'
 import { permissionHandlers } from './permissions'
+import { jobHandlers } from './job-handlers'
+import { linterHandlers } from './linter-handlers'
+import { catalogMissingAnswer, placesHandlers } from './places-handlers'
+import { receiptHandlers } from './receipt-handlers'
+import { replanHandlers } from './replan-handlers'
 import { createWorld, type ScenarioName, type World } from './scenarios'
 
 const API = '*/api/v1'
@@ -833,6 +838,8 @@ function normalHandlers(
       if (!findTrip(params.tripId)) return notFound('Trip not found')
       if (!canWrite(params.tripId)) return forbidden()
       if (world.plan?.trip_id === params.tripId) return HttpResponse.json(world.plan)
+      const missing = catalogMissingAnswer(world)
+      if (missing) return missing
       const created: Plan = plan(String(params.tripId ?? TRIP_ID))
       world.plan = created
       return HttpResponse.json(created, { status: 201 })
@@ -1308,5 +1315,10 @@ function expenseHandlers(
     }),
 
     ...settlementHandlers(world, latency, findTrip),
+    ...receiptHandlers(world, latency, findTrip),
+    ...jobHandlers(world, latency),
+    ...linterHandlers(world, latency, findTrip),
+    ...placesHandlers(world, latency),
+    ...replanHandlers(world, latency, findTrip),
   ]
 }

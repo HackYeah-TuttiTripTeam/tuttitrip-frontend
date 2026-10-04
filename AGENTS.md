@@ -110,6 +110,9 @@ with `is_me`) are served from `/trips/{id}/members` and join profiles on `profil
 | `join-dead` | Preview and accept answer 404 (expired, revoked or full: one answer for all) |
 | `join-already-member` | Preview says `already_member`; accept is idempotent |
 | `join-accept-dead` | Preview 200, then accept 404 (the link died in between) |
+| `new-city` | The trip's city has no places yet: `POST plans` answers 409 `catalog_missing`, the fetch job runs for a few asks, then the plan is computed (`/places/candidates`, `/jobs/{id}`) |
+| `new-city-fetch-error` | Same, but the first fetch job fails (`rate_limited`, the external service is busy); the retry works |
+| `replan-pending` | A member's rain replan waits for the host (`/replans`, approve and reject) |
 
 - **In tests:** `src/mocks/vitest-setup.ts` starts one `setupServer` and serves
   `family-warsaw` before each test. Pick another with `useScenario('no-plan')` (from
@@ -335,6 +338,11 @@ Source, first match wins: `--url <url-or-file>`, `API_SCHEMA_URL`,
 `VITE_API_URL` + `/api/v1/openapi.json` (env or `.env.local`), then
 `http://localhost:8000/api/v1/openapi.json`. Commit the regenerated file, so a fresh
 clone builds without a backend.
+
+Endpoints of backend issues that are not merged yet are typed by hand from the contract in the
+issue in `src/api/pending-paths.ts` (added to the generated paths as `ApiPaths` in `api/client.ts`)
+and served by the MSW mocks. When the backend PR lands, run `pnpm api:sync`, delete that block and
+fix what `tsc` points at: the generated shapes win.
 
 A frontend branch talks to the backend branch of the same name. If that
 backend deployment does not exist, it falls back to the nearest higher one:

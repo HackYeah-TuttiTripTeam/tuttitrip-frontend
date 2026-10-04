@@ -3,7 +3,7 @@ import { canCallProtectedApi } from '@/api/client'
 import { tripQueryOptions } from '@/api/queries/trips'
 import type { VoteSummarySort } from '@/api/queries/vote-links'
 import { VOICE_START_FLAG } from '@/lib/constants'
-import { TRIP_TABS, type TripTab } from '@/lib/trip-tabs'
+import { PLAN_VIEWS, type PlanView, TRIP_TABS, type TripTab } from '@/lib/trip-tabs'
 import { VOTE_SOURCES, VOTE_SUMMARY_SORTS } from '@/lib/vote-constants'
 import {
   type ExpenseSection,
@@ -20,11 +20,13 @@ export const tripSearchDefaults = {
   tab: 'interview',
   vpage: 1,
   vsort: 'name',
+  view: 'plan',
 } as const satisfies {
   tab: TripTab
   vpage: number
   vsort: VoteSummarySort
   section: ExpenseSection
+  view: PlanView
 }
 
 /** /trips/$tripId?tab=&person=&vpage=&vsort=&vsource=&vveto= — a bad tab falls back to the default instead of erroring. */
@@ -44,6 +46,11 @@ export const tripSearchSchema = z.object({
   vveto: z.literal(true).optional().catch(undefined),
   /** The Wydatki tab: the part (list or settlement) and the list state, see loaders/expenses.ts. */
   section: expenseSectionSchema,
+  /** The Plan tab: the plan, or the check of a pasted plan (`paste` is the open report). */
+  view: z.enum(PLAN_VIEWS).default(tripSearchDefaults.view).catch(tripSearchDefaults.view),
+  paste: z.uuid().optional().catch(undefined),
+  /** Simulated "now" for the rain replan, honoured for the demo account only (so a demo does not depend on the hour). */
+  as_of: z.iso.datetime({ local: true, offset: true }).optional().catch(undefined),
   ...expensesListShape,
 })
 

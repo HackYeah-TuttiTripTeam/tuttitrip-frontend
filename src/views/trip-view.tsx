@@ -40,7 +40,14 @@ export function TripView() {
   // replace: switching tabs should not fill the back button.
   const setTab = (next: TripTab) =>
     void navigate({
-      search: (prev) => ({ ...prev, ...expenseSearchReset, tab: next, person: undefined }),
+      search: (prev) => ({
+        ...prev,
+        ...expenseSearchReset,
+        tab: next,
+        person: undefined,
+        view: undefined,
+        paste: undefined,
+      }),
       replace: true,
     })
 
