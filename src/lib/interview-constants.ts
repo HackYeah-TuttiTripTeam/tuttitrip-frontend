@@ -74,6 +74,8 @@ export const VOICE_MODE_KEY = 'tt.voice.mode'
 /** Keys that press the hold-to-talk button from the keyboard. */
 export const PTT_PRESS_KEYS = [' ', 'Spacebar']
 
+/** While a voice call runs the screen asks the API for the card the assistant showed this often (ms). */
+export const VOICE_CARD_POLL_MS = 1500
 /** Size of the FFT window of the microphone level meter, and the silence value of a byte sample. */
 export const LEVEL_FFT_SIZE = 256
 export const LEVEL_MIDPOINT = 128
