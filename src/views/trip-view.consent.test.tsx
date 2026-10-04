@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import { configure, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { HttpResponse, http } from 'msw'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { TRIP_ID } from '@/mocks/fixtures'
-import { useScenario } from '@/mocks/node'
+import { server, useScenario } from '@/mocks/node'
 import { renderApp } from '@/mocks/render-app'
 import { m } from '@/paraglide/messages'
 
@@ -67,6 +68,9 @@ describe('budget consent window', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(await screen.findByText(/Host zatwierdził przekroczenie budżetu o 90\szł/)).toBeTruthy()
     expect(await screen.findByText(m.decision_kind_budget_approval())).toBeTruthy()
+    // The log row has the outcome, the amount over the limit and the price of a point.
+    const row = (await screen.findByText(/zatwierdzone · 90\szł ponad granicę/)).textContent
+    expect(row).toMatch(/3\szł za punkt/)
   })
 
   it('rejecting makes the plan within the limit the active one', async () => {
@@ -78,6 +82,19 @@ describe('budget consent window', () => {
     expect(await screen.findByText(/1\s580\szł/)).toBeTruthy()
     expect(screen.queryByText(/czeka na Twoją zgodę/)).toBeNull()
     expect(screen.queryByRole('button', { name: m.consent_banner_open() })).toBeNull()
+  })
+
+  it('explains a 409 (decided already or plan recomputed) and refreshes the plan', async () => {
+    useScenario('needs-approval')
+    server.use(
+      http.post('*/api/v1/trips/:tripId/budget-approvals/:id/approve', () =>
+        HttpResponse.json({ detail: 'budget_approval.not_pending' }, { status: 409 }),
+      ),
+    )
+    const user = userEvent.setup()
+    openPlan()
+    await user.click(await screen.findByRole('button', { name: m.consent_approve() }))
+    expect(await screen.findByText(m.consent_changed())).toBeTruthy()
   })
 
   it('tells a co-host that the host decides and gives no buttons', async () => {

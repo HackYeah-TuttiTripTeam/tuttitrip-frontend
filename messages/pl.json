@@ -1025,7 +1025,6 @@
   "consent_approve": "Zatwierdź przekroczenie",
   "consent_reject": "Odrzuć, wybieram plan w limicie",
   "consent_later": "Później",
-  "consent_host_decides": "O przekroczeniu budżetu decyduje host. Do czasu jego decyzji widzisz plan z przekroczeniem.",
   "consent_banner_host": "Plan przekracza budżet o {over}. Czeka na Twoją zgodę.",
   "consent_banner_waiting": "Plan przekracza budżet o {over} i czeka na zgodę hosta.",
   "consent_banner_approved": "Host zatwierdził przekroczenie budżetu o {over}.",
@@ -1043,5 +1042,15 @@
         "countPlural=*": "{range} ({count} nocy)"
       }
     }
-  ]
+  ],
+  "decision_log_order": "Kolejność",
+  "decision_log_newest": "Najnowsze",
+  "decision_log_oldest": "Najstarsze",
+  "decision_budget_approved": "zatwierdzone",
+  "decision_budget_rejected": "odrzucone",
+  "decision_budget_line": "{outcome} · {over} ponad granicę · {kappa} za punkt{gain}",
+  "decision_budget_gain": " · {name}: +{points} pkt",
+  "consent_changed": "Plan się zmienił albo zgoda jest już rozstrzygnięta. Odświeżyliśmy plan.",
+  "accommodation_log_failed": "Nie udało się zapisać otwarcia w logu.",
+  "offer_too_long": "Sprawdzanie trwa dłużej niż zwykle."
 }

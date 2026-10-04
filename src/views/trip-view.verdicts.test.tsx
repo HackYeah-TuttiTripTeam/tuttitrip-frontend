@@ -60,6 +60,15 @@ describe('place verdicts', () => {
     expect(within(sheet).getByText('Muzeum Polin')).toBeTruthy()
   })
 
+  it('offers to show a place that is in the plan, and not an empty "0" for no skip codes', async () => {
+    const user = userEvent.setup()
+    openPlan()
+    await user.click(await screen.findByRole('button', { name: m.verdict_iconic_not_yours() }))
+    const sheet = await dialog()
+    expect(within(sheet).getByRole('button', { name: m.verdict_show_on_plan() })).toBeTruthy()
+    expect(within(sheet).queryByText('0')).toBeNull()
+  })
+
   it('hides the "instead" section when the API proposes nothing', async () => {
     const user = userEvent.setup()
     openPlan()
@@ -168,6 +177,12 @@ describe('host override', () => {
 })
 
 describe('decision log', () => {
+  it('has a control for the order, kept in the URL', async () => {
+    const { router } = renderApp(`/trips/${TRIP_ID}?tab=plan&dir=asc`)
+    expect(await screen.findByRole('combobox', { name: m.decision_log_order() })).toBeTruthy()
+    expect(router.state.location.search).toMatchObject({ dir: 'asc' })
+  })
+
   it('starts empty with a hint', async () => {
     openPlan()
     expect(await screen.findByText(m.decision_log_empty_title())).toBeTruthy()

@@ -188,6 +188,7 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
         <PlanDecisions
           plan={plan}
           trip={trip}
+          index={verdicts}
           verdictPlace={verdictPlace}
           onVerdictPlace={setVerdictPlace}
           onShowOnPlan={(placeId) => {

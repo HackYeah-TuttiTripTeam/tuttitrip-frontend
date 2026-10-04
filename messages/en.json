@@ -1013,7 +1013,6 @@
   "consent_approve": "Approve the overrun",
   "consent_reject": "Reject, take the plan within the limit",
   "consent_later": "Later",
-  "consent_host_decides": "The host decides on a budget overrun. Until then you see the plan with the overrun.",
   "consent_banner_host": "The plan is {over} over budget. It waits for your approval.",
   "consent_banner_waiting": "The plan is {over} over budget and waits for the host's approval.",
   "consent_banner_approved": "The host approved a budget overrun of {over}.",
@@ -1029,5 +1028,15 @@
         "countPlural=*": "{range} ({count} nights)"
       }
     }
-  ]
+  ],
+  "decision_log_order": "Order",
+  "decision_log_newest": "Newest",
+  "decision_log_oldest": "Oldest",
+  "decision_budget_approved": "approved",
+  "decision_budget_rejected": "rejected",
+  "decision_budget_line": "{outcome} · {over} over the limit · {kappa} per point{gain}",
+  "decision_budget_gain": " · {name}: +{points} pts",
+  "consent_changed": "The plan changed or the approval is already settled. We refreshed the plan.",
+  "accommodation_log_failed": "Could not write the opening to the log.",
+  "offer_too_long": "The check is taking longer than usual."
 }

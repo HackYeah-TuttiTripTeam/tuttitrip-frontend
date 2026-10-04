@@ -11,8 +11,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { FILTER_ALL, GAIN_POINTS_DIGITS } from '@/lib/constants'
 import { DECISION_KINDS } from '@/lib/decisions'
-import { formatDate, formatTime } from '@/lib/format'
+import { formatDate, formatDecimal, formatNumber, formatTime } from '@/lib/format'
 import { m } from '@/paraglide/messages'
 import { DecisionEffectsLine } from './decision-effects'
 
@@ -23,9 +24,6 @@ const KIND_LABELS: Record<DecisionKind, () => string> = {
   budget_approval: m.decision_kind_budget_approval,
 }
 
-/** The "all kinds" entry of the filter; a Select item needs a value, and "" is taken by the placeholder. */
-const ALL_KINDS = 'all'
-
 interface DecisionLogProps {
   decisions: Decision[]
   currency: string
@@ -33,6 +31,9 @@ interface DecisionLogProps {
   authorName: (sub: string) => string | null
   placeName: (placeId: string) => string
   kind: DecisionKind | undefined
+  dir: 'asc' | 'desc'
+  /** Name of a person by profile id, for the gain in a budget decision. */
+  profileName: (profileId: string) => string | null
   page: number
   size: number
   pages: number | undefined
@@ -41,6 +42,7 @@ interface DecisionLogProps {
   isPlaceholder: boolean
   failed: boolean
   onKindChange: (kind: DecisionKind | undefined) => void
+  onDirChange: (dir: 'asc' | 'desc') => void
   onPageChange: (page: number) => void
   onSizeChange: (size: number) => void
   onRetry: () => void
@@ -53,6 +55,8 @@ export function DecisionLog({
   authorName,
   placeName,
   kind,
+  dir,
+  profileName,
   page,
   size,
   pages,
@@ -61,6 +65,7 @@ export function DecisionLog({
   isPlaceholder,
   failed,
   onKindChange,
+  onDirChange,
   onPageChange,
   onSizeChange,
   onRetry,
@@ -69,24 +74,38 @@ export function DecisionLog({
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-medium text-base">{m.decision_log_title()}</h2>
-        <Select
-          value={kind ?? ALL_KINDS}
-          onValueChange={(value) =>
-            onKindChange(DECISION_KINDS.find((candidate) => candidate === value))
-          }
-        >
-          <SelectTrigger aria-label={m.decision_log_filter()} className="h-11 w-auto min-w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_KINDS}>{m.decision_log_all()}</SelectItem>
-            {DECISION_KINDS.map((value) => (
-              <SelectItem key={value} value={value}>
-                {KIND_LABELS[value]()}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Select
+            value={dir}
+            onValueChange={(value) => onDirChange(value === 'asc' ? 'asc' : 'desc')}
+          >
+            <SelectTrigger aria-label={m.decision_log_order()} className="h-11 w-auto min-w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="desc">{m.decision_log_newest()}</SelectItem>
+              <SelectItem value="asc">{m.decision_log_oldest()}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={kind ?? FILTER_ALL}
+            onValueChange={(value) =>
+              onKindChange(DECISION_KINDS.find((candidate) => candidate === value))
+            }
+          >
+            <SelectTrigger aria-label={m.decision_log_filter()} className="h-11 w-auto min-w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={FILTER_ALL}>{m.decision_log_all()}</SelectItem>
+              {DECISION_KINDS.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {KIND_LABELS[value]()}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {isPending ? (
@@ -128,7 +147,32 @@ export function DecisionLog({
                   })}
                 </p>
                 {decision.reason && <p className="text-sm leading-relaxed">{decision.reason}</p>}
-                <DecisionEffectsLine effects={decision.effects} currency={currency} />
+                {decision.effects.budget ? (
+                  <p className="font-mono text-[13px] tabular-nums">
+                    {m.decision_budget_line({
+                      outcome:
+                        decision.effects.budget.outcome === 'approved'
+                          ? m.decision_budget_approved()
+                          : m.decision_budget_rejected(),
+                      over: formatDecimal(decision.effects.budget.over_budget, currency),
+                      kappa: formatDecimal(decision.effects.budget.kappa, currency),
+                      gain:
+                        decision.effects.budget.gain_points != null
+                          ? m.decision_budget_gain({
+                              name:
+                                profileName(decision.effects.budget.gain_profile_id ?? '') ??
+                                m.decision_log_author_unknown(),
+                              points: formatNumber(
+                                decision.effects.budget.gain_points,
+                                GAIN_POINTS_DIGITS,
+                              ),
+                            })
+                          : '',
+                    })}
+                  </p>
+                ) : (
+                  <DecisionEffectsLine effects={decision.effects} currency={currency} />
+                )}
               </li>
             ))}
           </ol>

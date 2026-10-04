@@ -6,7 +6,7 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/c
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { OFFER_TEXT_MAX_CHARS } from '@/lib/accommodation'
+import { OFFER_TEXT_MAX_CHARS } from '@/lib/constants'
 import { formatDate, formatNumber } from '@/lib/format'
 import { type OfferFormValues, offerFormSchema } from '@/lib/offer-form'
 import { m } from '@/paraglide/messages'

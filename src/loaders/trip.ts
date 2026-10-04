@@ -1,13 +1,13 @@
 import { z } from 'zod'
 import { canCallProtectedApi } from '@/api/client'
 import { tripQueryOptions } from '@/api/queries/trips'
+import { DECISION_SORT_KEYS } from '@/lib/constants'
 import { DECISION_KINDS } from '@/lib/decisions'
 import { TRIP_TABS, type TripTab } from '@/lib/trip-tabs'
 import { createListSearchSchema } from './list-search'
 import type { RouterContext } from './router-context'
 
 /** The decision log of the Plan tab is a list: page, size, sort, dir and a filter by kind. */
-export const DECISION_SORT_KEYS = ['created_at'] as const
 const { schema: decisionLogSchema, defaults: decisionLogDefaults } = createListSearchSchema({
   sortKeys: DECISION_SORT_KEYS,
   defaultSort: 'created_at',

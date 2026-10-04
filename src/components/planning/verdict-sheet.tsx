@@ -19,8 +19,6 @@ interface VerdictSheetProps {
   substituteName: string | null
   /** The place is in the plan (so the host can block it); otherwise the host can force it in. */
   inPlan: boolean
-  /** The replacement is already in the plan. */
-  substituteInPlan: boolean
   /** Only the host can force or block a place. */
   canOverride: boolean
   onClose: () => void
@@ -38,7 +36,6 @@ export function VerdictSheet({
   explain,
   substituteName,
   inPlan,
-  substituteInPlan,
   canOverride,
   onClose,
   onOverride,
@@ -59,8 +56,17 @@ export function VerdictSheet({
     >
       {verdict && (
         <div className="flex flex-col gap-5 pb-4">
-          <div>
+          <div className="flex flex-wrap items-center gap-3">
             <VerdictChip verdict={verdict.verdict} />
+            {inPlan && (
+              <Button
+                variant="outline"
+                className="h-11 rounded-full px-5"
+                onClick={() => onShowOnPlan(verdict.place_id)}
+              >
+                {m.verdict_show_on_plan()}
+              </Button>
+            )}
           </div>
 
           {noVotes ? (
@@ -88,7 +94,7 @@ export function VerdictSheet({
             </div>
           )}
 
-          {verdict.skip_codes?.length && (
+          {(verdict.skip_codes?.length ?? 0) > 0 && (
             <section>
               <h3 className="font-medium text-sm">{m.verdict_skip_why()}</h3>
               <ul className="mt-1 list-disc pl-5 text-sm leading-relaxed">
@@ -147,17 +153,6 @@ export function VerdictSheet({
               <h3 className="font-medium text-sm">{m.verdict_instead()}</h3>
               <p className="mt-1 text-sm">{substituteName}</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {substituteInPlan && (
-                  <Button
-                    variant="outline"
-                    className="h-11 rounded-full px-5"
-                    onClick={() =>
-                      verdict.substitute_place_id && onShowOnPlan(verdict.substitute_place_id)
-                    }
-                  >
-                    {m.verdict_show_on_plan()}
-                  </Button>
-                )}
                 {canOverride && (
                   <Button
                     variant="outline"

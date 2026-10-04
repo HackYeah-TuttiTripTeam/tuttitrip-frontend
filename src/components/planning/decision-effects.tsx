@@ -1,4 +1,5 @@
 import type { DecisionEffects } from '@/api/queries/decisions'
+import { JAIN_DELTA_DIGITS } from '@/lib/constants'
 import { formatSigned, formatSignedDecimal, formatSignedMinutes } from '@/lib/format'
 import { m } from '@/paraglide/messages'
 
@@ -42,7 +43,7 @@ export function PersonDeltas({ effects, names }: PersonDeltasProps) {
         ))}
       </ul>
       <p className="mt-1 text-muted-foreground text-xs">
-        {m.decision_effects_jain({ value: formatSigned(effects.d_jain, 3) })}
+        {m.decision_effects_jain({ value: formatSigned(effects.d_jain, JAIN_DELTA_DIGITS) })}
       </p>
     </section>
   )

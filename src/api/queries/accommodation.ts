@@ -1,7 +1,5 @@
 import { $api, type Schemas } from '@/api/client'
-
-/** How often a pending offer check is read again (the worker needs a few seconds). */
-export const OFFER_POLL_MS = 2000
+import { OFFER_POLL_MAX_READS, OFFER_POLL_MS } from '@/lib/constants'
 
 export type Requirements = Schemas['RequirementsRead']
 export type RequirementItem = Schemas['RequirementItem']
@@ -26,8 +24,11 @@ export const offerQueryOptions = (tripId: string, offerId: string) => ({
   ...$api.queryOptions('get', '/api/v1/trips/{trip_id}/accommodation/offers/{offer_id}', {
     params: { path: { trip_id: tripId, offer_id: offerId } },
   }),
-  refetchInterval: (query: { state: { data: Offer | undefined } }) =>
-    query.state.data?.state === 'pending' ? OFFER_POLL_MS : false,
+  // A check that stays pending for a minute is left alone; the screen then offers "check again".
+  refetchInterval: (query: { state: { data: Offer | undefined; dataUpdateCount: number } }) =>
+    query.state.data?.state === 'pending' && query.state.dataUpdateCount < OFFER_POLL_MAX_READS
+      ? OFFER_POLL_MS
+      : false,
 })
 
 export const searchLinksQueryOptions = (tripId: string) =>

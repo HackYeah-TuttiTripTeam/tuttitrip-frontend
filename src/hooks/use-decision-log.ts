@@ -3,8 +3,8 @@ import { classifyApiError } from '@/api/errors'
 import { type DecisionsSearch, decisionsQueryOptions } from '@/api/queries/decisions'
 
 /** One page of the decision log, filtered and paged by the server according to the URL. */
-export function useDecisionLog(tripId: string, search: DecisionsSearch, enabled: boolean) {
-  const query = useQuery({ ...decisionsQueryOptions(tripId, search), enabled })
+export function useDecisionLog(tripId: string, search: DecisionsSearch) {
+  const query = useQuery(decisionsQueryOptions(tripId, search))
   return {
     decisions: query.data?.items ?? [],
     total: query.data?.total ?? 0,

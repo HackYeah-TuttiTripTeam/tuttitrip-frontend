@@ -13,10 +13,10 @@ import {
  * set, so every change sends the new set; the screen shows it at once and puts the old one back
  * when the save fails. Saves run one after another, so quick taps cannot overwrite each other.
  */
-export function useAccommodationRequirements(tripId: string, enabled: boolean) {
+export function useAccommodationRequirements(tripId: string) {
   const queryClient = useQueryClient()
   const options = requirementsQueryOptions(tripId)
-  const query = useQuery({ ...options, enabled })
+  const query = useQuery(options)
 
   const mutation = useMutation({
     scope: { id: `accommodation-requirements-${tripId}` },

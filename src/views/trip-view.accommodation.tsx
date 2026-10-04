@@ -51,7 +51,7 @@ function Accommodation({ trip, nights }: { trip: Trip; nights: string[] }) {
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
   const canManage = trip.my_role !== 'member'
 
-  const requirements = useAccommodationRequirements(trip.id, true)
+  const requirements = useAccommodationRequirements(trip.id)
   const check = useOfferCheck(
     trip.id,
     offerId,
@@ -80,7 +80,10 @@ function Accommodation({ trip, nights }: { trip: Trip; nights: string[] }) {
           role="status"
           className="flex flex-col gap-2 rounded-lg bg-muted p-4 text-sm sm:flex-row sm:items-center sm:justify-between"
         >
-          <p className="leading-relaxed">{m.accommodation_returned()}</p>
+          <p className="leading-relaxed">
+            {m.accommodation_returned()}
+            {search.logFailed && ` ${m.accommodation_log_failed()}`}
+          </p>
           <Button
             variant="outline"
             className="h-11 rounded-full px-5"
@@ -168,6 +171,7 @@ function Accommodation({ trip, nights }: { trip: Trip; nights: string[] }) {
           offer={check.offer}
           onRecheck={check.recheck}
           rechecking={check.isSubmitting}
+          timedOut={check.timedOut}
           canRecheck={canManage}
         />
       )}

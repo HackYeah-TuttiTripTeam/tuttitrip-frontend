@@ -16,8 +16,8 @@ import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
 import { useOverridePreview } from '@/hooks/use-override-preview'
 import { useProfiles } from '@/hooks/use-profiles'
 import { useSession } from '@/hooks/use-session'
-import { useVerdicts } from '@/hooks/use-verdict'
 import { conflictMessages } from '@/lib/decisions'
+import type { VerdictIndex } from '@/lib/verdicts'
 import { decisionLogFilterDefaults } from '@/loaders/trip'
 import { m } from '@/paraglide/messages'
 
@@ -26,6 +26,8 @@ const route = getRouteApi('/trips_/$tripId')
 interface PlanDecisionsProps {
   plan: Plan
   trip: Trip
+  /** Verdicts by place, computed once by the plan view. */
+  index: VerdictIndex
   /** The place whose verdict is open (a chip was touched), or null. */
   verdictPlace: string | null
   onVerdictPlace: (placeId: string | null) => void
@@ -44,6 +46,7 @@ interface OverrideTarget {
 export function PlanDecisions({
   plan,
   trip,
+  index,
   verdictPlace,
   onVerdictPlace,
   onShowOnPlan,
@@ -53,7 +56,6 @@ export function PlanDecisions({
   const canOverride = trip.my_role === 'host'
   const { currency } = plan.budget
 
-  const index = useVerdicts(plan)
   const catalog = useCatalogPlaces(trip.city_slug, true)
   const { people } = useProfiles(trip.id, session.status)
 
@@ -119,7 +121,7 @@ export function PlanDecisions({
     dir: search.dir,
     kind: search.kind,
   }
-  const log = useDecisionLog(trip.id, logSearch, true)
+  const log = useDecisionLog(trip.id, logSearch)
   useClampPage(search.page, log.pages, setPage)
 
   return (
@@ -133,6 +135,8 @@ export function PlanDecisions({
           authorName={(sub) => authors.get(sub) ?? null}
           placeName={placeName}
           kind={search.decision}
+          dir={search.dir}
+          profileName={(profileId) => names.get(profileId) ?? null}
           page={search.page}
           size={search.size}
           pages={log.pages}
@@ -141,6 +145,7 @@ export function PlanDecisions({
           isPlaceholder={log.isPlaceholder}
           failed={log.problem !== null}
           onKindChange={(decision) => setFilters({ decision })}
+          onDirChange={(dir) => setFilters({ dir })}
           onPageChange={setPage}
           onSizeChange={setSize}
           onRetry={log.refetch}
@@ -155,7 +160,6 @@ export function PlanDecisions({
         explain={verdict ? (index.explainByPlace.get(verdict.place_id) ?? []) : []}
         substituteName={substituteId ? placeName(substituteId) : null}
         inPlan={verdict ? planStops.has(verdict.place_id) : false}
-        substituteInPlan={substituteId ? planStops.has(substituteId) : false}
         canOverride={canOverride}
         onClose={() => onVerdictPlace(null)}
         onOverride={openOverride}

@@ -2,9 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchClient } from '@/api/client'
 import { ApiError, classifyApiError } from '@/api/errors'
 import { type Offer, offerQueryOptions } from '@/api/queries/accommodation'
-
-/** The model provider the API defaults to for reading an offer (`OfferCreate.provider`). */
-const OFFER_PROVIDER = 'openrouter'
+import { OFFER_POLL_MAX_READS, OFFER_PROVIDER } from '@/lib/constants'
 
 export interface OfferSubmission {
   /** The pasted text of the offer. */
@@ -65,6 +63,11 @@ export function useOfferCheck(
   return {
     offer,
     isLoading: query.isPending && query.fetchStatus !== 'idle',
+    /** The worker kept the check pending past the polling limit: the screen offers to start again. */
+    timedOut:
+      offer?.state === 'pending' &&
+      (queryClient.getQueryState(offerQueryOptions(tripId, offerId ?? '').queryKey)
+        ?.dataUpdateCount ?? 0) >= OFFER_POLL_MAX_READS,
     problem: query.isError ? classifyApiError(query.error) : null,
     submit: (submission: OfferSubmission) => mutation.mutate(submission),
     /** Checks the same stored text again against the current requirements. */

@@ -80,6 +80,3 @@ export function indexVerdicts(plan: Pick<Plan, 'verdicts' | 'explain'>): Verdict
 /** The plan waits for the host: cost over B_do and the decision is still open. */
 export const awaitsBudgetApproval = (budget: PlanBudget): boolean =>
   budget.needs_approval && budget.approval_status === 'pending'
-
-/** Longest reason the API stores with a host decision (`OverrideCreate.reason`). */
-export const OVERRIDE_REASON_MAX_CHARS = 500

@@ -6,14 +6,17 @@ import { Switch } from '@/components/ui/switch'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   AMENITY_KEYS,
-  DEFAULT_MAX_DISTANCE_M,
-  DISTANCE_KEY,
-  DISTANCE_STEP_M,
   PLATFORM_KEYS,
   requirementLabel,
   withoutRequirement,
   withRequirement,
 } from '@/lib/accommodation'
+import {
+  DEFAULT_MAX_DISTANCE_M,
+  DISTANCE_KEY,
+  DISTANCE_STEP_M,
+  PLATFORM_ANY,
+} from '@/lib/constants'
 import { m } from '@/paraglide/messages'
 
 interface RequirementTogglesProps {
@@ -23,8 +26,6 @@ interface RequirementTogglesProps {
   /** Applies a change to the set (the hook sends the whole new set to the API). */
   onChange: (update: (current: RequirementItem[]) => RequirementItem[]) => void
 }
-
-const NO_PLATFORM = 'any'
 
 /**
  * The switches of the lodging contract: amenities, one platform and a distance. Each one is hard
@@ -83,7 +84,7 @@ export function RequirementToggles({ requirements, canManage, onChange }: Requir
         </h3>
         <ToggleGroup
           type="single"
-          value={platform?.key ?? NO_PLATFORM}
+          value={platform?.key ?? PLATFORM_ANY}
           disabled={!canManage}
           aria-labelledby="requirements-platform"
           onValueChange={(value) => {
@@ -95,7 +96,7 @@ export function RequirementToggles({ requirements, canManage, onChange }: Requir
             })
           }}
         >
-          <ToggleGroupItem value={NO_PLATFORM}>{m.requirements_platform_any()}</ToggleGroupItem>
+          <ToggleGroupItem value={PLATFORM_ANY}>{m.requirements_platform_any()}</ToggleGroupItem>
           {PLATFORM_KEYS.map((key) => (
             <ToggleGroupItem key={key} value={key}>
               {requirementLabel('platform', key)}
@@ -138,6 +139,8 @@ export function RequirementToggles({ requirements, canManage, onChange }: Requir
                     min={DISTANCE_STEP_M}
                     step={DISTANCE_STEP_M}
                     disabled={!canManage}
+                    // A failed save puts the server's value back: a new key shows it.
+                    key={distance.max_distance_m}
                     defaultValue={distance.max_distance_m ?? DEFAULT_MAX_DISTANCE_M}
                     className="h-11 w-28 font-mono tabular-nums md:h-9"
                     onBlur={(event) => {

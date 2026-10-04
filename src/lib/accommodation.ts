@@ -1,15 +1,6 @@
 import type { RequirementItem, UnconfirmedReason } from '@/api/queries/accommodation'
 import { m } from '@/paraglide/messages'
 
-/** The API refuses a pasted text longer than this (`DocumentCreate`). */
-export const OFFER_TEXT_MAX_CHARS = 20_000
-/** Longest offer link the API accepts (`OfferCreate.url`). */
-export const OFFER_URL_MAX_CHARS = 2000
-/** Starting value of the "distance to attractions" requirement, in metres. */
-export const DEFAULT_MAX_DISTANCE_M = 2000
-/** Step of the distance field, in metres. */
-export const DISTANCE_STEP_M = 100
-
 /** The amenity keys of the API's dictionary (places and requirements share it). */
 export const AMENITY_KEYS = [
   'pool',
@@ -31,9 +22,6 @@ export type AmenityKey = (typeof AMENITY_KEYS)[number]
 
 export const PLATFORM_KEYS = ['airbnb', 'booking'] as const
 export type PlatformKey = (typeof PLATFORM_KEYS)[number]
-
-/** The one key of the "maximum distance" requirement. */
-export const DISTANCE_KEY = 'attractions'
 
 const AMENITY_LABELS: Record<AmenityKey, () => string> = {
   pool: m.accommodation_key_pool,

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { OFFER_TEXT_MAX_CHARS, OFFER_URL_MAX_CHARS } from '@/lib/accommodation'
+import { OFFER_TEXT_MAX_CHARS, OFFER_URL_MAX_CHARS } from '@/lib/constants'
 import { m } from '@/paraglide/messages'
 
 /** The paste form: the offer text, an optional link and the nights it is for. */

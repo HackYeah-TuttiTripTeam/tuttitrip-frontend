@@ -30,7 +30,6 @@ export function useSearchLinks(tripId: string, enabled: boolean) {
       window.open(link.url, externalLink.target, 'noopener')
       opened.mutate(link.platform)
     },
-    isLogging: opened.isPending,
     logFailed: opened.isError,
   }
 }

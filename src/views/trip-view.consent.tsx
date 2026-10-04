@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { ApiError } from '@/api/errors'
 import type { Plan } from '@/api/queries/plans'
 import type { Trip } from '@/api/queries/trips'
 import { BudgetConsentBanner } from '@/components/planning/budget-consent-banner'
@@ -15,21 +14,29 @@ interface PlanConsentProps {
 
 /**
  * A plan over `B_do` waits for the host. The host gets the consent window (and can come back to
- * it from the banner after "Później"); everyone else only reads that the host decides.
+ * it from the banner after "Później"); everyone else only reads, in the banner, that the host
+ * decides.
  */
 export function PlanConsent({ plan, trip }: PlanConsentProps) {
   const { budget } = plan
   const canDecide = trip.my_role === 'host'
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
-  const { decide, isPending, error, reset } = useBudgetDecision(trip.id)
+  const pending = budget.needs_approval && budget.approval_status === 'pending'
+  const decision = useBudgetDecision(trip.id, canDecide && pending)
   const [later, setLater] = useState(false)
 
   if (!budget.needs_approval) return null
 
-  const pending = budget.approval_status === 'pending'
   const gainName =
     plan.fairness.per_person.find((person) => person.profile_id === budget.gain_profile_id)?.name ??
     null
+  const error = decision.changed
+    ? m.consent_changed()
+    : decision.forbidden
+      ? m.consent_forbidden()
+      : decision.failed
+        ? m.consent_failed()
+        : null
 
   return (
     <>
@@ -37,30 +44,23 @@ export function PlanConsent({ plan, trip }: PlanConsentProps) {
         budget={budget}
         canDecide={canDecide}
         onOpen={() => {
-          reset()
+          decision.reset()
           setLater(false)
         }}
       />
-      {pending && (
+      {pending && canDecide && (
         <BudgetConsentDialog
-          open={canDecide && !later}
+          open={!later}
           isDesktop={isDesktop}
           budget={budget}
           gainName={gainName}
-          canDecide={canDecide}
-          busy={isPending}
-          error={error ? decisionError(error) : null}
-          onApprove={() => void decide('approve').catch(() => undefined)}
-          onReject={() => void decide('reject').catch(() => undefined)}
+          busy={decision.isPending || !decision.approval}
+          error={error}
+          onApprove={() => decision.decide('approve')}
+          onReject={() => decision.decide('reject')}
           onLater={() => setLater(true)}
         />
       )}
     </>
   )
-}
-
-function decisionError(error: unknown): string {
-  return error instanceof ApiError && error.status === 403
-    ? m.consent_forbidden()
-    : m.consent_failed()
 }

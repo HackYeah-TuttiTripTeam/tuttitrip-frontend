@@ -1,6 +1,7 @@
 import type { PlanBudget } from '@/api/queries/plans'
 import { ApprovalCard, type ApprovalFact } from '@/components/shared/approval-card'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
+import { GAIN_POINTS_DIGITS } from '@/lib/constants'
 import { formatDecimal, formatNumber, formatSignedDecimal } from '@/lib/format'
 import { m } from '@/paraglide/messages'
 
@@ -10,7 +11,6 @@ interface BudgetConsentDialogProps {
   budget: PlanBudget
   /** Name of the person who gains most from going over, when the API names one. */
   gainName: string | null
-  canDecide: boolean
   busy: boolean
   error: string | null
   onApprove: () => void
@@ -29,7 +29,6 @@ export function BudgetConsentDialog({
   isDesktop,
   budget,
   gainName,
-  canDecide,
   busy,
   error,
   onApprove,
@@ -58,7 +57,7 @@ export function BudgetConsentDialog({
             label: m.consent_gain(),
             value: m.consent_gain_value({
               name: gainName ?? m.consent_gain_someone(),
-              points: formatNumber(budget.gain_points, 1),
+              points: formatNumber(budget.gain_points, GAIN_POINTS_DIGITS),
             }),
           },
         ]
@@ -87,7 +86,6 @@ export function BudgetConsentDialog({
         onLater={onLater}
         busy={busy}
         error={error}
-        readOnlyNote={canDecide ? undefined : m.consent_host_decides()}
       >
         {budget.strict_cost && (
           <section className="rounded-lg border p-4">

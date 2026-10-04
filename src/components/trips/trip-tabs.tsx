@@ -43,7 +43,10 @@ export function TripTabs({ tab, onTabChange, people, plan, accommodation }: Trip
       <TabsList aria-label={m.trip_tabs_label()} className="md:max-w-xl print:hidden">
         {TRIP_TABS.map((value) => (
           <TabsTrigger key={value} value={value}>
-            <span aria-hidden="true">{TAB_ICONS[value]}</span>
+            {/* On a phone four labels need the room the icons would take. */}
+            <span aria-hidden="true" className="hidden sm:inline">
+              {TAB_ICONS[value]}
+            </span>
             <span className="truncate">{TAB_LABELS[value]()}</span>
           </TabsTrigger>
         ))}

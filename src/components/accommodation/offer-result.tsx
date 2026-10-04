@@ -12,10 +12,18 @@ interface OfferResultProps {
   onRecheck: () => void
   rechecking: boolean
   canRecheck: boolean
+  /** The check stayed pending for too long. */
+  timedOut: boolean
 }
 
 /** The three-state result of one offer: pending, failed, or a chip per requirement. */
-export function OfferResult({ offer, onRecheck, rechecking, canRecheck }: OfferResultProps) {
+export function OfferResult({
+  offer,
+  onRecheck,
+  rechecking,
+  canRecheck,
+  timedOut,
+}: OfferResultProps) {
   const nights = offer.nights.map((night) => formatDate(`${night}T12:00:00`)).join(', ')
 
   return (
@@ -47,9 +55,26 @@ export function OfferResult({ offer, onRecheck, rechecking, canRecheck }: OfferR
 
       {offer.state === 'pending' && (
         <div role="status" className="flex flex-col gap-2">
-          <p className="text-muted-foreground text-sm">{m.offer_pending()}</p>
-          <Skeleton aria-hidden="true" className="h-7 w-2/3 rounded-full" />
-          <Skeleton aria-hidden="true" className="h-7 w-1/2 rounded-full" />
+          <p className="text-muted-foreground text-sm">
+            {timedOut ? m.offer_too_long() : m.offer_pending()}
+          </p>
+          {timedOut ? (
+            canRecheck && (
+              <Button
+                variant="outline"
+                className="h-11 self-start rounded-full px-5"
+                disabled={rechecking}
+                onClick={onRecheck}
+              >
+                {m.offer_try_again()}
+              </Button>
+            )
+          ) : (
+            <>
+              <Skeleton aria-hidden="true" className="h-7 w-2/3 rounded-full" />
+              <Skeleton aria-hidden="true" className="h-7 w-1/2 rounded-full" />
+            </>
+          )}
         </div>
       )}
 

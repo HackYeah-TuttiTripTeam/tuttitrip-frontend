@@ -29,8 +29,6 @@ interface ApprovalCardProps {
   onLater?: () => void
   busy?: boolean
   error?: string | null
-  /** The reader may not decide: no buttons, this says who does. */
-  readOnlyNote?: string
 }
 
 /**
@@ -48,7 +46,6 @@ export function ApprovalCard({
   onLater,
   busy = false,
   error,
-  readOnlyNote,
 }: ApprovalCardProps) {
   return (
     <div className="flex flex-col gap-4 pb-4">
@@ -76,42 +73,38 @@ export function ApprovalCard({
           {error}
         </p>
       )}
-      {readOnlyNote ? (
-        <p className="rounded-lg bg-muted px-4 py-3 text-sm leading-relaxed">{readOnlyNote}</p>
-      ) : (
-        <div className="flex flex-col gap-2 sm:flex-row-reverse">
-          {approve.map((action) => (
-            <Button
-              key={action.key}
-              className="h-11 flex-1 rounded-full"
-              disabled={busy}
-              onClick={action.onClick}
-            >
-              {action.label}
-            </Button>
-          ))}
-          {rejectLabel && onReject && (
-            <Button
-              variant="outline"
-              className="h-11 flex-1 rounded-full"
-              disabled={busy}
-              onClick={onReject}
-            >
-              {rejectLabel}
-            </Button>
-          )}
-          {laterLabel && onLater && (
-            <Button
-              variant="ghost"
-              className="h-11 flex-1 rounded-full"
-              disabled={busy}
-              onClick={onLater}
-            >
-              {laterLabel}
-            </Button>
-          )}
-        </div>
-      )}
+      <div className="flex flex-col gap-2 sm:flex-row-reverse">
+        {approve.map((action) => (
+          <Button
+            key={action.key}
+            className="h-11 flex-1 rounded-full"
+            disabled={busy}
+            onClick={action.onClick}
+          >
+            {action.label}
+          </Button>
+        ))}
+        {rejectLabel && onReject && (
+          <Button
+            variant="outline"
+            className="h-11 flex-1 rounded-full"
+            disabled={busy}
+            onClick={onReject}
+          >
+            {rejectLabel}
+          </Button>
+        )}
+        {laterLabel && onLater && (
+          <Button
+            variant="ghost"
+            className="h-11 flex-1 rounded-full"
+            disabled={busy}
+            onClick={onLater}
+          >
+            {laterLabel}
+          </Button>
+        )}
+      </div>
     </div>
   )
 }

@@ -174,21 +174,49 @@ export function planningHandlers(world: World, latency: () => Promise<void>): Re
       })
     }),
 
-    // Budget consent (backend#77, not in the schema yet): the endpoints as the issue describes them.
-    http.get(`${API}/trips/:tripId/budget-approvals`, async ({ params }) => {
+    http.get(`${API}/trips/:tripId/budget-approvals`, async ({ params, request }) => {
       await latency()
       if (!findTrip(params.tripId)) return notFound()
-      const status = world.plan?.budget.approval_status ?? 'not_needed'
-      return HttpResponse.json(status === 'not_needed' ? [] : [{ id: APPROVAL_ID, status }])
+      const status = new URL(request.url).searchParams.get('status')
+      const current = world.plan?.budget.approval_status ?? 'not_needed'
+      const items =
+        current === 'not_needed' || (status !== null && status !== current)
+          ? []
+          : [approvalOf(world, current)]
+      return HttpResponse.json({
+        items,
+        total: items.length,
+        page: 1,
+        size: 20,
+        pages: items.length,
+      })
     }),
 
     http.post(`${API}/trips/:tripId/budget-approvals/:approvalId/:decision`, async ({ params }) => {
       await latency()
       if (!findTrip(params.tripId) || !world.plan) return notFound()
       if (!isHost(params.tripId)) return forbidden()
+      if (world.plan.budget.approval_status !== 'pending') {
+        return HttpResponse.json({ detail: 'Not pending' }, { status: 409 })
+      }
       const approve = params.decision === 'approve'
       const { budget } = world.plan
-      const noChange = { d_min_r: 0, d_jain: 0, d_r: [], d_cost: budget.over_budget, d_minutes: 0 }
+      const noChange: DecisionEffects = {
+        d_min_r: 0,
+        d_jain: 0,
+        d_r: [],
+        d_cost: budget.over_budget,
+        d_minutes: 0,
+        budget: {
+          approval_id: APPROVAL_ID,
+          outcome: approve ? 'approved' : 'rejected',
+          currency: budget.currency,
+          over_budget: budget.over_budget,
+          kappa: budget.kappa ?? '0.00',
+          gain_profile_id: budget.gain_profile_id ?? null,
+          gain_points: budget.gain_points ?? null,
+        },
+      }
       log({
         kind: 'budget_approval',
         place_id: null,
@@ -209,9 +237,33 @@ export function planningHandlers(world: World, latency: () => Promise<void>): Re
               approval_status: 'rejected',
             },
       }
-      return HttpResponse.json({ id: APPROVAL_ID, status: approve ? 'approved' : 'rejected' })
+      return HttpResponse.json(approvalOf(world, approve ? 'approved' : 'rejected'))
     }),
   ]
 }
 
 const APPROVAL_ID = '22222222-0000-4000-8000-000000000001'
+
+function approvalOf(
+  world: World,
+  status: Schemas['BudgetApprovalStatus'] | Schemas['ApprovalStatus'],
+) {
+  const budget = world.plan?.budget
+  return {
+    id: APPROVAL_ID,
+    trip_id: world.plan?.trip_id ?? '',
+    flex_plan_id: world.plan?.id ?? '',
+    strict_plan_id: budget?.strict_plan_id ?? '',
+    currency: budget?.currency ?? 'PLN',
+    over_budget: budget?.over_budget ?? '0.00',
+    kappa: budget?.kappa ?? '0.00',
+    gain_profile_id: budget?.gain_profile_id ?? null,
+    gain_profile_name: null,
+    gain_points: budget?.gain_points ?? 0,
+    status,
+    active_plan_id: status === 'pending' ? null : (world.plan?.id ?? null),
+    created_at: '2026-10-04T08:00:00Z',
+    decided_by_sub: status === 'pending' ? null : MOCK_USER_SUB,
+    decided_at: status === 'pending' ? null : '2026-10-04T08:30:00Z',
+  }
+}
