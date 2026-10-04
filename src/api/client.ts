@@ -99,7 +99,7 @@ const errorMiddleware: Middleware = {
       .catch(() => undefined)
     const detail =
       typeof body === 'object' && body !== null && 'detail' in body ? body.detail : undefined
-    throw new ApiError(response.status, detail)
+    throw new ApiError(response.status, detail, body)
   },
 }
 

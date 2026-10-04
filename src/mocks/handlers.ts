@@ -37,6 +37,8 @@ import {
   voteLink,
   votePlaces,
 } from './fixtures'
+import { accommodationHandlers } from './handlers.accommodation'
+import { planningHandlers } from './handlers.planning'
 import { interviewHandlers } from './interview'
 import { permissionHandlers } from './permissions'
 import { buildPlan, type PlanInputs, planInputKey } from './plan-builder'
@@ -1251,6 +1253,9 @@ function normalHandlers(
       world.vetoes.push(created)
       return HttpResponse.json(created, { status: 201 })
     }),
+
+    ...accommodationHandlers(world, latency),
+    ...planningHandlers(world, latency),
   ]
 }
 

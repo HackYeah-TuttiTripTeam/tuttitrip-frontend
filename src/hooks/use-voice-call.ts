@@ -3,6 +3,8 @@ import { currentAccessToken, fetchClient } from '@/api/client'
 import { ApiError } from '@/api/errors'
 import { hangupOnPageClose } from '@/api/voice'
 import {
+  LEVEL_FFT_SIZE,
+  LEVEL_MIDPOINT,
   MIC_FAILSAFE_MS,
   MIC_REOPEN_DELAY_MS,
   PTT_MIN_HOLD_MS,
@@ -21,6 +23,37 @@ import {
   voiceActivity,
 } from '@/lib/voice-events'
 import { getLocale } from '@/paraglide/runtime'
+
+/** Level of the microphone (0 to 1) while `active`, for the "you are talking" meter. */
+function useMicLevel(stream: MediaStream | null, active: boolean): number {
+  const [level, setLevel] = useState(0)
+  useEffect(() => {
+    if (!active || !stream || typeof AudioContext === 'undefined') {
+      setLevel(0)
+      return
+    }
+    const context = new AudioContext()
+    const analyser = context.createAnalyser()
+    analyser.fftSize = LEVEL_FFT_SIZE
+    context.createMediaStreamSource(stream).connect(analyser)
+    const samples = new Uint8Array(analyser.fftSize)
+    let frame = 0
+    const tick = () => {
+      analyser.getByteTimeDomainData(samples)
+      let peak = 0
+      for (const sample of samples) peak = Math.max(peak, Math.abs(sample - LEVEL_MIDPOINT))
+      setLevel(Math.min(1, peak / LEVEL_MIDPOINT))
+      frame = requestAnimationFrame(tick)
+    }
+    tick()
+    return () => {
+      cancelAnimationFrame(frame)
+      void context.close()
+      setLevel(0)
+    }
+  }, [stream, active])
+  return level
+}
 
 /** Developer-facing: the API answered 2xx without a body. */
 const EMPTY_ANSWER = 'empty-voice-answer'
@@ -62,11 +95,12 @@ export function classifyVoiceError(error: unknown): VoiceProblem {
 export const voiceSupported = () =>
   typeof RTCPeerConnection !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia)
 
+/** Hold-to-talk unless the host chose "always listening" in the advanced option. */
 function readMode(): VoiceMode {
   try {
-    return localStorage.getItem(VOICE_MODE_KEY) === 'ptt' ? 'ptt' : 'open'
+    return localStorage.getItem(VOICE_MODE_KEY) === 'open' ? 'open' : 'ptt'
   } catch {
-    return 'open'
+    return 'ptt'
   }
 }
 
@@ -144,6 +178,7 @@ export function useVoiceCall({
   const [elsewhere, setElsewhere] = useState<BusyKind | null>(null)
   /** The provider's id of the live call, for the card the server shows next to the captions. */
   const [callId, setCallId] = useState<string | null>(null)
+  const [stream, setStream] = useState<MediaStream | null>(null)
 
   const send = useCallback((...events: object[]) => {
     const channel = callRef.current?.channel
@@ -156,6 +191,7 @@ export function useVoiceCall({
     const call = callRef.current
     callRef.current = null
     setCallId(null)
+    setStream(null)
     if (!call) return null
     for (const track of call.stream.getTracks()) track.stop()
     call.connection.onconnectionstatechange = null
@@ -263,6 +299,7 @@ export function useVoiceCall({
       const token = await currentAccessToken().catch(() => undefined)
       callRef.current = { id: data.call_id, connection, stream, audio, channel, token }
       setCallId(data.call_id)
+      setStream(stream)
       connection.onconnectionstatechange = () => {
         if (['failed', 'closed', 'disconnected'].includes(connection?.connectionState ?? '')) {
           void stop(connection?.connectionState === 'failed' ? 'failed' : null)
@@ -410,8 +447,11 @@ export function useVoiceCall({
     [send],
   )
 
+  const level = useMicLevel(stream, held && status === 'live')
   const tool = runningTool(view)
   return {
+    /** How loud the host is right now while the talk button is held (0 to 1). */
+    level,
     status,
     problem,
     callId,

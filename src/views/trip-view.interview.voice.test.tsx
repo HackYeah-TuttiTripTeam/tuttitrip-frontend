@@ -96,7 +96,9 @@ const openInterview = () => renderApp(`/trips/${TRIP_ID}?tab=interview`)
 const startButton = () =>
   screen.findByRole('button', { name: m.interview_voice_start() }, { timeout: 15_000 })
 
+/** A call in the "always listening" mode (the advanced option); hold-to-talk is the default. */
 async function startCall() {
+  localStorage.setItem('tt.voice.mode', 'open')
   const user = userEvent.setup()
   openInterview()
   await user.click(await startButton())
@@ -330,12 +332,9 @@ describe('Wywiad głosowy, przytrzymaj, aby mówić', () => {
   const holdButton = () => screen.findByRole('button', { name: m.voice_ptt_button() })
 
   async function startPtt() {
-    scenario('interview-resumed')
+    scenario('interview-resumed') // no stored choice: hold-to-talk is the default
     const user = userEvent.setup()
     openInterview()
-    await user.click(
-      await screen.findByRole('switch', { name: m.voice_ptt_toggle() }, { timeout: 15_000 }),
-    )
     await user.click(await startButton())
     await waitFor(() => expect(FakePeer.last?.remote).not.toBeNull())
     act(() => FakePeer.last?.channel.open())
@@ -409,14 +408,42 @@ describe('Wywiad głosowy, przytrzymaj, aby mówić', () => {
     expect(track.stop).toHaveBeenCalled()
   })
 
-  it('remembers the choice', async () => {
+  it('has no switch on the screen; always listening hides under Advanced and is off by default', async () => {
     const user = await startPtt()
-    expect(localStorage.getItem('tt.voice.mode')).toBe('ptt')
-    await user.click(screen.getByRole('switch', { name: m.voice_ptt_toggle() }))
+    const always = screen.getByRole('switch', { name: m.voice_always_listen() })
+    expect(always.getAttribute('aria-checked')).toBe('false')
+    expect(screen.getByText(m.voice_advanced()).closest('details')?.open).toBe(false)
+    expect(localStorage.getItem('tt.voice.mode')).toBeNull()
+    await user.click(always)
     expect(localStorage.getItem('tt.voice.mode')).toBe('open')
-    expect(
-      FakePeer.last?.channel.sent.filter((event) => event.type === 'session.update'),
-    ).toHaveLength(2)
+    // Server voice detection comes back, and the hold button is gone.
+    const updates = FakePeer.last?.channel.sent.filter((event) => event.type === 'session.update')
+    expect(updates?.at(-1)).toMatchObject({
+      session: { audio: { input: { turn_detection: { type: 'server_vad' } } } },
+    })
+    expect(screen.queryByRole('button', { name: m.voice_ptt_button() })).toBeNull()
+  })
+
+  it('guides the host: a big button, the hint, then "talking" with a level meter while held', async () => {
+    await startPtt()
+    const button = await holdButton()
+    expect(screen.getByText(m.voice_ptt_hint())).toBeTruthy()
+    expect(screen.queryByRole('meter')).toBeNull()
+    fireEvent.pointerDown(button, { pointerId: 1 })
+    expect(await screen.findByText(m.voice_ptt_held())).toBeTruthy()
+    expect(screen.getByRole('meter', { name: m.voice_ptt_level() })).toBeTruthy()
+    expect(screen.queryByText(m.voice_ptt_hint())).toBeNull()
+    fireEvent.pointerUp(button, { pointerId: 1 })
+    expect(await screen.findByText(m.voice_ptt_hint())).toBeTruthy()
+  })
+
+  it('keeps the microphone shut and the buffer uncommitted until the button is pressed, whatever the room sounds like', async () => {
+    await startPtt()
+    emit({ type: 'input_audio_buffer.speech_started' }) // noise the server heard anyway
+    emit({ type: 'input_audio_buffer.speech_stopped' })
+    await waitFor(() => expect(track.enabled).toBe(false))
+    expect(sent()).not.toContain('input_audio_buffer.commit')
+    expect(sent()).not.toContain('response.create')
   })
 })
 

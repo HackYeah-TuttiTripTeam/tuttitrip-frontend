@@ -1,4 +1,5 @@
 import {
+  Bed,
   Calendar,
   Images,
   MessageSquare,
@@ -18,6 +19,7 @@ const TAB_LABELS: Record<TripTab, () => string> = {
   people: m.trip_tab_people,
   members: m.trip_tab_members,
   plan: m.trip_tab_plan,
+  accommodation: m.trip_tab_accommodation,
   photos: m.trip_tab_photos,
   locations: m.trip_tab_locations,
   expenses: m.trip_tab_expenses,
@@ -28,6 +30,7 @@ const TAB_ICONS: Record<TripTab, ReactNode> = {
   people: <Users />,
   members: <UserCheck />,
   plan: <Calendar />,
+  accommodation: <Bed />,
   photos: <Images />,
   locations: <Navigation />,
   expenses: <Wallet />,
@@ -50,9 +53,11 @@ interface TripTabsProps {
   photos: ReactNode
   /** The content of the Lokalizacje tab. */
   locations: ReactNode
+  /** The content of the Noclegi tab. */
+  accommodation: ReactNode
 }
 
-/** Wywiad, Osoby, Członkowie, Plan, Wydatki, Zdjęcia, Lokalizacje: a scrollable segment switch. */
+/** Wywiad, Osoby, Członkowie, Plan, Wydatki, Zdjęcia, Lokalizacje, Noclegi: a scrollable segment switch. */
 
 export function TripTabs({
   tab,
@@ -64,6 +69,7 @@ export function TripTabs({
   photos,
   locations,
   expenses,
+  accommodation,
 }: TripTabsProps) {
   return (
     <Tabs
@@ -90,6 +96,7 @@ export function TripTabs({
       <TabsContent value="people">{people}</TabsContent>
       <TabsContent value="members">{members}</TabsContent>
       <TabsContent value="plan">{plan}</TabsContent>
+      <TabsContent value="accommodation">{accommodation}</TabsContent>
       <TabsContent value="photos">{photos}</TabsContent>
       <TabsContent value="locations">{locations}</TabsContent>
       <TabsContent value="expenses">{expenses}</TabsContent>

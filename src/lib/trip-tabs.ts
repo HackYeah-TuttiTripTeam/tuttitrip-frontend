@@ -7,5 +7,6 @@ export const TRIP_TABS = [
   'expenses',
   'photos',
   'locations',
+  'accommodation',
 ] as const
 export type TripTab = (typeof TRIP_TABS)[number]

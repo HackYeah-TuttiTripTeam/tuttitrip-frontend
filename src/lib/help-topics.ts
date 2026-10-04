@@ -151,6 +151,7 @@ const TAB_STEPS: Record<TripTab, TourStep[]> = {
   photos: [],
   locations: [],
   expenses: [],
+  accommodation: [],
 }
 
 const tabTitle: Record<TripTab, () => string> = {
@@ -161,6 +162,7 @@ const tabTitle: Record<TripTab, () => string> = {
   photos: m.help_trip_title,
   locations: m.help_trip_title,
   expenses: m.help_trip_expenses_title,
+  accommodation: m.help_trip_title,
 }
 
 /** One topic per tab, built once: the registry compares topics by identity. */
@@ -183,6 +185,11 @@ export const tripTopics: Record<TripTab, TourTopic> = {
     id: 'trip-expenses',
     title: tabTitle.expenses,
     steps: [...tripHeaderSteps, ...TAB_STEPS.expenses],
+  },
+  accommodation: {
+    id: 'trip-accommodation',
+    title: tabTitle.accommodation,
+    steps: tripHeaderSteps,
   },
 }
 

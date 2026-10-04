@@ -191,7 +191,8 @@ describe('Plan tab, needs-approval', () => {
   it('shows the plan that goes over the budget with its higher cost', async () => {
     useScenario('needs-approval')
     renderApp(`/trips/${TRIP_ID}?tab=plan`)
-    expect(await screen.findByText(/1\s690\szł/)).toBeTruthy()
+    // The consent window of the host repeats the cost; the plan itself is behind it.
+    expect((await screen.findAllByText(/1\s690\szł/)).length).toBeGreaterThan(0)
     expect(screen.getByText('Zamek Królewski')).toBeTruthy()
   })
 })

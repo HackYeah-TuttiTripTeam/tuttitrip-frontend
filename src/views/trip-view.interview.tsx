@@ -319,6 +319,7 @@ function InterviewWorkspace({
             saved={voice.saved && { name: voice.saved.name, ok: voice.saved.status === 'done' }}
             mode={voice.mode}
             held={voice.held}
+            level={voice.level}
             micMuted={voice.micMuted}
             canOverride={voice.canOverride}
             disabled={interview.running}
