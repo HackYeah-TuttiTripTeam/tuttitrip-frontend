@@ -9,7 +9,9 @@ import { useSession } from '@/hooks/use-session'
 import { useTrip } from '@/hooks/use-trip'
 import { isDev } from '@/lib/env'
 import type { TripTab } from '@/lib/trip-tabs'
+import { expenseSearchReset } from '@/loaders/expenses'
 import { m } from '@/paraglide/messages'
+import { TripExpensesView } from './trip-view.expenses'
 import { TripPeopleView } from './trip-view.people'
 import { TripPlanView } from './trip-view.plan'
 import { TripSettings } from './trip-view.settings'
@@ -25,7 +27,10 @@ export function TripView() {
 
   // replace: switching tabs should not fill the back button.
   const setTab = (next: TripTab) =>
-    void navigate({ search: (prev) => ({ ...prev, tab: next, person: undefined }), replace: true })
+    void navigate({
+      search: (prev) => ({ ...prev, ...expenseSearchReset, tab: next, person: undefined }),
+      replace: true,
+    })
 
   // Opening a person is a step forward (the back button closes it); the tab switch above is not.
   const setPerson = (id: string | undefined) =>
@@ -134,6 +139,7 @@ export function TripView() {
           />
         }
         plan={<TripPlanView key={trip.id} trip={trip} />}
+        expenses={<TripExpensesView key={trip.id} trip={trip} />}
       />
     </div>
   )

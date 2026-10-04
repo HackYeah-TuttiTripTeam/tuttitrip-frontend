@@ -2,6 +2,7 @@
 // after `pnpm api:sync` a contract change breaks `tsc` here instead of silently drifting.
 // Amounts are decimal strings, like in the API.
 import type { Schemas } from '@/api/client'
+import { allocate, centsToDecimal, toCents } from '@/lib/money'
 
 export type Trip = Schemas['TripRead']
 export type Profile = Schemas['ProfileRead']
@@ -16,6 +17,7 @@ export type Member = Schemas['MemberRead']
 export type Invitation = Schemas['InvitationRead']
 export type City = Schemas['CityRead']
 export type Preferences = Schemas['PreferencesRead']
+export type Expense = Schemas['ExpenseRead']
 export type CatalogPlace = Schemas['PlaceRead']
 
 /** The signed-in test user, the host of most scenarios. */
@@ -507,6 +509,95 @@ export const cities = (): City[] => [
   }),
 ]
 
+/** Another user of the trip: the author of expenses the caller did not write. */
+export const OTHER_USER_SUB = 'auth0|mock-other'
+
+/** The parts of an expense the way the API stores them: allocated to the cent like the backend. */
+export function expenseParticipants(
+  amount: string,
+  method: Expense['split_method'],
+  shares: { profile_id: string; value?: string | null }[],
+): Expense['participants'] {
+  const parts = allocate(
+    toCents(amount),
+    method,
+    shares.map((share) => ({ profileId: share.profile_id, value: share.value ?? null })),
+  )
+  return shares.map((share) => ({
+    profile_id: share.profile_id,
+    value: share.value ?? null,
+    amount: centsToDecimal(parts.get(share.profile_id) ?? 0n),
+  }))
+}
+
+export const expense = (overrides: Partial<Expense> = {}): Expense => {
+  const amount = overrides.amount ?? '100.00'
+  const method = overrides.split_method ?? 'equal'
+  const shares =
+    overrides.participants ??
+    Object.values(PROFILE_IDS).map((profile_id) => ({ profile_id, value: null, amount: '0.00' }))
+  return {
+    id: crypto.randomUUID(),
+    trip_id: TRIP_ID,
+    payer_profile_id: PROFILE_IDS.mama,
+    amount,
+    currency: 'PLN',
+    trip_amount: overrides.amount ?? '100.00',
+    exchange_rate: null,
+    status: 'confirmed',
+    has_evidence: false,
+    description: 'Obiad',
+    spent_on: '2026-10-10',
+    category: 'food',
+    split_method: method,
+    created_by_sub: MOCK_USER_SUB,
+    created_at: '2026-10-10T12:00:00Z',
+    ...overrides,
+    participants: expenseParticipants(amount, method, shares),
+  }
+}
+
+/** Three expenses of the family trip: a hotel for all, a dinner for four, a taxi for two. */
+export const familyExpenses = (): Expense[] => {
+  const ids = PROFILE_IDS
+  return [
+    expense({
+      id: '5a1c0e11-8b2d-4c3e-9f40-000000000001',
+      description: 'Nocleg',
+      category: 'lodging',
+      amount: '300.00',
+      spent_on: '2026-10-10',
+      payer_profile_id: ids.mama,
+    }),
+    expense({
+      id: '5a1c0e11-8b2d-4c3e-9f40-000000000002',
+      description: 'Kolacja',
+      amount: '90.00',
+      spent_on: '2026-10-10',
+      payer_profile_id: ids.tata,
+      created_by_sub: OTHER_USER_SUB,
+      participants: [ids.mama, ids.tata, ids.babcia, ids.zosia].map((profile_id) => ({
+        profile_id,
+        value: null,
+        amount: '0.00',
+      })),
+    }),
+    expense({
+      id: '5a1c0e11-8b2d-4c3e-9f40-000000000003',
+      description: 'Taksówka',
+      category: 'transport',
+      amount: '45.50',
+      spent_on: '2026-10-11',
+      payer_profile_id: ids.babcia,
+      created_by_sub: OTHER_USER_SUB,
+      participants: [ids.babcia, ids.zosia].map((profile_id) => ({
+        profile_id,
+        value: null,
+        amount: '0.00',
+      })),
+    }),
+  ]
+}
 const CATALOG_IDS = {
   narodowe: '5d1c8e20-3b4a-4c75-9e2f-0000000000b1',
   zamek: '5d1c8e20-3b4a-4c75-9e2f-0000000000b2',

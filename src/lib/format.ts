@@ -147,6 +147,18 @@ export function formatDecimal(amount: string, currency = 'PLN'): string {
   }).format(amount as `${number}`)
 }
 
+/** A plain decimal string ("6.67") in the locale's notation, no float in between: "6,67" / "6.67". */
+export function formatDecimalNumber(value: string, maximumFractionDigits = 4): string {
+  return new Intl.NumberFormat(INTL_TAG[getLocale()], { maximumFractionDigits }).format(
+    value as `${number}`,
+  )
+}
+
+/** Money with a currency, or a plain two-decimal number when the API has no currency to name. */
+export function formatAmount(amount: string, currency: string | null): string {
+  return currency ? formatDecimal(amount, currency) : formatDecimalNumber(amount, 2)
+}
+
 interface BudgetFields {
   currency: string | null
   budget_total_min: string | null
