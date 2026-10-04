@@ -15,7 +15,16 @@ import { tripTopics } from '@/lib/help-topics'
 import type { TripTab } from '@/lib/trip-tabs'
 import { m } from '@/paraglide/messages'
 import { TripMembersView } from './trip-view.members'
+import { useLocationBeacon } from '@/hooks/use-locations'
+import { useSession } from '@/hooks/use-session'
+import { useTrip } from '@/hooks/use-trip'
+import { isDev } from '@/lib/env'
+import { tripHasEnded } from '@/lib/trip-dates'
+import type { TripTab } from '@/lib/trip-tabs'
+import { m } from '@/paraglide/messages'
+import { TripLocationsView } from './trip-view.locations'
 import { TripPeopleView } from './trip-view.people'
+import { TripPhotosView } from './trip-view.photos'
 import { TripPlanView } from './trip-view.plan'
 import { TripSettings } from './trip-view.settings'
 
@@ -34,6 +43,8 @@ export function TripView() {
   const { trip, isPending, problem, refetch } = useTrip(tripId, session.status)
   // Only a loaded trip has the elements the steps point at.
   useHelpTopic(trip && !problem ? tripTopics[tab] : null)
+  // Serves a location-sharing consent the person gave, as long as this trip is open.
+  useLocationBeacon(trip?.id, tripHasEnded(trip?.end_date))
 
   // replace: switching tabs should not fill the back button.
   const setTab = (next: TripTab) =>
@@ -168,6 +179,7 @@ export function TripView() {
             tripName={trip.name}
             canManage={trip.my_role !== 'member'}
             citySlug={trip.city_slug}
+            canFillIn={trip.my_role === 'host'}
             personId={person}
             onPersonChange={setPerson}
           />
@@ -182,6 +194,8 @@ export function TripView() {
           />
         }
         plan={<TripPlanView key={trip.id} trip={trip} />}
+        photos={<TripPhotosView key={trip.id} tripId={trip.id} isHost={trip.my_role === 'host'} />}
+        locations={<TripLocationsView key={trip.id} tripId={trip.id} />}
       />
     </div>
   )

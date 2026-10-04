@@ -170,3 +170,21 @@ export function budgetSummary(trip: BudgetFields): string | null {
     scope: byDay ? m.trip_budget_scope_day_short() : m.trip_budget_scope_total_short(),
   })
 }
+
+const MS_PER_MINUTE = 60_000
+const MINUTES_PER_HOUR = 60
+const HOURS_PER_DAY = 24
+
+const relativeFormat = memoByLocale(
+  (tag) => new Intl.RelativeTimeFormat(tag, { numeric: 'auto', style: 'short' }),
+)
+
+/** "5 min temu" / "5 min. ago": how long ago a position or an entry was updated. */
+export function formatAgo(iso: string, now: number = Date.now()): string {
+  const minutes = Math.round((new Date(iso).getTime() - now) / MS_PER_MINUTE)
+  const format = relativeFormat()
+  if (Math.abs(minutes) < MINUTES_PER_HOUR) return format.format(minutes, 'minute')
+  const hours = Math.round(minutes / MINUTES_PER_HOUR)
+  if (Math.abs(hours) < HOURS_PER_DAY) return format.format(hours, 'hour')
+  return format.format(Math.round(hours / HOURS_PER_DAY), 'day')
+}

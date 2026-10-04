@@ -40,6 +40,12 @@ export const PROFILE_IDS = {
   antek: '0b1f5c1a-7d3e-4e0a-9c11-1a2b3c4d5e05',
 } as const
 
+/** Google Place IDs of two catalogue places; the others have none (no card button). */
+export const GOOGLE_PLACE_IDS = {
+  zamek: 'ChIJ-mock-zamek-krolewski',
+  kopernik: 'ChIJ-mock-centrum-kopernik',
+} as const
+
 const PLACE_IDS = {
   zamek: '7c2e9a10-4d5b-4f61-8a3c-0000000000a1',
   prasowy: '7c2e9a10-4d5b-4f61-8a3c-0000000000a2',
@@ -317,6 +323,9 @@ const days = (): PlanDay[] => [
         place_id: PLACE_IDS.zamek,
         name: 'Zamek Królewski',
         address: 'Plac Zamkowy 4, 00-277 Warszawa',
+        lat: 52.248,
+        lon: 21.0147,
+        google_place_id: GOOGLE_PLACE_IDS.zamek,
         start: '10:00:00',
         end: '12:00:00',
       }),
@@ -324,6 +333,8 @@ const days = (): PlanDay[] => [
       verifiedStop({
         place_id: PLACE_IDS.prasowy,
         name: 'Bar Mleczny Prasowy',
+        lat: 52.2338,
+        lon: 21.0205,
         kind: 'food',
         start: '12:30:00',
         end: '13:30:00',
@@ -338,6 +349,8 @@ const days = (): PlanDay[] => [
       verifiedStop({
         place_id: PLACE_IDS.lazienki,
         name: 'Łazienki Królewskie',
+        lat: 52.215,
+        lon: 21.0357,
         start: '15:00:00',
         end: '17:30:00',
         transfer: { minutes: 25, mode: 'transit', cost: '4.40' },
@@ -354,6 +367,9 @@ const days = (): PlanDay[] => [
       verifiedStop({
         place_id: PLACE_IDS.kopernik,
         name: 'Centrum Nauki Kopernik',
+        lat: 52.2397,
+        lon: 21.0287,
+        google_place_id: GOOGLE_PLACE_IDS.kopernik,
         start: '10:00:00',
         end: '13:00:00',
         cost_per_person: '35.00',
@@ -364,6 +380,8 @@ const days = (): PlanDay[] => [
       verifiedStop({
         place_id: PLACE_IDS.pyzy,
         name: 'Pyzy Flaki Gorące',
+        lat: 52.231,
+        lon: 21.012,
         kind: 'food',
         start: '13:30:00',
         end: '14:30:00',
@@ -677,3 +695,69 @@ export const votePlaces = (): VotePlace[] =>
     reason_code: null,
     veto_id: null,
   }))
+
+export type Checkin = Schemas['CheckinRead']
+export type Photo = Schemas['PhotoRead']
+export type MemberLocation = Schemas['LocationRead']
+
+/** A 1x1 PNG: enough for a thumbnail or a full picture in a test. */
+export const PIXEL_PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+export const PIXEL_DATA_URL = `data:image/png;base64,${PIXEL_PNG_BASE64}`
+
+export const checkin = (profileId: string, overrides: Partial<Checkin> = {}): Checkin => ({
+  profile_id: profileId,
+  display_name: 'Ola',
+  accommodation: 'Hotel Polonia',
+  room: '214',
+  updated_at: '2026-10-09T18:00:00Z',
+  is_me: false,
+  ...overrides,
+})
+
+/** Marek has settled in with the grandmother's room next door; Ola has not entered hers yet. */
+export const familyCheckins = (): Checkin[] => [
+  checkin(PROFILE_IDS.tata, { display_name: 'Marek', accommodation: 'Hotel Polonia', room: '214' }),
+  checkin(PROFILE_IDS.babcia, {
+    display_name: 'Babcia Halina',
+    accommodation: 'Hotel Polonia',
+    room: '216',
+  }),
+]
+
+export const photo = (id: string, overrides: Partial<Photo> = {}): Photo => ({
+  id,
+  author_name: 'Marek',
+  is_mine: false,
+  content_type: 'image/jpeg',
+  size_bytes: 120_000,
+  created_at: '2026-10-10T12:00:00Z',
+  thumbnail: PIXEL_DATA_URL,
+  ...overrides,
+})
+
+/** Thirty photos, newest first by id, every third one the caller's. */
+export const galleryPhotos = (count = 30): Photo[] =>
+  Array.from({ length: count }, (_, index) =>
+    photo(`6b0f1c20-0000-4000-8000-${String(index).padStart(12, '0')}`, {
+      is_mine: index % 3 === 0,
+      author_name: index % 3 === 0 ? 'Ola' : 'Marek',
+      size_bytes: 100_000 + index * 1000,
+      created_at: new Date(Date.UTC(2026, 9, 10, 8, index)).toISOString(),
+    }),
+  )
+
+export const location = (
+  profileId: string,
+  overrides: Partial<MemberLocation> = {},
+): MemberLocation => ({
+  profile_id: profileId,
+  display_name: 'Marek',
+  latitude: 52.2297,
+  longitude: 21.0122,
+  accuracy_m: 20,
+  recorded_at: new Date().toISOString(),
+  expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+  is_me: false,
+  ...overrides,
+})

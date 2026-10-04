@@ -39,6 +39,8 @@ Skopiuj `.env.example` do `.env.local` (ten plik nie trafia do gita) i uzupełni
 | `VITE_AUTH0_DOMAIN` | domena tenanta Auth0 | puste, logowanie wyłączone |
 | `VITE_AUTH0_CLIENT_ID` | client id aplikacji SPA w Auth0 | puste, logowanie wyłączone |
 | `VITE_AUTH0_AUDIENCE` | identyfikator API w Auth0 (np. `https://tuttitrip-api.gburek.app`) | puste |
+| `VITE_GOOGLE_MAPS_API_KEY` | klucz przeglądarkowy Maps JavaScript API i Places UI Kit (ograniczony do domen TuttiTrip w Google Cloud) | puste, mapy wyłączone |
+| `VITE_GOOGLE_MAPS_MAP_ID` | identyfikator mapy wektorowej (potrzebny do `AdvancedMarker`) | puste, mapy wyłączone |
 
 Wszystkie te wartości lądują w kodzie przeglądarki, więc nie wpisuj tu sekretów. Tenant Auth0 konfiguruje zespół backendu. Bez `VITE_AUTH0_*` aplikacja działa, a w miejscu logowania wyświetla informację, że jest wyłączone.
 

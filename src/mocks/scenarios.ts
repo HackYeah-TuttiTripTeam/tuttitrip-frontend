@@ -4,12 +4,15 @@ import {
   type AdminUser,
   adminUsers,
   type CatalogPlace,
+  type Checkin,
   type City,
   catalogPlaces,
   cities,
+  familyCheckins,
   familyMembers,
   familyPreferences,
   familyProfiles,
+  galleryPhotos,
   type Invitation,
   invitation,
   type Me,
@@ -19,6 +22,9 @@ import {
   needsApprovalBudget,
   outing,
   type PlaceVoteSummary,
+  location,
+  type MemberLocation,
+  type Photo,
   type Plan,
   PROFILE_IDS,
   type Preferences,
@@ -39,6 +45,7 @@ export const scenarioNames = [
   'many-trips',
   'needs-approval',
   'no-plan',
+  'others-share-location',
   'member-readonly',
   'member-pending',
   'cohost',
@@ -112,6 +119,16 @@ export interface World {
   preferencesSaveFails: boolean
   /** The latest plan of the main trip; null until "Policz plan" creates one. */
   plan: Plan | null
+  /** Check-ins (where everyone stays) of the main trip. */
+  checkins: Checkin[]
+  /** Photos of the main trip, in upload order (the handler sorts them). */
+  photos: Photo[]
+  /** Positions members share right now. */
+  locations: MemberLocation[]
+  /** Status the photo upload answers with, for a refusal (413, 422) no scenario has. */
+  photoUploadStatus?: number
+  /** The caller's own location-sharing consent. */
+  consent: { enabled: boolean; until: string | null }
   /** Invitations of the main trip, newest first (the host's list). */
   invitations: Invitation[]
   /** Voting links of the main trip, newest first (the host's panel; never holds a token). */
@@ -187,6 +204,10 @@ export function createWorld(name: ScenarioName): World {
     places: catalogPlaces(),
     preferencesSaveFails: false,
     plan: plan(main.id),
+    checkins: familyCheckins(),
+    photos: galleryPhotos(),
+    locations: [],
+    consent: { enabled: false, until: null },
     invitations: [invitation()],
     voteLinks: [],
     voteSummary: voteSummary(),
@@ -212,6 +233,19 @@ export function createWorld(name: ScenarioName): World {
       return { ...base, plan: plan(main.id, { budget: needsApprovalBudget() }) }
     case 'no-plan':
       return { ...base, plan: null }
+    case 'others-share-location':
+      return {
+        ...base,
+        locations: [
+          location(PROFILE_IDS.tata, { display_name: 'Marek' }),
+          location(PROFILE_IDS.babcia, {
+            display_name: 'Babcia Halina',
+            latitude: 52.2319,
+            longitude: 21.0067,
+            recorded_at: new Date(Date.now() - 6 * 60_000).toISOString(),
+          }),
+        ],
+      }
     case 'member-readonly':
       return {
         ...base,
