@@ -18,6 +18,7 @@ import { TripsToolbar } from '@/components/trips/trips-toolbar'
 import { VoiceTripForm } from '@/components/trips/voice-trip-form'
 import { Button } from '@/components/ui/button'
 import { useCities } from '@/hooks/use-cities'
+import { useCitySearch } from '@/hooks/use-city-search'
 import { useCreateVoiceTrip } from '@/hooks/use-create-voice-trip'
 import { useDebouncedInput } from '@/hooks/use-debounced-input'
 import { useHelpTopic } from '@/hooks/use-help-topic'
@@ -54,6 +55,8 @@ export function TripsView() {
   const createTrip = useSaveTrip(null, cities)
   const [voiceOpen, setVoiceOpen] = useState(false)
   const voiceTrip = useCreateVoiceTrip(() => setVoiceOpen(false))
+
+  const citySearch = useCitySearch(session.status)
   const queryInput = useDebouncedInput(search.q, (q) => setFilters({ q }))
 
   const hasFilters =
@@ -108,6 +111,7 @@ export function TripsView() {
             filters={search}
             onFiltersChange={setFilters}
             cities={cities}
+            citySearch={citySearch}
             hasFilters={hasFilters}
             onReset={reset}
           />
@@ -234,12 +238,14 @@ export function TripsView() {
         open={createTripOpen}
         onOpenChange={setCreateTripOpen}
         isDesktop={isDesktop}
+        wide
         title={m.action_new_trip()}
         description={m.trips_create_description()}
       >
         <TripForm
           initial={EMPTY_TRIP_FORM}
           cities={cities}
+          citySearch={citySearch}
           fieldErrors={createTrip.fieldErrors}
           submitError={createTrip.submitError}
           isSubmitting={createTrip.isPending}

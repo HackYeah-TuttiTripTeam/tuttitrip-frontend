@@ -1,3 +1,4 @@
+import { cn } from 'cn'
 import type { ReactNode } from 'react'
 import {
   Dialog,
@@ -22,6 +23,8 @@ interface ResponsiveModalProps {
   title: string
   description: string
   children: ReactNode
+  /** A wide dialog on desktop, for forms laid out in two columns. Phones are unaffected. */
+  wide?: boolean
 }
 
 export function ResponsiveModal({
@@ -31,11 +34,14 @@ export function ResponsiveModal({
   title,
   description,
   children,
+  wide = false,
 }: ResponsiveModalProps) {
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex max-h-[90dvh] flex-col sm:max-w-md">
+        <DialogContent
+          className={cn('flex max-h-[90dvh] flex-col', wide ? 'sm:max-w-3xl' : 'sm:max-w-md')}
+        >
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
