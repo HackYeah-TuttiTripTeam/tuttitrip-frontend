@@ -2207,6 +2207,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/interview/voice/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Voice Release
+         * @description End the voice call of this trip's interview, wherever it runs.
+         *
+         *     For a call left on another device or by a tab that never hung up. The
+         *     transcript is stored and the session is free when this returns. Does
+         *     nothing when no call runs; a text turn is left to finish.
+         *
+         *     Args:
+         *         membership: The caller's membership (co-host or above).
+         *
+         *     Wymagane uprawnienie: `interview:WRITE`.
+         */
+        post: operations["voice_release_api_v1_trips__trip_id__interview_voice_release_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/interview/agui": {
         parameters: {
             query?: never;
@@ -5132,6 +5161,11 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Running
+             * @description What holds the interview right now: a text turn or a voice call. Another turn or call is refused (409) while it does.
+             */
+            running?: ("text" | "voice") | null;
             /**
              * Message Count
              * @description Messages the host can see (their questions and answers).
@@ -8283,6 +8317,11 @@ export interface components {
              */
             updated_at: string;
             /**
+             * Running
+             * @description What holds the interview right now: a text turn or a voice call. Another turn or call is refused (409) while it does.
+             */
+            running?: ("text" | "voice") | null;
+            /**
              * Message Count
              * @description Messages the host can see (their questions and answers).
              */
@@ -8851,6 +8890,13 @@ export interface components {
              * @description SDP offer.
              */
             sdp: string;
+            /**
+             * Locale
+             * @description Language of the call: the assistant speaks it and the speech is transcribed in it.
+             * @default pl
+             * @enum {string}
+             */
+            locale: "pl" | "en";
         };
         /**
          * VoteLinkCreate
@@ -15950,6 +15996,56 @@ export interface operations {
             };
             /** @description Brak uprawnienia `notifications:READ` */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    voice_release_api_v1_trips__trip_id__interview_voice_release_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `interview:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The trip has no interview. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
