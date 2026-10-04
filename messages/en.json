@@ -21,13 +21,8 @@
   "trips_tagline": "Plans you put together as a group.",
   "trips_count": [
     {
-      "declarations": [
-        "input count",
-        "local countPlural = count: plural"
-      ],
-      "selectors": [
-        "countPlural"
-      ],
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
       "match": {
         "countPlural=one": "{count} trip",
         "countPlural=*": "{count} trips"
@@ -36,14 +31,8 @@
   ],
   "trips_count_filtered": [
     {
-      "declarations": [
-        "input count",
-        "input total",
-        "local countPlural = count: plural"
-      ],
-      "selectors": [
-        "countPlural"
-      ],
+      "declarations": ["input count", "input total", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
       "match": {
         "countPlural=one": "{count} trip of {total}",
         "countPlural=*": "{count} trips of {total}"
@@ -191,13 +180,8 @@
   "plan_total": "Plan cost for the whole group: {amount}",
   "plan_lodging": [
     {
-      "declarations": [
-        "input count",
-        "local countPlural = count: plural"
-      ],
-      "selectors": [
-        "countPlural"
-      ],
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
       "match": {
         "countPlural=one": "Lodging: {name}, {count} night. {cost}",
         "countPlural=*": "Lodging: {name}, {count} nights. {cost}"
@@ -208,13 +192,8 @@
   "plan_lodging_cost_none": "Lodging price: no data",
   "people_count": [
     {
-      "declarations": [
-        "input count",
-        "local countPlural = count: plural"
-      ],
-      "selectors": [
-        "countPlural"
-      ],
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
       "match": {
         "countPlural=one": "{count} person",
         "countPlural=*": "{count} people"
@@ -229,13 +208,8 @@
   "people_list_label": "People on this trip",
   "people_age": [
     {
-      "declarations": [
-        "input age",
-        "local agePlural = age: plural"
-      ],
-      "selectors": [
-        "agePlural"
-      ],
+      "declarations": ["input age", "local agePlural = age: plural"],
+      "selectors": ["agePlural"],
       "match": {
         "agePlural=one": "{age} year old",
         "agePlural=*": "{age} years old"

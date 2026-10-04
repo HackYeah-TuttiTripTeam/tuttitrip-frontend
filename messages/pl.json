@@ -21,13 +21,8 @@
   "trips_tagline": "Plany, które układacie razem.",
   "trips_count": [
     {
-      "declarations": [
-        "input count",
-        "local countPlural = count: plural"
-      ],
-      "selectors": [
-        "countPlural"
-      ],
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
       "match": {
         "countPlural=one": "{count} wyjazd",
         "countPlural=few": "{count} wyjazdy",
@@ -38,14 +33,8 @@
   ],
   "trips_count_filtered": [
     {
-      "declarations": [
-        "input count",
-        "input total",
-        "local countPlural = count: plural"
-      ],
-      "selectors": [
-        "countPlural"
-      ],
+      "declarations": ["input count", "input total", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
       "match": {
         "countPlural=one": "{count} wyjazd z {total}",
         "countPlural=few": "{count} wyjazdy z {total}",
@@ -195,13 +184,8 @@
   "plan_total": "Koszt planu dla całej grupy: {amount}",
   "plan_lodging": [
     {
-      "declarations": [
-        "input count",
-        "local countPlural = count: plural"
-      ],
-      "selectors": [
-        "countPlural"
-      ],
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
       "match": {
         "countPlural=one": "Nocleg: {name}, {count} noc. {cost}",
         "countPlural=few": "Nocleg: {name}, {count} noce. {cost}",
@@ -214,13 +198,8 @@
   "plan_lodging_cost_none": "Cena noclegu: brak danych",
   "people_count": [
     {
-      "declarations": [
-        "input count",
-        "local countPlural = count: plural"
-      ],
-      "selectors": [
-        "countPlural"
-      ],
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
       "match": {
         "countPlural=one": "{count} osoba",
         "countPlural=few": "{count} osoby",
@@ -237,13 +216,8 @@
   "people_list_label": "Osoby na wyjeździe",
   "people_age": [
     {
-      "declarations": [
-        "input age",
-        "local agePlural = age: plural"
-      ],
-      "selectors": [
-        "agePlural"
-      ],
+      "declarations": ["input age", "local agePlural = age: plural"],
+      "selectors": ["agePlural"],
       "match": {
         "agePlural=one": "{age} rok",
         "agePlural=few": "{age} lata",
