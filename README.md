@@ -254,7 +254,7 @@ Slug gałęzi to jej nazwa małymi literami, z każdym ciągiem znaków spoza `a
 4. PR do `develop`, z opisem, listą zmian i zrzutami ekranu (desktop i telefon). Wydanie to PR z `develop` do `main`.
 5. Po merge'u gałąź usuwa workflow `Delete merged branch`, a razem z nią znika jej podgląd. `main` i `develop` nie są nigdy usuwane, więc PR wydania idzie prosto z `develop`.
 
-Do `main` i `develop` wchodzimy tylko przez PR z zielonym CI i nigdy nie robimy force-pusha.
+Do `main` i `develop` wchodzimy tylko przez PR z zielonym CI i nigdy nie robimy force-pusha. Ochrona gałęzi nie jest jeszcze włączona, więc na razie pilnujemy tego sami.
 
 ## Co dalej
 
