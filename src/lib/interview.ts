@@ -90,3 +90,32 @@ export function sourceOf(
 
 /** How many values the panel holds (the counter on the phone button). */
 export const collectedCount = (knowledge: Knowledge | undefined) => knowledge?.sources.length ?? 0
+
+/** The parts of a trip the "we are back" header names. */
+export type ResumeField = 'destination' | 'dates' | 'budget' | 'people' | 'preferences'
+
+export interface ResumeSummary {
+  /** Settled, in the order the host would say them. */
+  known: ResumeField[]
+  /** Still to ask (the API's list, once per kind). */
+  missing: ResumeField[]
+  /** People on the trip, for "3 people". */
+  peopleCount: number
+}
+
+/** What the interview already has and what it still lacks, from the "What we already know" data. */
+export function resumeSummary(knowledge: Knowledge): ResumeSummary {
+  const { trip, people } = knowledge
+  const known: ResumeField[] = []
+  if (trip.destination || trip.city_slug) known.push('destination')
+  if (trip.start_date && trip.end_date) known.push('dates')
+  if (trip.budget_total_min !== null || trip.budget_total_max !== null) known.push('budget')
+  if (people.length > 0) known.push('people')
+  const missing = [...new Set(knowledge.missing.map((entry) => entry.field))]
+  // The API's list wins: a field it still asks about is not settled, whatever the trip holds.
+  return {
+    known: known.filter((field) => !missing.includes(field)),
+    missing,
+    peopleCount: people.length,
+  }
+}

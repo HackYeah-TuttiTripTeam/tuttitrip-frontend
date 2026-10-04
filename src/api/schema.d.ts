@@ -2485,6 +2485,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/plans/{plan_id}/calendar.ics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Approved plan as an iCalendar file
+         * @description One event per stop, in the local time of the city (`TZID` and `VTIMEZONE`). Only a version that every member with an account approved (`PUT .../proposals/{id}/response`) can be exported. The same version gives the same bytes: `UID` is a UUIDv5 of the version and the stop, `DTSTAMP` the time the version was stored and `SEQUENCE` its number. The file does not sync; download a new one after the plan changes.
+         *
+         *     Wymagane uprawnienie: `planning.plans:READ`.
+         */
+        get: operations["get_plan_calendar_api_v1_trips__trip_id__plans__plan_id__calendar_ics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/overrides/preview": {
         parameters: {
             query?: never;
@@ -2578,6 +2600,138 @@ export interface paths {
          */
         get: operations["list_decisions_api_v1_trips__trip_id__decisions_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/budget-approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consent questions about exceeding the budget
+         * @description Paged, newest first by default; filter by `status`. A question opens with a plan that needs approval (`budget.needs_approval`): the amount over `B_do`, the price per point (`kappa`) and who gains most. Members see `P_flex` marked as waiting for the host until it is decided.
+         *
+         *     Wymagane uprawnienie: `planning.plans:READ`.
+         */
+        get: operations["list_budget_approvals_api_v1_trips__trip_id__budget_approvals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/budget-approvals/{approval_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve exceeding the budget
+         * @description Only the host. `P_flex` stays the plan in force. The decision goes to the append-only log with the amount over `B_do`, `kappa`, the person who gains most and the author.
+         *
+         *     Wymagane uprawnienie: `planning.plans:WRITE`.
+         */
+        post: operations["approve_budget_api_v1_trips__trip_id__budget_approvals__approval_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/budget-approvals/{approval_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refuse to exceed the budget
+         * @description Only the host. `P_strict`, within `B_do`, is stored as the newest plan version and becomes the plan in force. The decision is logged like an approval.
+         *
+         *     Wymagane uprawnienie: `planning.plans:WRITE`.
+         */
+        post: operations["reject_budget_api_v1_trips__trip_id__budget_approvals__approval_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a plan version to the members
+         * @description The host proposes the latest stored plan (or a given version that still is the latest). Every member with an account gets a notification and approves, rejects or comments. Sending again replaces the open proposal. A person without an account is listed apart: their opinion comes from a voting link.
+         *
+         *     Wymagane uprawnienie: `planning.proposals:WRITE`.
+         */
+        post: operations["send_proposal_api_v1_trips__trip_id__proposals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/proposals/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The proposal sent last, with its status
+         * @description `status` is `approved` when every member with an account approved, `rejected` when somebody rejects, `outdated` when the plan changed after it was sent, else `pending`. The tally counts approvals, rejections and comments.
+         *
+         *     Wymagane uprawnienie: `planning.proposals:READ`.
+         */
+        get: operations["get_current_proposal_api_v1_trips__trip_id__proposals_current_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/proposals/{proposal_id}/response": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Approve, reject or comment on a proposal
+         * @description Any member with an account answers; a new answer replaces the earlier one. 409 `proposal.outdated` when the plan changed after it was sent. A comment needs a remark.
+         *
+         *     Wymagane uprawnienie: `planning.proposals:WRITE`.
+         */
+        put: operations["respond_to_proposal_api_v1_trips__trip_id__proposals__proposal_id__response_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3740,7 +3894,7 @@ export interface components {
          * @description State of the organizer's approval of going over ``B_do``.
          * @enum {string}
          */
-        ApprovalStatus: "not_needed" | "pending" | "approved" | "rejected";
+        ApprovalStatus: "not_needed" | "pending" | "approved" | "rejected" | "superseded";
         /**
          * Assumption
          * @description One thing the preliminary plan assumed instead of data the host did not give.
@@ -3828,6 +3982,132 @@ export interface components {
             /** File */
             file: string;
         };
+        /**
+         * BudgetApprovalRead
+         * @description A consent question with the facts shown on the approval card.
+         */
+        BudgetApprovalRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /**
+             * Flex Plan Id
+             * Format: uuid
+             * @description P_flex, over B_do.
+             */
+            flex_plan_id: string;
+            /**
+             * Strict Plan Id
+             * Format: uuid
+             * @description P_strict, within B_do.
+             */
+            strict_plan_id: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Over Budget
+             * @description Amount above B_do of P_flex.
+             */
+            over_budget: string;
+            /**
+             * Kappa
+             * @description Price of a point, currency per point.
+             */
+            kappa: string;
+            /**
+             * Gain Profile Id
+             * @description Who gains most from going over.
+             */
+            gain_profile_id: string | null;
+            /** Gain Profile Name */
+            gain_profile_name: string | null;
+            /** Gain Points */
+            gain_points: number | null;
+            status: components["schemas"]["BudgetApprovalStatus"];
+            /**
+             * Active Plan Id
+             * @description The plan in force after the decision: P_flex or P_strict.
+             */
+            active_plan_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided By Sub */
+            decided_by_sub: string | null;
+            /** Decided At */
+            decided_at: string | null;
+        };
+        /**
+         * BudgetApprovalSort
+         * @description Sort keys of the list.
+         * @enum {string}
+         */
+        BudgetApprovalSort: "created_at";
+        /**
+         * BudgetApprovalStatus
+         * @description State of the question "may the plan cost more than ``B_do``".
+         * @enum {string}
+         */
+        BudgetApprovalStatus: "pending" | "approved" | "rejected" | "superseded";
+        /**
+         * BudgetConsent
+         * @description The facts of a budget consent (E6), copied into the log entry.
+         */
+        BudgetConsent: {
+            /**
+             * Approval Id
+             * Format: uuid
+             */
+            approval_id: string;
+            outcome: components["schemas"]["BudgetOutcome"];
+            /** Currency */
+            currency: string;
+            /**
+             * Over Budget
+             * @description Amount above B_do of P_flex.
+             */
+            over_budget: string;
+            /**
+             * Kappa
+             * @description Price of a point, currency per point.
+             */
+            kappa: string;
+            /**
+             * Gain Profile Id
+             * @description Who gains most from going over.
+             */
+            gain_profile_id: string | null;
+            /**
+             * Gain Points
+             * @description Their gain in points.
+             */
+            gain_points: number | null;
+        };
+        /**
+         * BudgetDecisionCreate
+         * @description The host's decision.
+         *
+         *     The reason is optional: the amount and the person who gains are logged anyway.
+         */
+        BudgetDecisionCreate: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
+         * BudgetOutcome
+         * @description What the host decided about going over ``B_do``.
+         * @enum {string}
+         */
+        BudgetOutcome: "approved" | "rejected";
         /**
          * BudgetZone
          * @description Where the plan cost falls against the budget (E2 cost, E6).
@@ -4124,6 +4404,8 @@ export interface components {
              * @description Change of the active minutes of the plan.
              */
             d_minutes: number;
+            /** @description Set for a budget consent: the numbers above are P_flex minus P_strict. */
+            budget?: components["schemas"]["BudgetConsent"] | null;
         };
         /**
          * DecisionKind
@@ -5558,6 +5840,55 @@ export interface components {
             basis: components["schemas"]["PriceBasis"];
         };
         /**
+         * NotApprovedDetail
+         * @description Why the plan cannot be exported; clients map by ``code``.
+         */
+        NotApprovedDetail: {
+            /**
+             * Code
+             * @default plan.not_approved
+             * @constant
+             */
+            code: "plan.not_approved";
+            /**
+             * Message
+             * @description For developers; clients map by code.
+             */
+            message: string;
+        };
+        /**
+         * NotApprovedError
+         * @description 409 body: no approved proposal for this plan version.
+         */
+        NotApprovedError: {
+            detail: components["schemas"]["NotApprovedDetail"];
+        };
+        /**
+         * NotPendingDetail
+         * @description Why the decision was refused; clients map by ``code``.
+         */
+        NotPendingDetail: {
+            /**
+             * Code
+             * @default budget_approval.not_pending
+             * @constant
+             */
+            code: "budget_approval.not_pending";
+            /**
+             * Message
+             * @description For developers; clients map by code.
+             */
+            message: string;
+            status: components["schemas"]["BudgetApprovalStatus"];
+        };
+        /**
+         * NotPendingError
+         * @description 409 body: somebody decided already, or the plan was recomputed.
+         */
+        NotPendingError: {
+            detail: components["schemas"]["NotPendingDetail"];
+        };
+        /**
          * NotificationAction
          * @description One button on a notification.
          */
@@ -5805,6 +6136,36 @@ export interface components {
          */
         OsmType: "node" | "way" | "relation";
         /**
+         * OutdatedDetail
+         * @description Why a proposal cannot be answered; clients map by ``code``.
+         */
+        OutdatedDetail: {
+            /**
+             * Code
+             * @default proposal.outdated
+             * @constant
+             */
+            code: "proposal.outdated";
+            /**
+             * Message
+             * @description For developers; clients map by code.
+             */
+            message: string;
+            /**
+             * Latest Plan Id
+             * Format: uuid
+             * @description The version the proposal is behind.
+             */
+            latest_plan_id: string;
+        };
+        /**
+         * OutdatedError
+         * @description 409 body: the proposal is about an older plan version.
+         */
+        OutdatedError: {
+            detail: components["schemas"]["OutdatedDetail"];
+        };
+        /**
          * OverrideConflict
          * @description 409: the decision contradicts a hard constraint.
          */
@@ -5886,6 +6247,25 @@ export interface components {
         Page_AdminUserRead_: {
             /** Items */
             items: components["schemas"]["AdminUserRead"][];
+            /**
+             * Total
+             * @description Rows matching the filters.
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /**
+             * Pages
+             * @description Pages in total; 0 when empty.
+             */
+            pages: number;
+        };
+        /** Page[BudgetApprovalRead] */
+        Page_BudgetApprovalRead_: {
+            /** Items */
+            items: components["schemas"]["BudgetApprovalRead"][];
             /**
              * Total
              * @description Rows matching the filters.
@@ -6903,6 +7283,11 @@ export interface components {
              */
             verdicts?: components["schemas"]["PlanVerdict"][] | null;
             budget: components["schemas"]["PlanBudget"];
+            /**
+             * Upgrades
+             * @description Upgrades for a plan that costs less than B_od, best first; empty when there is no real one.
+             */
+            upgrades?: components["schemas"]["PlanUpgrade"][];
             telemetry: components["schemas"]["PlanTelemetry"];
         };
         /**
@@ -6990,6 +7375,53 @@ export interface components {
             solo_runs: number;
             /** Elapsed Ms */
             elapsed_ms: number;
+        };
+        /**
+         * PlanUpgrade
+         * @description A way to use the room below ``B_od`` (backend#101): the price and the gain.
+         */
+        PlanUpgrade: {
+            kind: components["schemas"]["UpgradeKind"];
+            /**
+             * Place Id
+             * Format: uuid
+             * @description The place the plan gets.
+             */
+            place_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Replaces Place Id
+             * @description The place it takes out; null for an addition.
+             */
+            replaces_place_id?: string | null;
+            /** Replaces Name */
+            replaces_name?: string | null;
+            /**
+             * Day
+             * @description 1-based day of the change.
+             */
+            day: number;
+            /**
+             * Cost
+             * @description c(P) of the upgraded plan, at most B_od.
+             */
+            cost: string;
+            /**
+             * Extra Cost
+             * @description Added to c(P).
+             */
+            extra_cost: string;
+            /**
+             * D J
+             * @description Rise of J.
+             */
+            d_j: number;
+            /**
+             * D Min R
+             * @description Change of min r.
+             */
+            d_min_r: number;
         };
         /**
          * PlanVerdict
@@ -7254,6 +7686,19 @@ export interface components {
          */
         ProfileWeightPreset: "po_rowno" | "pod_dzieci" | "dzien_babci";
         /**
+         * ProfileWithoutAccount
+         * @description A person with no account: their opinion comes from a voting link.
+         */
+        ProfileWithoutAccount: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Display Name */
+            display_name: string;
+        };
+        /**
          * Progress
          * @description Value of the ``progress`` event.
          */
@@ -7262,6 +7707,93 @@ export interface components {
             stage: string;
             /** Percent */
             percent: number;
+        };
+        /**
+         * ProposalCreate
+         * @description Which plan to send; the latest version by default.
+         */
+        ProposalCreate: {
+            /**
+             * Plan Id
+             * @description A stored version; it must still be the latest one (else 409).
+             */
+            plan_id?: string | null;
+        };
+        /**
+         * ProposalDecision
+         * @description What a member does with a proposal.
+         * @enum {string}
+         */
+        ProposalDecision: "approve" | "reject" | "comment";
+        /**
+         * ProposalRead
+         * @description A proposal with the status, the counts and the answers.
+         */
+        ProposalRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            /**
+             * Plan Id
+             * Format: uuid
+             */
+            plan_id: string;
+            /** Plan Hash */
+            plan_hash: string;
+            /** Plan Version */
+            plan_version: number;
+            /** Sent By Name */
+            sent_by_name: string;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+            status: components["schemas"]["ProposalStatus"];
+            tally: components["schemas"]["ProposalTally"];
+            /** Responses */
+            responses: components["schemas"]["ResponseRead"][];
+            /** Profiles Without Account */
+            profiles_without_account: components["schemas"]["ProfileWithoutAccount"][];
+        };
+        /**
+         * ProposalStatus
+         * @description The proposal as a whole.
+         *
+         *     ``outdated`` wins (the plan changed after it was sent), then ``approved``
+         *     (every member with an account approved), then ``rejected`` (somebody
+         *     rejects) and else ``pending``.
+         * @enum {string}
+         */
+        ProposalStatus: "pending" | "approved" | "rejected" | "outdated";
+        /**
+         * ProposalTally
+         * @description Counts over the members with an account.
+         */
+        ProposalTally: {
+            /**
+             * Members
+             * @description Everybody with an account on the trip.
+             */
+            members: number;
+            /** Approvals */
+            approvals: number;
+            /** Rejections */
+            rejections: number;
+            /** Comments */
+            comments: number;
+            /**
+             * Waiting
+             * @description Members who have not answered yet.
+             */
+            waiting: number;
         };
         /**
          * ProviderManagedDetail
@@ -7513,6 +8045,41 @@ export interface components {
         RequirementsWrite: {
             /** Requirements */
             requirements?: components["schemas"]["RequirementItem"][];
+        };
+        /**
+         * ResponseCreate
+         * @description A member's answer.
+         */
+        ResponseCreate: {
+            decision: components["schemas"]["ProposalDecision"];
+            /**
+             * Remark
+             * @description Required for `comment`, optional otherwise.
+             */
+            remark?: string | null;
+        };
+        /**
+         * ResponseRead
+         * @description One member's answer with their name.
+         */
+        ResponseRead: {
+            /**
+             * Profile Id
+             * @description The member's profile; null when it was removed.
+             */
+            profile_id: string | null;
+            /** Display Name */
+            display_name: string;
+            decision: components["schemas"]["ProposalDecision"];
+            /** Remark */
+            remark: string | null;
+            /**
+             * Responded At
+             * Format: date-time
+             */
+            responded_at: string;
+            /** Is Me */
+            is_me: boolean;
         };
         /**
          * RoleCreate
@@ -8136,6 +8703,12 @@ export interface components {
             /** Count */
             count: number;
         };
+        /**
+         * UpgradeKind
+         * @description What an upgrade does to the plan.
+         * @enum {string}
+         */
+        UpgradeKind: "add" | "replace";
         /**
          * UserPermissionsRead
          * @description A user's assignments as stored in the database.
@@ -12987,6 +13560,68 @@ export interface operations {
             };
         };
     };
+    get_plan_calendar_api_v1_trips__trip_id__plans__plan_id__calendar_ics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The .ics file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/calendar": unknown;
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan, trip not found or caller not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The version has no approved proposal. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotApprovedError"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     preview_override_api_v1_trips__trip_id__overrides_preview_post: {
         parameters: {
             query?: never;
@@ -13191,6 +13826,374 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_budget_approvals_api_v1_trips__trip_id__budget_approvals_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["BudgetApprovalStatus"] | null;
+                /** @description Page number, from 1. */
+                page?: number;
+                /** @description Items per page (max 100). */
+                size?: number;
+                dir?: components["schemas"]["SortDir"];
+                sort?: components["schemas"]["BudgetApprovalSort"];
+            };
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_BudgetApprovalRead_"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_budget_api_v1_trips__trip_id__budget_approvals__approval_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BudgetDecisionCreate"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetApprovalRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip or approval not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Decided already, or the plan was recomputed (superseded). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotPendingError"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_budget_api_v1_trips__trip_id__budget_approvals__approval_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BudgetDecisionCreate"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetApprovalRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip or approval not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Decided already, or the plan was recomputed (superseded). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotPendingError"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_proposal_api_v1_trips__trip_id__proposals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ProposalCreate"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.proposals:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip, proposal or plan not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The proposal is about an older plan version. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutdatedError"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_current_proposal_api_v1_trips__trip_id__proposals_current_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.proposals:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Nothing was sent, or no such trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    respond_to_proposal_api_v1_trips__trip_id__proposals__proposal_id__response_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResponseCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.proposals:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip, proposal or plan not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The proposal is about an older plan version. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutdatedError"];
+                };
             };
             /** @description Validation Error */
             422: {

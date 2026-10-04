@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { $api } from '@/api/client'
 import { planQueryOptions } from '@/api/queries/plans'
+import { proposalQueryOptions } from '@/api/queries/proposals'
 
 /** Builds the plan and puts the answer straight into the "latest plan" cache. */
 export function useCreatePlan(tripId: string) {
@@ -11,6 +12,8 @@ export function useCreatePlan(tripId: string) {
       // A fetch of the old plan still in flight must not overwrite the new one.
       await queryClient.cancelQueries({ queryKey })
       queryClient.setQueryData(queryKey, plan)
+      // A new version makes the open proposal outdated: read its status again.
+      await queryClient.invalidateQueries({ queryKey: proposalQueryOptions(tripId).queryKey })
     },
   })
 

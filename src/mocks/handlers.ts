@@ -38,6 +38,7 @@ import {
 } from './fixtures'
 import { interviewHandlers } from './interview'
 import { permissionHandlers } from './permissions'
+import { proposalHandlers } from './proposals'
 import { createWorld, type ScenarioName, type World } from './scenarios'
 
 const API = '*/api/v1'
@@ -331,6 +332,7 @@ function normalHandlers(
       findTrip,
       canWrite,
     }),
+    ...proposalHandlers({ api: API, world, latency, findTrip, canWrite }),
     // The jury's one-link entry. Like the real API: no-store, and 404 for every bad or disabled token.
     http.post(`${API}/auth/demo`, async ({ request }) => {
       await latency()
