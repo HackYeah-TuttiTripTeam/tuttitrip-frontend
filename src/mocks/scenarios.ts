@@ -31,8 +31,8 @@ import {
   votePlaces,
   voteSummary,
 } from './fixtures'
-import { adminMe, createPermissionsWorld, type PermissionsWorld } from './permissions'
 import { emptyInterviewWorld, emptyTrip, type InterviewWorld, resumedMessages } from './interview'
+import { adminMe, createPermissionsWorld, type PermissionsWorld } from './permissions'
 
 export const scenarioNames = [
   'family-warsaw',

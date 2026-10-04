@@ -19,8 +19,8 @@ import {
   voteLink,
   votePlaces,
 } from './fixtures'
-import { permissionHandlers } from './permissions'
 import { interviewHandlers } from './interview'
+import { permissionHandlers } from './permissions'
 import { createWorld, type ScenarioName, type World } from './scenarios'
 
 const API = '*/api/v1'
