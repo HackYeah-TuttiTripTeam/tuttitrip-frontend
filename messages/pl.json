@@ -1345,10 +1345,8 @@
   "voice_mic_muted": "Mikrofon wyciszony na czas odpowiedzi asystenta",
   "voice_mic_muted_ptt": "Mikrofon wyłączony, dopóki trzymasz przycisk, słucha",
   "voice_mic_override": "Mów mimo to",
-  "voice_ptt_toggle": "Mów przytrzymując przycisk",
-  "voice_ptt_toggle_hint": "Mikrofon słucha tylko, gdy trzymasz przycisk. Puszczenie go nie kończy rozmowy.",
   "voice_ptt_button": "Przytrzymaj, aby mówić",
-  "voice_ptt_held": "Mów… puść, aby wysłać",
+  "voice_ptt_held": "Mówisz…",
   "voice_elsewhere_voice": "Trwa rozmowa głosowa na innym urządzeniu albo w innej karcie.",
   "voice_elsewhere_text": "Asystent odpowiada jeszcze na wiadomość. Spróbuj za chwilę.",
   "voice_elsewhere_end": "Zakończ tamtą rozmowę",
@@ -1793,5 +1791,10 @@
   "expense_error_currency_unsupported": "Tej waluty nie obsługujemy. Wybierz inną.",
   "expense_error_rate_not_found": "Brak kursu na ten dzień (to może być weekend albo święto). Wybierz inną datę albo walutę wyjazdu.",
   "expense_error_rate_unavailable": "Nie udało się pobrać kursu waluty. Spróbuj jeszcze raz za chwilę.",
-  "help_trip_expenses_title": "Przewodnik: wydatki"
+  "help_trip_expenses_title": "Przewodnik: wydatki",
+  "voice_ptt_hint": "Puść, aby wysłać. Rozmowa trwa, kończy ją kwadrat.",
+  "voice_ptt_level": "Poziom Twojego głosu",
+  "voice_advanced": "Zaawansowane",
+  "voice_always_listen": "Zawsze słuchaj",
+  "voice_always_listen_hint": "Mikrofon słucha cały czas i łapie także tło. Domyślnie słucha tylko przy przytrzymanym przycisku."
 }
