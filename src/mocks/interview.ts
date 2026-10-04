@@ -40,6 +40,10 @@ export interface InterviewWorld {
   turn: number
   /** A run answers with this status instead of a stream (401 expired session, 409 run going). */
   runStatus?: number
+  /** What holds the interview (a call on another device, a text turn): offers and runs get 409. */
+  running?: 'text' | 'voice'
+  /** How many times the host ended a call that runs elsewhere (`voice/release`). */
+  releases: number
   /** The voice offer answers with this status instead of an SDP answer (409, 429, 503). */
   voiceOfferStatus?: number
   /** Calls the server holds, and the ones that were hung up (the test reads both). */
@@ -55,6 +59,7 @@ export const emptyInterviewWorld = (): InterviewWorld => ({
   written: {},
   script: defaultScript(),
   turn: 0,
+  releases: 0,
   calls: [],
   hangups: [],
 })
@@ -122,6 +127,14 @@ function defaultScript(): ScriptedTurn[] {
     {
       reply: 'To wszystko. Zbudować plan?',
       card: { kind: 'confirm', question: 'Zbudować plan?', options: ['Tak, buduj', 'Jeszcze nie'] },
+    },
+    {
+      reply: 'A może inne miasto?',
+      card: { kind: 'city', question: 'Dokąd jedziecie?', options: [], field: 'destination' },
+    },
+    {
+      reply: 'Kiedy to będzie?',
+      card: { kind: 'date_range', question: 'Kiedy jedziecie?', options: [], field: 'dates' },
     },
   ]
 }
@@ -258,6 +271,7 @@ function sessionRead(world: InterviewHost, tripId: string): Schemas['SessionRead
     created_by: 'auth0|mock-user',
     created_at: SESSION_TIME,
     updated_at: SESSION_TIME,
+    running: world.interview.running ?? null,
     message_count: world.interview.messages.length,
   }
 }
@@ -341,12 +355,24 @@ export function interviewHandlers({
           { status: 404 },
         )
       }
+      if (world.interview.running) {
+        return HttpResponse.json({ detail: 'busy' }, { status: 409 })
+      }
       if (world.interview.voiceOfferStatus) {
         return HttpResponse.json({ detail: 'mock' }, { status: world.interview.voiceOfferStatus })
       }
       const callId = `call_${world.interview.calls.length + 1}`
       world.interview.calls.push(callId)
       return HttpResponse.json({ sdp: 'v=0\r\nmock-answer', call_id: callId })
+    }),
+
+    http.post(`${api}/trips/:tripId/interview/voice/release`, async ({ params }) => {
+      await latency()
+      const found = guard(params.tripId)
+      if (found instanceof HttpResponse) return found
+      world.interview.releases += 1
+      if (world.interview.running === 'voice') world.interview.running = undefined
+      return new HttpResponse(null, { status: 204 })
     }),
 
     http.post(`${api}/trips/:tripId/interview/voice/:callId/hangup`, async ({ params }) => {
@@ -365,6 +391,9 @@ export function interviewHandlers({
       await latency()
       const found = guard(params.tripId)
       if (found instanceof HttpResponse) return found
+      if (world.interview.running) {
+        return HttpResponse.json({ detail: 'busy' }, { status: 409 })
+      }
       if (world.interview.runStatus) {
         return HttpResponse.json({ detail: 'mock' }, { status: world.interview.runStatus })
       }

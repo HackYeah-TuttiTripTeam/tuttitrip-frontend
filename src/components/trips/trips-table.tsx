@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ArrowUpDown } from '@keyline-icons/react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Bin } from '@keyline-icons/react'
 import { Link } from '@tanstack/react-router'
 import {
   createColumnHelper,
@@ -8,6 +8,7 @@ import {
   tableFeatures,
   useTable,
 } from '@tanstack/react-table'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -67,7 +68,7 @@ const columns = column.columns([
     cell: ({ row }) => {
       const range = formatDateRange(row.original.start_date, row.original.end_date)
       return range ? (
-        <span className="whitespace-nowrap tabular-nums">{range}</span>
+        <span className="whitespace-normal tabular-nums md:whitespace-nowrap">{range}</span>
       ) : (
         <span className="text-muted-foreground">{m.trip_dates_undecided()}</span>
       )
@@ -87,7 +88,7 @@ const columns = column.columns([
 const columnClass: Record<string, string> = {
   name: 'w-full md:w-1/2',
   destination: 'hidden md:table-cell',
-  start_date: 'text-right md:text-left',
+  start_date: 'w-40 text-right md:w-auto md:text-left',
   created_at: 'hidden text-right md:table-cell',
 }
 
@@ -96,12 +97,14 @@ interface TripsTableProps {
   sort: TripSortKey
   dir: SortDirection
   onSortChange: (sort: TripSortKey, dir: SortDirection) => void
+  /** Asks to delete a trip; the button shows only on rows where the caller is the host. */
+  onDelete: (trip: Trip) => void
 }
 
 const isSortKey = (id: string): id is TripSortKey => id in TRIP_SORT_LABELS
 
 /** Rows arrive sorted by the server (see useTrips); the table only renders and toggles sort state. */
-export function TripsTable({ trips, sort, dir, onSortChange }: TripsTableProps) {
+export function TripsTable({ trips, sort, dir, onSortChange, onDelete }: TripsTableProps) {
   const sorting: SortingState = [{ id: sort, desc: dir === 'desc' }]
 
   const table = useTable({
@@ -159,6 +162,9 @@ export function TripsTable({ trips, sort, dir, onSortChange }: TripsTableProps) 
                 </TableHead>
               )
             })}
+            <TableHead className="w-12 px-0">
+              <span className="sr-only">{m.trips_col_actions()}</span>
+            </TableHead>
           </TableRow>
         ))}
       </TableHeader>
@@ -173,6 +179,21 @@ export function TripsTable({ trips, sort, dir, onSortChange }: TripsTableProps) 
                 <table.FlexRender cell={cell} />
               </TableCell>
             ))}
+            <TableCell className="w-12 px-0 py-1 text-right">
+              {row.original.my_role === 'host' && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={m.trip_delete_row_label({ name: row.original.name })}
+                  title={m.trip_delete_open()}
+                  onClick={() => onDelete(row.original)}
+                  className="relative z-10 size-11 text-muted-foreground hover:text-destructive md:size-9"
+                >
+                  <Bin aria-hidden="true" />
+                </Button>
+              )}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -189,6 +210,7 @@ export function TripsTableSkeleton({ rows = 4 }: { rows?: number }) {
           <Skeleton className="h-4 flex-1" />
           <Skeleton className="hidden h-4 w-32 md:block" />
           <Skeleton className="h-4 w-20" />
+          <Skeleton className="size-9" />
         </div>
       ))}
     </div>
