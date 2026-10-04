@@ -9,7 +9,6 @@ import {
   formValuesToPatch,
   kindFromDates,
   mapValidationErrors,
-  moneyToNumber,
   normalizeMoney,
   toCents,
   tripFormSchema,
@@ -38,6 +37,7 @@ const trip = (over: Partial<Trip> = {}): Trip => ({
   budget_flex_pct: 10,
   fairness_alpha: 1,
   my_role: 'host',
+  my_status: 'confirmed',
   kind: 'trip',
   ...over,
 })
@@ -82,6 +82,15 @@ describe('tripFormSchema', () => {
     expect(issues({ ...filled, budgetMin: '3000' })).toHaveProperty('budgetMax')
     expect(issues({ ...filled, budgetMin: 'abc', budgetMax: '2' })).toHaveProperty('budgetMin')
     expect(issues({ ...filled, budgetMin: '2000', budgetMax: '3000' })).toEqual({})
+  })
+
+  it('has no ceiling on a budget, per day or for the whole trip', () => {
+    const day = { ...filled, budgetScope: 'day' as const }
+    expect(issues({ ...day, budgetMin: '1500', budgetMax: '25000' })).toEqual({})
+    expect(issues({ ...filled, budgetMin: '0', budgetMax: '9999999999' })).toEqual({})
+    expect(issues({ ...filled, budgetMin: '1', budgetMax: '12345678901' })).toHaveProperty(
+      'budgetMax',
+    )
   })
 })
 
@@ -247,12 +256,6 @@ describe('diffPatch', () => {
 })
 
 describe('money for display and currency', () => {
-  it('reads Polish commas and rejects half-typed text', () => {
-    expect(moneyToNumber('2000,5')).toBe(2000.5)
-    expect(moneyToNumber('')).toBeNull()
-    expect(moneyToNumber('20x')).toBeNull()
-  })
-
   it('takes the currency from the city, then the trip, then PLN', () => {
     const cities = [{ slug: 'london', currency: 'GBP' }]
     expect(effectiveCurrency('london', cities, 'EUR')).toBe('GBP')

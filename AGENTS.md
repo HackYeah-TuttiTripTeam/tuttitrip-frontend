@@ -188,6 +188,12 @@ options from `src/api/queries/`, so a route never touches the API directly.
    or `cva()`; Biome's `noTailwindRawColors` rejects palette colors
    (`bg-red-500`). Runs in `pnpm biome check` / `biome ci`.
 
+9. **The AG-UI client lives in `hooks/` and `api/` only.** `@ag-ui/*` is imported by
+   `api/interview-agent.ts`, `api/interview-events.ts` and `hooks/use-interview.ts`; components,
+   views, routes, loaders, lib and stores get plain types and props. `@copilotkit/*` is not allowed
+   anywhere (spike #24: production needs a licence key, its runtime does not start in a Worker).
+   (`ag-ui-only-in-hooks-and-api`, `no-copilotkit` and a package.json check in `scripts/check-arch.mjs`)
+
 Also enforced: no circular imports, no unresolvable or undeclared packages,
 loaders/stores/api stay UI-free, and only the folders above exist in `src/`.
 Each rule was proven to fail on a deliberate violation. If you need to break
@@ -244,6 +250,30 @@ widoki ani komponenty.
 
 - Poza zakresem: manifest PWA (`vite.config.ts`) i `index.html` mają opis po polsku, bo nie znają
   języka użytkownika.
+
+## Interview (Wywiad tab, AG-UI)
+
+`views/trip-view.interview.tsx` (lazy chunk) wires `hooks/use-interview-session.ts` (session and
+history over REST, newest page first with `dir=desc`), `hooks/use-interview.ts` (the AG-UI run) and
+`hooks/use-knowledge.ts` (the "Co już wiem" panel). The client sends only the latest user text; the
+server keeps the history of the session (`threadId` = session id), one run at a time (409 otherwise).
+The shared state is read defensively (`lib/interview.ts`): `knowledge` (a `KnowledgeRead` snapshot,
+applied to the query cache) and `card` (kind, question, options). A card answers with a sentence
+that carries the numbers (`lib/interview-answers.ts`). The REST answer of `/interview/knowledge`
+is the truth; the panel refetches after every run and edits go through the trips and profiles REST.
+`api/interview-events.ts` folds all 31 AG-UI 1.0 events (8 families) into the run view; RAW and
+CUSTOM land in `unhandled` (logged in dev). Mock: scenarios `interview-empty` and
+`interview-resumed`, `sseResponse()` in `src/mocks/interview.ts` for tests that script a stream.
+A RUN_ERROR carries `code` (`spend_limit`, `timeout`, `unavailable`, `error`), each with its own
+message; 409 means a text turn or a voice call is already running.
+
+Voice (`hooks/use-voice-call.ts`, `components/interview/voice-button.tsx`, `live-captions.tsx`):
+WebRTC straight to the provider, our API only answers the SDP offer
+(`POST …/interview/voice/offer`) and hangs up (`…/{call_id}/hangup`). The microphone and the audio
+start on a tap; stop releases the mic first, then tells the server; closing the page sends a
+`keepalive` hang-up (`api/voice.ts`). Captions come from the data-channel events (`lib/voice-events.ts`,
+keyed by item id, so a late user transcript keeps its place). A call and a text turn exclude each other.
+No microphone or no WebRTC leaves the text field.
 
 ## Data flow for a feature (example: trips)
 
@@ -501,7 +531,9 @@ branch deleted by hand), which also rewrites the PR's preview comment to
 Secrets and variables (GitHub Actions): secret `CLOUDFLARE_API_TOKEN` (Workers
 Scripts:Edit, Account Workers subdomain read, Zone Workers Routes:Edit and
 DNS:Edit for gburek.app); variables `CLOUDFLARE_ACCOUNT_ID`, `AUTH0_DOMAIN`,
-`AUTH0_CLIENT_ID`, `AUTH0_AUDIENCE`. Without the token the deploy job is
+`AUTH0_CLIENT_ID`, `AUTH0_AUDIENCE`, `VITE_GOOGLE_MAPS_API_KEY`, `VITE_GOOGLE_MAPS_MAP_ID`
+(the Google key is public by design: referrer, API and daily quota limits are set in Google Cloud,
+backend#28). Without the token the deploy job is
 skipped with a warning and `checks` stays green.
 
 ## Workflows

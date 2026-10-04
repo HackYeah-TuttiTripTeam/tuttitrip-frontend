@@ -16,11 +16,18 @@ interface InvitationListProps {
   invitations: Invitation[]
   /** Asks to revoke; the caller confirms before anything is sent. */
   onRevoke: (invitation: Invitation) => void
+  /** Names of the people on the trip by profile id, to say whom a named invitation is for. */
+  profileNames: ReadonlyMap<string, string>
   now?: Date
 }
 
 /** Working invitations first, each with its expiry, uses and Revoke; older ones fold away. */
-export function InvitationList({ invitations, onRevoke, now = new Date() }: InvitationListProps) {
+export function InvitationList({
+  invitations,
+  onRevoke,
+  profileNames,
+  now = new Date(),
+}: InvitationListProps) {
   const rows = invitations.map((invitation) => ({
     invitation,
     status: invitationStatus(invitation, now),
@@ -42,6 +49,13 @@ export function InvitationList({ invitations, onRevoke, now = new Date() }: Invi
         <p className="text-muted-foreground text-sm tabular-nums">
           {m.invite_row_uses({ uses: invitation.uses, max: invitation.max_uses })}
         </p>
+        {invitation.profile_id && (
+          <p className="font-medium text-sm">
+            {m.invite_row_for({
+              name: profileNames.get(invitation.profile_id) ?? m.invite_row_for_unknown(),
+            })}
+          </p>
+        )}
       </div>
       {status === 'active' && (
         <Button

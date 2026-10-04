@@ -6,6 +6,7 @@ import {
   RefreshCcw,
   TriangleAlert,
 } from '@keyline-icons/react'
+import { getRouteApi } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ApiError } from '@/api/errors'
 import type { Trip } from '@/api/queries/trips'
@@ -13,8 +14,6 @@ import { DayTabs } from '@/components/planning/day-tabs'
 import { PlanHashLabel } from '@/components/planning/plan-hash-label'
 import { PlanPrintout } from '@/components/planning/plan-printout'
 import { PlanSummary } from '@/components/planning/plan-summary'
-import { PlanTimeline } from '@/components/planning/plan-timeline'
-import { VerdictChip } from '@/components/planning/verdict-chip'
 import { StatusMessage } from '@/components/shared/status-message'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -22,9 +21,13 @@ import { useCreatePlan } from '@/hooks/use-create-plan'
 import { usePlan } from '@/hooks/use-plan'
 import { usePrinting } from '@/hooks/use-printing'
 import { useVerdicts } from '@/hooks/use-verdict'
+import { TOUR } from '@/lib/help'
 import { m } from '@/paraglide/messages'
 import { PlanConsent } from './trip-view.consent'
 import { PlanDecisions } from './trip-view.decisions'
+import { PlanDayPanel } from './trip-view.plan-day'
+
+const route = getRouteApi('/trips_/$tripId')
 
 interface TripPlanViewProps {
   trip: Trip
@@ -39,6 +42,10 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
   const [day, setDay] = useState(1)
   const [verdictPlace, setVerdictPlace] = useState<string | null>(null)
   const verdicts = useVerdicts(plan)
+  const { view } = route.useSearch()
+  const navigate = route.useNavigate()
+  const setView = (next: typeof view) =>
+    void navigate({ search: (prev) => ({ ...prev, view: next }), replace: true })
   const canBuild = role !== 'member'
 
   if (isPending) return <PlanSkeleton />
@@ -87,27 +94,29 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
 
   if (hasNoPlan || !plan) {
     return (
-      <StatusMessage
-        icon={<Calendar />}
-        title={m.plan_empty_title()}
-        action={
-          <div className="flex flex-col items-start gap-3 md:items-center">
-            {canBuild && (
-              <Button
-                size="lg"
-                className="h-11 rounded-full px-6"
-                onClick={creation.create}
-                disabled={creation.isPending}
-              >
-                {creation.isPending ? m.plan_computing() : m.plan_compute()}
-              </Button>
-            )}
-            {failure}
-          </div>
-        }
-      >
-        {canBuild ? m.plan_empty_body_manage() : m.plan_empty_body_member()}
-      </StatusMessage>
+      <div data-tour={TOUR.planEmpty}>
+        <StatusMessage
+          icon={<Calendar />}
+          title={m.plan_empty_title()}
+          action={
+            <div className="flex flex-col items-start gap-3 md:items-center">
+              {canBuild && (
+                <Button
+                  size="lg"
+                  className="h-11 rounded-full px-6"
+                  onClick={creation.create}
+                  disabled={creation.isPending}
+                >
+                  {creation.isPending ? m.plan_computing() : m.plan_compute()}
+                </Button>
+              )}
+              {failure}
+            </div>
+          }
+        >
+          {canBuild ? m.plan_empty_body_manage() : m.plan_empty_body_member()}
+        </StatusMessage>
+      </div>
     )
   }
 
@@ -121,7 +130,10 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
     <>
       {printing && <PlanPrintout plan={plan} trip={trip} />}
       <div className="flex flex-col gap-4 print:hidden" aria-busy={recalculating}>
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div
+          className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
+          data-tour={TOUR.planActions}
+        >
           <p className="flex flex-col text-sm leading-[22px]">
             <span className="font-medium">{m.plan_version({ n: plan.version })}</span>
             <PlanHashLabel hash={plan.plan_hash} />
@@ -154,10 +166,15 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
         <div role="status" className={recalculating ? 'text-muted-foreground text-sm' : 'sr-only'}>
           {recalculating && m.plan_recomputing_status()}
         </div>
-        <PlanSummary plan={plan} />
+        <div data-tour={TOUR.planSummary}>
+          <PlanSummary plan={plan} />
+        </div>
         <PlanConsent plan={plan} trip={trip} />
         {failure}
-        <div className={recalculating ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+        <div
+          className={recalculating ? 'opacity-60 transition-opacity' : 'transition-opacity'}
+          data-tour={TOUR.planDays}
+        >
           <DayTabs
             days={plan.days}
             value={current}
@@ -166,20 +183,14 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
               planDay.items.length === 0 ? (
                 <p className="text-muted-foreground text-sm">{m.plan_day_empty()}</p>
               ) : (
-                <PlanTimeline
-                  stops={planDay.items}
+                <PlanDayPanel
+                  key={planDay.index}
+                  day={planDay}
                   currency={plan.budget.currency}
-                  renderActions={(stop) => {
-                    const verdict = verdicts.byPlace.get(stop.place_id)
-                    return verdict ? (
-                      <div>
-                        <VerdictChip
-                          verdict={verdict.verdict}
-                          onClick={() => setVerdictPlace(stop.place_id)}
-                        />
-                      </div>
-                    ) : null
-                  }}
+                  view={view}
+                  onViewChange={setView}
+                  verdicts={verdicts}
+                  onVerdictOpen={setVerdictPlace}
                 />
               )
             }

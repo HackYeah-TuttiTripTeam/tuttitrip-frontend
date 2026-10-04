@@ -17,7 +17,7 @@ export function useCreatePlan(tripId: string) {
   return {
     create: () => mutation.mutate({ params: { path: { trip_id: tripId } }, body: null }),
     isPending: mutation.isPending,
-    // The generated type of the error is `never` (no error body is documented); it is an ApiError.
+    // The contract lists no error body for this call; the client throws an ApiError anyway.
     error: mutation.error as Error | null,
   }
 }

@@ -1,9 +1,13 @@
 import { useRef, useState } from 'react'
+import { HelpHint } from '@/components/shared/help-hint'
+import type { HelpHintId } from '@/lib/help-hints'
 import { cn } from '@/lib/utils'
 
 export interface ProofRow {
   title: string
   body: string
+  /** A "?" hint on the title. */
+  help?: HelpHintId
 }
 
 /**
@@ -44,6 +48,7 @@ export function ProofList({ rows }: { rows: ProofRow[] }) {
             )}
           >
             {row.title}
+            {row.help && <HelpHint id={row.help} className="ml-1" />}
           </dt>
           <dd className="max-w-prose text-muted-foreground leading-relaxed">{row.body}</dd>
         </div>

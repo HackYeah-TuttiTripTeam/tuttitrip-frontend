@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { HelpHint } from '@/components/shared/help-hint'
 import { cn } from '@/lib/utils'
 import { m } from '@/paraglide/messages'
 
@@ -60,7 +61,10 @@ export function FairnessExample({ people, floor, formatShare }: FairnessExampleP
           <p className="font-heading font-extrabold text-5xl tabular-nums leading-none tracking-tight">
             {formatShare(lowest.share)}
           </p>
-          <p className="mt-1 text-muted-foreground text-sm">{m.example_metric()}</p>
+          <p className="mt-1 flex items-center gap-1 text-muted-foreground text-sm">
+            {m.example_metric()}
+            <HelpHint id="weakest" />
+          </p>
         </div>
       )}
 
@@ -110,19 +114,26 @@ export function FairnessExample({ people, floor, formatShare }: FairnessExampleP
           </span>
         )}
         {lowest && (
-          <span>
+          <span className="flex items-center gap-1">
             {m.example_summary({
               name: lowest.name,
               share: formatShare(lowest.share),
               floor: formatShare(floor),
             })}
+            <HelpHint id="floor" />
           </span>
         )}
-        <span className="text-muted-foreground">{m.example_explainer()}</span>
+        <span className="flex items-center gap-1 text-muted-foreground">
+          {m.example_explainer()}
+          <HelpHint id="jain" />
+        </span>
       </figcaption>
 
       <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t pt-3">
-        <p className="text-muted-foreground text-sm">{m.example_hint()}</p>
+        <p className="flex items-center gap-1 text-muted-foreground text-sm">
+          {m.example_hint()}
+          <HelpHint id="alpha" />
+        </p>
         {moved && (
           <button
             type="button"

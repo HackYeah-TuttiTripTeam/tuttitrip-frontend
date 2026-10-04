@@ -2,6 +2,8 @@
 // after `pnpm api:sync` a contract change breaks `tsc` here instead of silently drifting.
 // Amounts are decimal strings, like in the API.
 import type { Schemas } from '@/api/client'
+import type { VotePlace } from '@/api/vote-contract'
+import { allocate, centsToDecimal, toCents } from '@/lib/money'
 
 export type Trip = Schemas['TripRead']
 export type Profile = Schemas['ProfileRead']
@@ -13,9 +15,13 @@ export type PersonFairness = Schemas['PersonFairness']
 export type PlanDomainCode = Schemas['PlanDomainCode']
 export type Me = Schemas['MeResponse']
 export type Member = Schemas['MemberRead']
+export type AdminUser = Schemas['AdminUserRead']
 export type Invitation = Schemas['InvitationRead']
+export type VoteLink = Schemas['VoteLinkRead']
+export type PlaceVoteSummary = Schemas['PlaceVoteSummary']
 export type City = Schemas['CityRead']
 export type Preferences = Schemas['PreferencesRead']
+export type Expense = Schemas['ExpenseRead']
 export type CatalogPlace = Schemas['PlaceRead']
 export type PlanVerdict = Schemas['PlanVerdict']
 export type ExplainEntry = Schemas['ExplainEntry']
@@ -41,6 +47,12 @@ export const PROFILE_IDS = {
   babcia: '0b1f5c1a-7d3e-4e0a-9c11-1a2b3c4d5e03',
   zosia: '0b1f5c1a-7d3e-4e0a-9c11-1a2b3c4d5e04',
   antek: '0b1f5c1a-7d3e-4e0a-9c11-1a2b3c4d5e05',
+} as const
+
+/** Google Place IDs of two catalogue places; the others have none (no card button). */
+export const GOOGLE_PLACE_IDS = {
+  zamek: 'ChIJ-mock-zamek-krolewski',
+  kopernik: 'ChIJ-mock-centrum-kopernik',
 } as const
 
 const PLACE_IDS = {
@@ -70,6 +82,7 @@ export const trip = (overrides: Partial<Trip> = {}): Trip => ({
   budget_flex_pct: 10,
   fairness_alpha: 1,
   my_role: 'host',
+  my_status: 'confirmed',
   kind: 'trip',
   ...overrides,
 })
@@ -174,14 +187,27 @@ export const familyProfiles = (): Profile[] => [
  * Marek is the host unless Ola is, then he is a co-host. The grandmother is a plain member.
  */
 export const familyMembers = (myRole: Trip['my_role'] = 'host'): Member[] => [
-  { profile_id: PROFILE_IDS.mama, display_name: 'Ola', role: myRole, is_me: true },
+  {
+    profile_id: PROFILE_IDS.mama,
+    display_name: 'Ola',
+    role: myRole,
+    status: 'confirmed',
+    is_me: true,
+  },
   {
     profile_id: PROFILE_IDS.tata,
     display_name: 'Marek',
     role: myRole === 'host' ? 'co_host' : 'host',
+    status: 'confirmed',
     is_me: false,
   },
-  { profile_id: PROFILE_IDS.babcia, display_name: 'Babcia Halina', role: 'member', is_me: false },
+  {
+    profile_id: PROFILE_IDS.babcia,
+    display_name: 'Babcia Halina',
+    role: 'member',
+    status: 'pending',
+    is_me: false,
+  },
 ]
 
 /** What the API answers for a person nobody has filled in yet: the age defaults, nothing ticked. */
@@ -306,6 +332,9 @@ const days = (): PlanDay[] => [
         place_id: PLACE_IDS.zamek,
         name: 'Zamek Królewski',
         address: 'Plac Zamkowy 4, 00-277 Warszawa',
+        lat: 52.248,
+        lon: 21.0147,
+        google_place_id: GOOGLE_PLACE_IDS.zamek,
         start: '10:00:00',
         end: '12:00:00',
       }),
@@ -313,6 +342,8 @@ const days = (): PlanDay[] => [
       verifiedStop({
         place_id: PLACE_IDS.prasowy,
         name: 'Bar Mleczny Prasowy',
+        lat: 52.2338,
+        lon: 21.0205,
         kind: 'food',
         start: '12:30:00',
         end: '13:30:00',
@@ -327,6 +358,8 @@ const days = (): PlanDay[] => [
       verifiedStop({
         place_id: PLACE_IDS.lazienki,
         name: 'Łazienki Królewskie',
+        lat: 52.215,
+        lon: 21.0357,
         start: '15:00:00',
         end: '17:30:00',
         transfer: { minutes: 25, mode: 'transit', cost: '4.40' },
@@ -343,6 +376,9 @@ const days = (): PlanDay[] => [
       verifiedStop({
         place_id: PLACE_IDS.kopernik,
         name: 'Centrum Nauki Kopernik',
+        lat: 52.2397,
+        lon: 21.0287,
+        google_place_id: GOOGLE_PLACE_IDS.kopernik,
         start: '10:00:00',
         end: '13:00:00',
         cost_per_person: '35.00',
@@ -353,6 +389,8 @@ const days = (): PlanDay[] => [
       verifiedStop({
         place_id: PLACE_IDS.pyzy,
         name: 'Pyzy Flaki Gorące',
+        lat: 52.231,
+        lon: 21.012,
         kind: 'food',
         start: '13:30:00',
         end: '14:30:00',
@@ -385,12 +423,12 @@ const days = (): PlanDay[] => [
 ]
 
 const withinBudget = (): PlanBudget => ({
+  unlimited: false,
   currency: 'PLN',
   cost: '1480.00',
   b_from: '1200.00',
   b_to: '1600.00',
   b_max: '1760.00',
-  unlimited: false,
   zone: 'up_to_b_to',
   over_budget: '0.00',
   needs_approval: false,
@@ -518,7 +556,7 @@ export const plan = (tripId: string = TRIP_ID, overrides: Partial<Plan> = {}): P
   input_hash: 'a'.repeat(64),
   plan_hash: 'a1b2c3d4e5f6',
   created_at: '2026-10-02T12:00:00Z',
-  params: { alpha: 1, weight_preset: 'default' },
+  params: { alpha: 1, weight_preset: 'default', draft: false },
   days: days(),
   lodging: lodging(),
   fairness: {
@@ -543,14 +581,33 @@ export const plan = (tripId: string = TRIP_ID, overrides: Partial<Plan> = {}): P
   ...overrides,
 })
 
-export const me = (): Me => ({
+export const me = (overrides: Partial<Me> = {}): Me => ({
   sub: MOCK_USER_SUB,
   scopes: [],
   permissions: [],
   roles: [],
   is_admin: false,
   access: { trips: 'WRITE', 'trips.core': 'WRITE', 'profiles.core': 'WRITE' },
+  ...overrides,
 })
+
+/** Accounts of the admin panel: 23 of them, every seventh blocked, three login providers. */
+export const adminUsers = (count = 23): AdminUser[] => {
+  const providers = ['auth0', 'google-oauth2', 'discord'] as const
+  return Array.from({ length: count }, (_, index) => {
+    const provider = providers[index % providers.length] ?? 'auth0'
+    const day = String((index % 28) + 1).padStart(2, '0')
+    return {
+      sub: `${provider}|user-${index}`,
+      email: `osoba${String(index).padStart(2, '0')}@example.com`,
+      name: `Osoba ${index}`,
+      provider,
+      last_login: index % 5 === 4 ? null : `2026-10-${day}T09:00:00Z`,
+      created_at: `2026-09-${day}T10:00:00Z`,
+      blocked: index % 7 === 6,
+    }
+  })
+}
 
 export const INVITATION_ID = 'c5d8e1a0-3b7f-4a29-9e64-0d2f6b8a1c33'
 /** The token of the invitation every scenario's host already holds (shown only once in reality). */
@@ -599,6 +656,95 @@ export const cities = (): City[] => [
   }),
 ]
 
+/** Another user of the trip: the author of expenses the caller did not write. */
+export const OTHER_USER_SUB = 'auth0|mock-other'
+
+/** The parts of an expense the way the API stores them: allocated to the cent like the backend. */
+export function expenseParticipants(
+  amount: string,
+  method: Expense['split_method'],
+  shares: { profile_id: string; value?: string | null }[],
+): Expense['participants'] {
+  const parts = allocate(
+    toCents(amount),
+    method,
+    shares.map((share) => ({ profileId: share.profile_id, value: share.value ?? null })),
+  )
+  return shares.map((share) => ({
+    profile_id: share.profile_id,
+    value: share.value ?? null,
+    amount: centsToDecimal(parts.get(share.profile_id) ?? 0n),
+  }))
+}
+
+export const expense = (overrides: Partial<Expense> = {}): Expense => {
+  const amount = overrides.amount ?? '100.00'
+  const method = overrides.split_method ?? 'equal'
+  const shares =
+    overrides.participants ??
+    Object.values(PROFILE_IDS).map((profile_id) => ({ profile_id, value: null, amount: '0.00' }))
+  return {
+    id: crypto.randomUUID(),
+    trip_id: TRIP_ID,
+    payer_profile_id: PROFILE_IDS.mama,
+    amount,
+    currency: 'PLN',
+    trip_amount: overrides.amount ?? '100.00',
+    exchange_rate: null,
+    status: 'confirmed',
+    has_evidence: false,
+    description: 'Obiad',
+    spent_on: '2026-10-10',
+    category: 'food',
+    split_method: method,
+    created_by_sub: MOCK_USER_SUB,
+    created_at: '2026-10-10T12:00:00Z',
+    ...overrides,
+    participants: expenseParticipants(amount, method, shares),
+  }
+}
+
+/** Three expenses of the family trip: a hotel for all, a dinner for four, a taxi for two. */
+export const familyExpenses = (): Expense[] => {
+  const ids = PROFILE_IDS
+  return [
+    expense({
+      id: '5a1c0e11-8b2d-4c3e-9f40-000000000001',
+      description: 'Nocleg',
+      category: 'lodging',
+      amount: '300.00',
+      spent_on: '2026-10-10',
+      payer_profile_id: ids.mama,
+    }),
+    expense({
+      id: '5a1c0e11-8b2d-4c3e-9f40-000000000002',
+      description: 'Kolacja',
+      amount: '90.00',
+      spent_on: '2026-10-10',
+      payer_profile_id: ids.tata,
+      created_by_sub: OTHER_USER_SUB,
+      participants: [ids.mama, ids.tata, ids.babcia, ids.zosia].map((profile_id) => ({
+        profile_id,
+        value: null,
+        amount: '0.00',
+      })),
+    }),
+    expense({
+      id: '5a1c0e11-8b2d-4c3e-9f40-000000000003',
+      description: 'Taksówka',
+      category: 'transport',
+      amount: '45.50',
+      spent_on: '2026-10-11',
+      payer_profile_id: ids.babcia,
+      created_by_sub: OTHER_USER_SUB,
+      participants: [ids.babcia, ids.zosia].map((profile_id) => ({
+        profile_id,
+        value: null,
+        amount: '0.00',
+      })),
+    }),
+  ]
+}
 const CATALOG_IDS = {
   narodowe: '5d1c8e20-3b4a-4c75-9e2f-0000000000b1',
   zamek: '5d1c8e20-3b4a-4c75-9e2f-0000000000b2',
@@ -655,3 +801,144 @@ export const catalogPlaces = (): CatalogPlace[] => [
   catalogPlace(CATALOG_IDS.kopernik, 'Centrum Nauki Kopernik', { tags: ['science', 'kids'] }),
   catalogPlace(CATALOG_IDS.polin, 'Muzeum Polin'),
 ]
+/** The secret of the voting link a mock host creates (shown once, in the 201 answer). */
+export const VOTE_TOKEN = 'mock-vote-token'
+/** The voting link of a second person (Antek), to open two links one after the other. */
+export const VOTE_TOKEN_OTHER = 'mock-vote-token-other'
+export const VOTE_LINK_ID = 'c4e1f2a0-5b6d-4c7e-8f90-1a2b3c4d5e01'
+
+export const voteLink = (overrides: Partial<VoteLink> = {}): VoteLink => ({
+  id: VOTE_LINK_ID,
+  profile_id: PROFILE_IDS.zosia,
+  profile_name: 'Zosia',
+  state: 'active',
+  created_at: '2026-10-01T10:00:00Z',
+  expires_at: '2036-10-15T10:00:00Z',
+  revoked_at: null,
+  last_used_at: null,
+  ...overrides,
+})
+
+/** What the group said so far: Zosia wants the castle, nobody has vetoed anything. */
+export const voteSummary = (): PlaceVoteSummary[] => [
+  summaryRow(PLACE_IDS.zamek, 'Zamek Królewski', [
+    ['want', null, 'app', PROFILE_IDS.mama, 'Ola'],
+    ['want', null, 'link', PROFILE_IDS.zosia, 'Zosia'],
+  ]),
+  summaryRow(PLACE_IDS.kopernik, 'Centrum Nauki Kopernik', [
+    ['dont_want', 'too_crowded', 'app', PROFILE_IDS.tata, 'Marek'],
+  ]),
+  summaryRow(PLACE_IDS.lazienki, 'Łazienki Królewskie', []),
+]
+
+function summaryRow(
+  placeId: string,
+  name: string,
+  votes: [
+    Schemas['RatingValue'],
+    Schemas['ReasonCode'] | null,
+    Schemas['VoteSource'],
+    string,
+    string,
+  ][],
+): PlaceVoteSummary {
+  return {
+    place_id: placeId,
+    place_name: name,
+    want: votes.filter(([value]) => value === 'want').length,
+    dont_want: votes.filter(([value]) => value === 'dont_want').length,
+    neutral: votes.filter(([value]) => value === 'neutral').length,
+    veto_count: 0,
+    votes: votes.map(([value, reason, source, profileId, displayName]) => ({
+      profile_id: profileId,
+      display_name: displayName,
+      value,
+      reason_code: reason,
+      source,
+      updated_at: '2026-10-02T10:00:00Z',
+    })),
+    vetoes: [],
+  }
+}
+
+/** What the voting page of Zosia shows: the plan's places, nothing rated yet. */
+export const votePlaces = (): VotePlace[] =>
+  [
+    [PLACE_IDS.zamek, 'Zamek Królewski', 'Zwiedzanie komnat i taras widokowy.'],
+    [PLACE_IDS.kopernik, 'Centrum Nauki Kopernik', 'Doświadczenia dla dzieci i dorosłych.'],
+    [PLACE_IDS.lazienki, 'Łazienki Królewskie', 'Spacer po parku z pawiami.'],
+  ].map(([place_id, name, description]) => ({
+    place_id: place_id as string,
+    name: name as string,
+    description: description as string,
+    photo_url: null,
+    rating: null,
+    reason_code: null,
+    veto_id: null,
+  }))
+
+export type Checkin = Schemas['CheckinRead']
+export type Photo = Schemas['PhotoRead']
+export type MemberLocation = Schemas['LocationRead']
+
+/** A 1x1 PNG: enough for a thumbnail or a full picture in a test. */
+export const PIXEL_PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+export const PIXEL_DATA_URL = `data:image/png;base64,${PIXEL_PNG_BASE64}`
+
+export const checkin = (profileId: string, overrides: Partial<Checkin> = {}): Checkin => ({
+  profile_id: profileId,
+  display_name: 'Ola',
+  accommodation: 'Hotel Polonia',
+  room: '214',
+  updated_at: '2026-10-09T18:00:00Z',
+  is_me: false,
+  ...overrides,
+})
+
+/** Marek has settled in with the grandmother's room next door; Ola has not entered hers yet. */
+export const familyCheckins = (): Checkin[] => [
+  checkin(PROFILE_IDS.tata, { display_name: 'Marek', accommodation: 'Hotel Polonia', room: '214' }),
+  checkin(PROFILE_IDS.babcia, {
+    display_name: 'Babcia Halina',
+    accommodation: 'Hotel Polonia',
+    room: '216',
+  }),
+]
+
+export const photo = (id: string, overrides: Partial<Photo> = {}): Photo => ({
+  id,
+  author_name: 'Marek',
+  is_mine: false,
+  content_type: 'image/jpeg',
+  size_bytes: 120_000,
+  created_at: '2026-10-10T12:00:00Z',
+  thumbnail: PIXEL_DATA_URL,
+  ...overrides,
+})
+
+/** Thirty photos, newest first by id, every third one the caller's. */
+export const galleryPhotos = (count = 30): Photo[] =>
+  Array.from({ length: count }, (_, index) =>
+    photo(`6b0f1c20-0000-4000-8000-${String(index).padStart(12, '0')}`, {
+      is_mine: index % 3 === 0,
+      author_name: index % 3 === 0 ? 'Ola' : 'Marek',
+      size_bytes: 100_000 + index * 1000,
+      created_at: new Date(Date.UTC(2026, 9, 10, 8, index)).toISOString(),
+    }),
+  )
+
+export const location = (
+  profileId: string,
+  overrides: Partial<MemberLocation> = {},
+): MemberLocation => ({
+  profile_id: profileId,
+  display_name: 'Marek',
+  latitude: 52.2297,
+  longitude: 21.0122,
+  accuracy_m: 20,
+  recorded_at: new Date().toISOString(),
+  expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+  is_me: false,
+  ...overrides,
+})

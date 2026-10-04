@@ -74,6 +74,15 @@ for (const file of handWritten) {
     failures.push(`${file}: imports msw, allowed only inside src/mocks/ (rule 8)`)
 }
 
+// Rule 9: CopilotKit was rejected in spike #24 and may not come back as a dependency either
+// (dependency-cruiser only sees imports). The AG-UI client's placement is a dependency-cruiser rule.
+{
+  const manifest = JSON.parse(readFileSync('package.json', 'utf8'))
+  const declared = Object.keys({ ...manifest.dependencies, ...manifest.devDependencies })
+  for (const name of declared.filter((dependency) => dependency.startsWith('@copilotkit/')))
+    failures.push(`package.json: ${name} is not allowed (rule 9, spike #24)`)
+}
+
 // Rule 6: every UI string lives in messages/*.json, in both languages with the same placeholders.
 const messageKeys = (locale) => {
   const raw = JSON.parse(readFileSync(`messages/${locale}.json`, 'utf8'))

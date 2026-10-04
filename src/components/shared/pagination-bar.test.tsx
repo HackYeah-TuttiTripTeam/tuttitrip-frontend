@@ -71,4 +71,24 @@ describe('PaginationBar', () => {
     }
     expect(screen.getByRole('combobox', { name: 'Per page' }).className).toContain('h-11')
   })
+
+  it('sticks to the bottom: above the phone action bar, at the screen edge on desktop', () => {
+    overwriteGetLocale(() => 'en')
+    const { container } = render(
+      <PaginationBar
+        page={1}
+        pages={3}
+        size={20}
+        total={50}
+        onPageChange={vi.fn()}
+        onSizeChange={vi.fn()}
+      />,
+    )
+    const bar = container.querySelector<HTMLElement>('[data-slot="pagination-bar"]')
+    expect(bar?.className).toContain('sticky')
+    expect(bar?.className).toContain('bottom-[calc(4rem+1px+env(safe-area-inset-bottom))]')
+    expect(bar?.className).toContain('md:bottom-0')
+    expect(bar?.className).toContain('mt-auto')
+    expect(bar?.className).toContain('bg-background')
+  })
 })

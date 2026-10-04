@@ -82,7 +82,7 @@ export function Proof() {
     { title: m.proof_visible_title(), body: m.proof_visible_body() },
     { title: m.proof_check_title(), body: m.proof_check_body() },
     { title: m.proof_price_title(), body: m.proof_price_body() },
-    { title: m.proof_settle_title(), body: m.proof_settle_body() },
+    { title: m.proof_settle_title(), body: m.proof_settle_body(), help: 'settlement' as const },
   ]
   return (
     <Section className="py-10 md:py-14">

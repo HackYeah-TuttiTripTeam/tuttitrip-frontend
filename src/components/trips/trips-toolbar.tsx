@@ -1,4 +1,5 @@
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, Search, X } from '@keyline-icons/react'
+import { CityCombobox } from '@/components/trips/city-combobox'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,15 +11,20 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { type CitySearch, nameFromSlug } from '@/lib/city-search'
 import { m } from '@/paraglide/messages'
 import {
   type SortDirection,
   TRIP_KIND_LABELS,
   TRIP_ROLE_LABELS,
   TRIP_SORT_LABELS,
+  TRIP_STATUS_LABELS,
+  TRIP_WHEN_LABELS,
   type TripKind,
   type TripRole,
   type TripSortKey,
+  type TripStatus,
+  type TripWhen,
 } from './trip-columns'
 
 type Kind = TripKind
@@ -27,6 +33,8 @@ type Role = TripRole
 export interface TripFilters {
   city?: string | undefined
   kind?: Kind | undefined
+  when?: TripWhen | undefined
+  status?: TripStatus | undefined
   role: Role[]
   start_from?: string | undefined
   start_to?: string | undefined
@@ -43,6 +51,8 @@ interface TripsToolbarProps {
   filters: TripFilters
   onFiltersChange: (patch: Partial<TripFilters>) => void
   cities: { slug: string; name: string }[]
+  /** Live city suggestions for the city filter. */
+  citySearch: CitySearch
   hasFilters: boolean
   onReset: () => void
 }
@@ -50,6 +60,8 @@ interface TripsToolbarProps {
 const ALL = 'all'
 const isSortKey = (value: string): value is TripSortKey => value in TRIP_SORT_LABELS
 const isKind = (value: string): value is Kind => value in TRIP_KIND_LABELS
+const isWhen = (value: string): value is TripWhen => value in TRIP_WHEN_LABELS
+const isStatus = (value: string): value is TripStatus => value in TRIP_STATUS_LABELS
 const isRole = (value: string): value is Role => value in TRIP_ROLE_LABELS
 
 export function TripsToolbar({
@@ -62,6 +74,7 @@ export function TripsToolbar({
   filters,
   onFiltersChange,
   cities,
+  citySearch,
   hasFilters,
   onReset,
 }: TripsToolbarProps) {
@@ -161,24 +174,57 @@ export function TripsToolbar({
           </SelectContent>
         </Select>
 
-        {cities.length > 0 && (
-          <Select
-            value={filters.city ?? ALL}
-            onValueChange={(value) => onFiltersChange({ city: value === ALL ? undefined : value })}
-          >
-            <SelectTrigger aria-label={m.trips_filter_city()} className="h-11 w-44 sm:h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>{m.trips_filter_city_all()}</SelectItem>
-              {cities.map((city) => (
-                <SelectItem key={city.slug} value={city.slug}>
-                  {city.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        <Select
+          value={filters.when ?? ALL}
+          onValueChange={(value) => onFiltersChange({ when: isWhen(value) ? value : undefined })}
+        >
+          <SelectTrigger aria-label={m.trips_filter_when()} className="h-11 w-44 sm:h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>{m.trips_filter_when_all()}</SelectItem>
+            {Object.entries(TRIP_WHEN_LABELS).map(([key, label]) => (
+              <SelectItem key={key} value={key}>
+                {label()}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.status ?? ALL}
+          onValueChange={(value) =>
+            onFiltersChange({ status: isStatus(value) ? value : undefined })
+          }
+        >
+          <SelectTrigger aria-label={m.trips_filter_status()} className="h-11 w-48 sm:h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>{m.trips_filter_status_all()}</SelectItem>
+            {Object.entries(TRIP_STATUS_LABELS).map(([key, label]) => (
+              <SelectItem key={key} value={key}>
+                {label()}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <CityCombobox
+          id="trips-filter-city"
+          label={m.trips_filter_city()}
+          value={
+            filters.city
+              ? (cities.find((c) => c.slug === filters.city)?.name ?? nameFromSlug(filters.city))
+              : ''
+          }
+          search={citySearch}
+          placeholder={m.trips_filter_city()}
+          clearLabel={m.trips_filter_city_all()}
+          onSelect={(city) => onFiltersChange({ city: city.slug })}
+          onClear={() => onFiltersChange({ city: undefined })}
+          className="w-52 sm:h-9"
+        />
 
         <div className="flex items-end gap-2">
           <div className="flex flex-col gap-1">

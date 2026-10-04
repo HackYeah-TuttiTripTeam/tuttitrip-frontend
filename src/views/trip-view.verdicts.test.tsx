@@ -178,9 +178,9 @@ describe('host override', () => {
 
 describe('decision log', () => {
   it('has a control for the order, kept in the URL', async () => {
-    const { router } = renderApp(`/trips/${TRIP_ID}?tab=plan&dir=asc`)
+    const { router } = renderApp(`/trips/${TRIP_ID}?tab=plan&dl_dir=asc`)
     expect(await screen.findByRole('combobox', { name: m.decision_log_order() })).toBeTruthy()
-    expect(router.state.location.search).toMatchObject({ dir: 'asc' })
+    expect(router.state.location.search).toMatchObject({ dl_dir: 'asc' })
   })
 
   it('starts empty with a hint', async () => {
@@ -189,9 +189,9 @@ describe('decision log', () => {
   })
 
   it('reads the page and the kind filter from the URL', async () => {
-    const { router } = renderApp(`/trips/${TRIP_ID}?tab=plan&decision=block&size=10`)
+    const { router } = renderApp(`/trips/${TRIP_ID}?tab=plan&dl_kind=block&dl_size=10`)
     expect(await screen.findByText(m.decision_log_empty_title())).toBeTruthy()
-    expect(router.state.location.search).toMatchObject({ decision: 'block', size: 10 })
+    expect(router.state.location.search).toMatchObject({ dl_kind: 'block', dl_size: 10 })
     expect(SKIPPED_PLACE_ID).toBeTruthy()
   })
 })

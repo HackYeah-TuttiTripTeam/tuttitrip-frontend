@@ -1,3 +1,4 @@
+import { cn } from 'cn'
 import type { ReactNode } from 'react'
 import {
   Dialog,
@@ -28,6 +29,8 @@ interface ResponsiveModalProps {
    * modal close it.
    */
   dismissible?: boolean
+  /** A wide dialog on desktop, for forms laid out in two columns. Phones are unaffected. */
+  wide?: boolean
 }
 
 export function ResponsiveModal({
@@ -38,6 +41,7 @@ export function ResponsiveModal({
   description,
   children,
   dismissible = true,
+  wide = false,
 }: ResponsiveModalProps) {
   if (isDesktop) {
     return (
@@ -46,7 +50,7 @@ export function ResponsiveModal({
           showCloseButton={dismissible}
           onInteractOutside={dismissible ? undefined : (event) => event.preventDefault()}
           onEscapeKeyDown={dismissible ? undefined : (event) => event.preventDefault()}
-          className="flex max-h-[90dvh] flex-col sm:max-w-md"
+          className={cn('flex max-h-[90dvh] flex-col', wide ? 'sm:max-w-3xl' : 'sm:max-w-md')}
         >
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>

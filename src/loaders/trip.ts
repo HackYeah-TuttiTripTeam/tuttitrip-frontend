@@ -1,32 +1,79 @@
 import { z } from 'zod'
 import { canCallProtectedApi } from '@/api/client'
 import { tripQueryOptions } from '@/api/queries/trips'
-import { DECISION_SORT_KEYS } from '@/lib/constants'
+import type { VoteSummarySort } from '@/api/queries/vote-links'
+import { VOICE_START_FLAG } from '@/lib/constants'
 import { DECISION_KINDS } from '@/lib/decisions'
+import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from '@/lib/pagination'
 import { TRIP_TABS, type TripTab } from '@/lib/trip-tabs'
-import { createListSearchSchema } from './list-search'
+import { VOTE_SOURCES, VOTE_SUMMARY_SORTS } from '@/lib/vote-constants'
+import {
+  type ExpenseSection,
+  expenseSectionSchema,
+  expensesListDefaults,
+  expensesListShape,
+} from './expenses'
 import type { RouterContext } from './router-context'
 
-/** The decision log of the Plan tab is a list: page, size, sort, dir and a filter by kind. */
-const { schema: decisionLogSchema, defaults: decisionLogDefaults } = createListSearchSchema({
-  sortKeys: DECISION_SORT_KEYS,
-  defaultSort: 'created_at',
-  defaultDir: 'desc',
-  filters: { decision: z.enum(DECISION_KINDS).optional().catch(undefined) },
-})
+/** Sort keys of the lists the trip page shows (the API's `sort` values). */
+export const CHECKIN_SORT_KEYS = ['accommodation', 'room', 'updated_at'] as const
+export const PHOTO_SORT_KEYS = ['created_at', 'size_bytes'] as const
+export const PHOTO_OWNERS = ['all', 'mine', 'others'] as const
+/** Every param of the decision log set to "absent", for a tab switch: the next tab's URL stays clean. */
+export const decisionLogReset = {
+  dl_page: undefined,
+  dl_size: undefined,
+  dl_dir: undefined,
+  dl_kind: undefined,
+}
+export const PLAN_VIEWS = ['list', 'map'] as const
+export const SORT_DIRS = ['asc', 'desc'] as const
 
 /** Values left out of the URL (see stripSearchParams in routes/trips_.$tripId.ts). */
 export const tripSearchDefaults = {
+  ...expensesListDefaults,
+  section: 'list',
   tab: 'interview',
-  ...decisionLogDefaults,
-} as const satisfies { tab: TripTab }
+  vpage: 1,
+  vsort: 'name',
+  view: 'list',
+  ci_page: 1,
+  ci_sort: 'accommodation',
+  ci_dir: 'asc',
+  ci_q: '',
+  ph_page: 1,
+  ph_sort: 'created_at',
+  ph_dir: 'desc',
+  ph_owner: 'all',
+  dl_page: 1,
+  dl_size: DEFAULT_PAGE_SIZE,
+  dl_dir: 'desc',
+} as const satisfies {
+  tab: TripTab
+  vpage: number
+  vsort: VoteSummarySort
+  view: (typeof PLAN_VIEWS)[number]
+  ci_page: number
+  ci_sort: (typeof CHECKIN_SORT_KEYS)[number]
+  ci_dir: (typeof SORT_DIRS)[number]
+  ci_q: string
+  ph_page: number
+  ph_sort: (typeof PHOTO_SORT_KEYS)[number]
+  ph_dir: (typeof SORT_DIRS)[number]
+  ph_owner: (typeof PHOTO_OWNERS)[number]
+  dl_page: number
+  dl_size: (typeof PAGE_SIZES)[number]
+  dl_dir: (typeof SORT_DIRS)[number]
+  section: ExpenseSection
+}
 
-/** The filters of the decision log without sort and paging. */
-export const decisionLogFilterDefaults = { decision: undefined }
+const CHECKIN_FILTER_MAX_CHARS = 200
 
 /**
- * /trips/$tripId?tab=&person=&offer=&page=&size=&sort=&dir=&decision= — a bad value falls back to the
- * default instead of erroring.
+ * /trips/$tripId?tab=&person=&vpage=&vsort=&vsource=&vveto=&view=&ci_*=&ph_*= — a bad value falls
+ * back to the default instead of erroring. `view` is the Plan tab's List | Map switch; `ci_*`
+ * (page, sort, dir, q) is the check-in list of the Osoby tab; `ph_*` (page, sort, dir, owner) is
+ * the Zdjęcia gallery.
  */
 export const tripSearchSchema = z.object({
   tab: z.enum(TRIP_TABS).default(tripSearchDefaults.tab).catch(tripSearchDefaults.tab),
@@ -34,7 +81,65 @@ export const tripSearchSchema = z.object({
   person: z.uuid().optional().catch(undefined),
   /** The checked offer of the Noclegi tab, so a reload shows the same result. */
   offer: z.uuid().optional().catch(undefined),
-  ...decisionLogSchema.shape,
+  /** The decision log of the Plan tab: page, size, order and a filter by kind. */
+  dl_page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(tripSearchDefaults.dl_page)
+    .catch(tripSearchDefaults.dl_page),
+  dl_size: z
+    .literal(PAGE_SIZES)
+    .default(tripSearchDefaults.dl_size)
+    .catch(tripSearchDefaults.dl_size),
+  dl_dir: z.enum(SORT_DIRS).default(tripSearchDefaults.dl_dir).catch(tripSearchDefaults.dl_dir),
+  dl_kind: z.enum(DECISION_KINDS).optional().catch(undefined),
+  /** The vote summary of the Osoby tab: page, sort, source filter and "only with a veto". */
+  vpage: z.number().int().min(1).default(tripSearchDefaults.vpage).catch(tripSearchDefaults.vpage),
+  vsort: z
+    .enum(VOTE_SUMMARY_SORTS)
+    .default(tripSearchDefaults.vsort)
+    .catch(tripSearchDefaults.vsort),
+  /** `voice=1`: the trip was just created by voice, the Wywiad tab starts the call (then drops the param). */
+  voice: z.literal(VOICE_START_FLAG).optional().catch(undefined),
+  vsource: z.enum(VOTE_SOURCES).optional().catch(undefined),
+  vveto: z.literal(true).optional().catch(undefined),
+  view: z.enum(PLAN_VIEWS).default(tripSearchDefaults.view).catch(tripSearchDefaults.view),
+  ci_page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(tripSearchDefaults.ci_page)
+    .catch(tripSearchDefaults.ci_page),
+  ci_sort: z
+    .enum(CHECKIN_SORT_KEYS)
+    .default(tripSearchDefaults.ci_sort)
+    .catch(tripSearchDefaults.ci_sort),
+  ci_dir: z.enum(SORT_DIRS).default(tripSearchDefaults.ci_dir).catch(tripSearchDefaults.ci_dir),
+  // TanStack Router parses ?ci_q=2026 as a number, so accept both.
+  ci_q: z
+    .union([z.string(), z.number()])
+    .transform((value) => String(value).slice(0, CHECKIN_FILTER_MAX_CHARS))
+    .default(tripSearchDefaults.ci_q)
+    .catch(tripSearchDefaults.ci_q),
+  ph_page: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(tripSearchDefaults.ph_page)
+    .catch(tripSearchDefaults.ph_page),
+  ph_sort: z
+    .enum(PHOTO_SORT_KEYS)
+    .default(tripSearchDefaults.ph_sort)
+    .catch(tripSearchDefaults.ph_sort),
+  ph_dir: z.enum(SORT_DIRS).default(tripSearchDefaults.ph_dir).catch(tripSearchDefaults.ph_dir),
+  ph_owner: z
+    .enum(PHOTO_OWNERS)
+    .default(tripSearchDefaults.ph_owner)
+    .catch(tripSearchDefaults.ph_owner),
+  /** The Wydatki tab: the part (list or settlement) and the list state, see loaders/expenses.ts. */
+  section: expenseSectionSchema,
+  ...expensesListShape,
 })
 
 export type TripSearch = z.output<typeof tripSearchSchema>

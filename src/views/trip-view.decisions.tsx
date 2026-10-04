@@ -11,14 +11,14 @@ import { VerdictSheet } from '@/components/planning/verdict-sheet'
 import { useApplyOverride } from '@/hooks/use-apply-override'
 import { useCatalogPlaces } from '@/hooks/use-catalog-places'
 import { useDecisionLog } from '@/hooks/use-decision-log'
-import { useClampPage, useListSearch } from '@/hooks/use-list-search'
+import { useClampPage } from '@/hooks/use-list-search'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
 import { useOverridePreview } from '@/hooks/use-override-preview'
 import { useProfiles } from '@/hooks/use-profiles'
 import { useSession } from '@/hooks/use-session'
 import { conflictMessages } from '@/lib/decisions'
+import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from '@/lib/pagination'
 import type { VerdictIndex } from '@/lib/verdicts'
-import { decisionLogFilterDefaults } from '@/loaders/trip'
 import { m } from '@/paraglide/messages'
 
 const route = getRouteApi('/trips_/$tripId')
@@ -110,19 +110,21 @@ export function PlanDecisions({
   const failure = override.error ?? preview.error
   const conflicts = conflictMessages(failure)
 
-  // The decision log lives in the URL like every list.
-  const { search, setPage, setSize, setFilters } = useListSearch(route, {
-    filterDefaults: decisionLogFilterDefaults,
+  // The decision log lives in the URL like every list (dl_*): a page change adds a history entry,
+  // a change of order, size or filter replaces it and goes back to page 1.
+  const search = route.useSearch()
+  const navigate = route.useNavigate()
+  const setLog = (patch: Partial<typeof search>, replace = true) =>
+    void navigate({ search: (prev) => ({ ...prev, ...patch }), replace })
+  const log = useDecisionLog(trip.id, {
+    page: search.dl_page,
+    size: search.dl_size,
+    sort: 'created_at',
+    dir: search.dl_dir,
+    kind: search.dl_kind,
   })
-  const logSearch = {
-    page: search.page,
-    size: search.size,
-    sort: search.sort,
-    dir: search.dir,
-    kind: search.kind,
-  }
-  const log = useDecisionLog(trip.id, logSearch)
-  useClampPage(search.page, log.pages, setPage)
+  // A page past the last one (a stale link) moves to the last page, from a real answer only.
+  useClampPage(search.dl_page, log.pages, (page) => setLog({ dl_page: page }))
 
   return (
     <>
@@ -134,20 +136,22 @@ export function PlanDecisions({
           currency={currency}
           authorName={(sub) => authors.get(sub) ?? null}
           placeName={placeName}
-          kind={search.decision}
-          dir={search.dir}
+          kind={search.dl_kind}
+          dir={search.dl_dir}
           profileName={(profileId) => names.get(profileId) ?? null}
-          page={search.page}
-          size={search.size}
+          page={search.dl_page}
+          size={search.dl_size}
           pages={log.pages}
           total={log.total}
           isPending={log.isPending}
           isPlaceholder={log.isPlaceholder}
           failed={log.problem !== null}
-          onKindChange={(decision) => setFilters({ decision })}
-          onDirChange={(dir) => setFilters({ dir })}
-          onPageChange={setPage}
-          onSizeChange={setSize}
+          onKindChange={(dl_kind) => setLog({ dl_kind, dl_page: 1 })}
+          onDirChange={(dl_dir) => setLog({ dl_dir, dl_page: 1 })}
+          onPageChange={(dl_page) => setLog({ dl_page }, false)}
+          onSizeChange={(size) =>
+            setLog({ dl_size: PAGE_SIZES.find((n) => n === size) ?? DEFAULT_PAGE_SIZE, dl_page: 1 })
+          }
           onRetry={log.refetch}
         />
       </section>

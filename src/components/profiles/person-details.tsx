@@ -1,6 +1,8 @@
 import { ArrowLeft } from '@keyline-icons/react'
 import type { Diet, ExamplePlace, ExampleVerdict, Preferences } from '@/api/queries/preferences'
+import { HelpHint } from '@/components/shared/help-hint'
 import { Button } from '@/components/ui/button'
+import type { HelpHintId } from '@/lib/help-hints'
 import { POOL_TOTAL } from '@/lib/importance'
 import { GROUP_LABELS, hasAccount, type Person, type SaveResult } from '@/lib/people'
 import type { ConstraintsValues } from '@/lib/preferences'
@@ -39,19 +41,24 @@ function Section({
   id,
   title,
   hint,
+  help,
   children,
 }: {
   id: string
   title: string
   hint?: string
+  help?: HelpHintId
   children: React.ReactNode
 }) {
   return (
     <section aria-labelledby={id} className="flex flex-col gap-4 border-t pt-6">
       <div className="flex flex-col">
-        <h3 id={id} className="font-medium text-lg">
-          {title}
-        </h3>
+        <div className="flex items-center gap-1">
+          <h3 id={id} className="font-medium text-lg">
+            {title}
+          </h3>
+          {help && <HelpHint id={help} />}
+        </div>
         {hint && <p className="text-muted-foreground text-sm">{hint}</p>}
       </div>
       {children}
@@ -121,6 +128,7 @@ export function PersonDetails({
       <Section
         id="prefs-constraints"
         title={m.prefs_constraints_title()}
+        help="veto"
         hint={m.prefs_constraints_hint()}
       >
         {canEdit && constraints ? (
@@ -159,6 +167,7 @@ export function PersonDetails({
       <Section
         id="prefs-pool"
         title={m.prefs_pool_title()}
+        help="weights"
         hint={[
           canEdit ? m.prefs_pool_hint({ total: POOL_TOTAL }) : null,
           profile.age_group === 'toddler' || profile.age_group === 'child'

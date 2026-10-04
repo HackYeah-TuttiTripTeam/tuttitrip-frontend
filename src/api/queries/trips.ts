@@ -18,6 +18,8 @@ export interface TripsSearch {
   q: string
   city?: string | undefined
   kind?: 'trip' | 'outing' | undefined
+  when?: Schemas['TripWhen'] | undefined
+  status?: Schemas['MemberStatus'] | undefined
   start_from?: string | undefined
   start_to?: string | undefined
   role: Schemas['TripRole'][]
