@@ -373,7 +373,9 @@ describe('JoinView, signed out', () => {
     expect(peekJoinToken()).toBeNull()
 
     await user.click(
-      within(screen.getByRole('status')).getByRole('button', { name: m.account_login() }),
+      within(within(screen.getByRole('main')).getByRole('status')).getByRole('button', {
+        name: m.account_login(),
+      }),
     )
     // Stashed before login() left the page.
     expect(login).toHaveBeenCalledOnce()

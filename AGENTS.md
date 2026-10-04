@@ -366,7 +366,7 @@ origin. No CORS, and the same build works in every environment.
 ## PWA updates and caching
 
 Settings live in `pwa.config.ts` (used by `vite.config.ts`, tested in
-`pwa.config.test.ts`; `scripts/pwa-build.test.mjs` builds develop and main and
+`pwa.config.test.ts`; `scripts/pwa-build.int.test.mjs` builds develop and main and
 checks the generated `sw.js` and `_headers`). Production is `VITE_APP_ENV=main`:
 `scripts/resolve-api.sh` turns the branch (`github.head_ref || github.ref_name`)
 into `app_env`, which is `main` only for the push to `main`, and the `checks`
@@ -397,19 +397,49 @@ is not production.
   `defaultOnCatch`, on errors such as "Failed to fetch dynamically imported
   module". A missing file-like path (`/assets/x.js`, any extension but `.html`)
   under `/assets/*` that the SPA fallback would answer with `index.html` is a
-  real 404 from the Worker (`assetsOr404` in `worker/index.ts`).
-  The deploy smoke test checks `/assets/smoke-missing.js` -> 404.
+  real 404 from the Worker (`assetsOr404` in `worker/index.ts`). Only `/assets/*`:
+  the Worker never sees other static paths (they are not in `run_worker_first`), so a
+  missing `/workbox-x.js` still gets the SPA fallback; `sw.js` is `no-cache` and always
+  names the current one. The deploy smoke test checks `/assets/smoke-missing.js` -> 404.
+  Cost: every `/assets/*` request runs the Worker script (free plan: about 100k
+  requests a day). On `main` the precache answers repeat visits without the network,
+  so mostly first visits and deploys count; develop and previews pay on every load.
 - **Production (`main`):** navigations are `NetworkFirst` (3 s timeout,
   `app-shell` cache, one `/index.html` entry) so offline any deep link gets the
-  shell; JS/CSS/icons/manifest are precached; `/assets/*` and `/workbox-*` are
+  shell; JS/CSS/icons and the fonts (`/assets/fonts/*.woff2`, about 85 KB)
+  are precached, so the offline shell keeps the design-system typefaces (they keep their
+  names, so `dontCacheBustURLsMatching` gives them a content revision and a deploy replaces them); photos are
+  not (2.9 MB, public pages only), nor is the manifest (the Worker serves it per language). `/assets/*` and `/workbox-*` are
   immutable for a year; `sw.js`, `sw-activate.js`, `index.html` and the manifest
-  are `no-cache`.
+  are `no-cache`. Offline, the app shows `OfflineBanner` ("Brak połączenia", from
+  `navigator.onLine` and the `online`/`offline` events) above the header on every
+  build; the views keep their own error states for failed API calls.
+- **TTL decision (issue #94):**
+
+  | Path | `main` | develop, previews |
+  | --- | --- | --- |
+  | `/assets/*` (hashed) | `max-age=31536000, immutable` + precache | `no-cache` |
+  | `/assets/photos/*`, `/assets/fonts/*` (unhashed) | `max-age=86400, stale-while-revalidate=604800` (Worker); fonts also precached | `no-cache` |
+  | `/workbox-*` | `max-age=31536000, immutable` | `no-cache` |
+  | `index.html`, navigations | `no-cache`; service worker `NetworkFirst` 3 s, then cache | `no-cache`, network only |
+  | `sw.js`, `sw-activate.js`, manifest | `no-cache` | `no-cache` |
+
+  Why: a hashed name changes with its content, so a year is safe and makes return
+  visits free; anything whose name stays the same across deploys (the shell, the
+  service worker, photos, fonts) is revalidated, so a deploy reaches an installed PWA
+  on the next refresh. 3 s is how long a navigation waits on a weak signal before the
+  cached shell is used. Nothing moves to develop: it exists to show each deploy at
+  once, and offline is checked on a local `VITE_APP_ENV=main` build
+  (`pnpm build && pnpm preview`).
 - **Non-production (develop, previews):** short caching on purpose, so every
   deploy shows on the next load. The built `sw.js` has no `precacheAndRoute`
   (`includeAssets`, manifest icons and the manifest entry are dropped), no
   `app-shell` cache and no navigation route (offline does not work there); its
   only route is a `NetworkOnly` pass-through for `/api/*` (Workbox refuses a worker
   with nothing to do). `_headers` sets `Cache-Control: no-cache` for every path.
+  At start the page deletes `workbox-precache-*` and `app-shell` caches that an
+  older build left behind (`deleteUnusedCaches` in `src/lib/pwa.ts`); the worker
+  never reads them. On `main` Workbox cleans its own precache.
   `_headers` is generated at build time (`vite.config.ts`), there is no
   `public/_headers`.
 - Recovering a browser stuck on an old build (only needed for installs older

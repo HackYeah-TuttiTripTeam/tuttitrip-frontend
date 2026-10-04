@@ -3,12 +3,14 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { AppShell } from '@/components/shared/app-shell'
 import { BootScreen } from '@/components/shared/boot-screen'
 import { DemoBanner } from '@/components/shared/demo-banner'
+import { OfflineBanner } from '@/components/shared/offline-banner'
 import { PublicShell } from '@/components/shared/public-shell'
 import { useApiAuthBridge } from '@/hooks/use-api-auth-bridge'
 import { useCleanServerHead } from '@/hooks/use-clean-server-head'
 import { useDemoStatus } from '@/hooks/use-demo-session'
 import { useHomeRedirect } from '@/hooks/use-home-redirect'
 import { useLocale } from '@/hooks/use-locale'
+import { useOnline } from '@/hooks/use-online'
 import { useSession } from '@/hooks/use-session'
 import { useTheme } from '@/hooks/use-theme'
 import { appEnv } from '@/lib/env'
@@ -48,7 +50,13 @@ export function RootLayoutView() {
   const shell = shellFor(pathname, session.status, storedSession)
   useHomeRedirect(pathname, session.status, storedSession)
   const demo = useDemoStatus()
-  const banner = demo === 'active' ? <DemoBanner /> : undefined
+  const online = useOnline()
+  const banner = (
+    <>
+      <OfflineBanner offline={!online} />
+      {demo === 'active' && <DemoBanner />}
+    </>
+  )
   // The demo token ran out: say so on /demo, where the jury can enter again from the link.
   useEffect(() => {
     if (demo === 'expired' && pathname !== '/demo') void navigate({ to: '/demo', replace: true })

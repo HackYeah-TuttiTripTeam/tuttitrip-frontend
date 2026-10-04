@@ -196,7 +196,7 @@ export default {
       }
       if (seoPath(pathname)) return publicPage(request, env, url)
     }
-    return assetsOr404(request, env)
+    return env.ASSETS.fetch(request)
   },
 }
 
@@ -237,7 +237,7 @@ async function assetsOr404(request: Request, env: Env): Promise<Response> {
   return response
 }
 
-/** The last segment has an extension other than .html: /assets/a.js, /workbox-1.js. */
+/** The last segment has an extension other than .html: /assets/a.js, /assets/x.css. */
 function isFileLike(pathname: string): boolean {
   const last = pathname.split('/').pop() ?? ''
   return /\.[A-Za-z0-9]+$/.test(last) && !last.endsWith('.html')
