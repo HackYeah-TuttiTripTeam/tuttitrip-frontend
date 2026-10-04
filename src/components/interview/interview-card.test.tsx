@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { CitySearch } from '@/lib/city-search'
 import { POOL_TOTAL } from '@/lib/importance'
 import type { InterviewCard as Card } from '@/lib/interview'
 import { SWIPE_FLY_OUT_PX, SWIPE_THRESHOLD_PX } from '@/lib/interview-constants'
@@ -10,9 +11,22 @@ import { InterviewCard } from './interview-card'
 
 afterEach(cleanup)
 
+const CITY_SEARCH: CitySearch = {
+  query: '',
+  onQueryChange: vi.fn(),
+  searchable: false,
+  isSearching: false,
+  isError: false,
+  retry: vi.fn(),
+  suggestions: [],
+  geocoderAvailable: true,
+}
+
 function setup(card: Card, disabled = false) {
   const onAnswer = vi.fn()
-  const view = render(<InterviewCard card={card} disabled={disabled} onAnswer={onAnswer} />)
+  const view = render(
+    <InterviewCard card={card} disabled={disabled} onAnswer={onAnswer} citySearch={CITY_SEARCH} />,
+  )
   return { onAnswer, user: userEvent.setup(), ...view }
 }
 
@@ -239,3 +253,65 @@ function stubReducedMotion(reduce: boolean) {
     },
   }
 }
+
+describe('date range', () => {
+  const card: Card = { kind: 'date_range', question: 'Kiedy?', options: [] }
+
+  it('answers with both days as ISO dates and as a value', async () => {
+    const { onAnswer, user } = setup(card)
+    await user.type(screen.getByLabelText(m.interview_dates_start()), '2026-10-10')
+    await user.type(screen.getByLabelText(m.interview_dates_end()), '2026-10-12')
+    await user.click(submit())
+    expect(onAnswer).toHaveBeenCalledWith(
+      m.interview_answer_dates({ from: '2026-10-10', to: '2026-10-12' }),
+      { kind: 'date_range', start: '2026-10-10', end: '2026-10-12' },
+    )
+  })
+
+  it('does not answer with an end before the start, or with a day missing', async () => {
+    const { onAnswer, user } = setup(card)
+    await user.click(submit())
+    expect(screen.getByText(m.interview_dates_required())).toBeTruthy()
+    await user.type(screen.getByLabelText(m.interview_dates_start()), '2026-10-12')
+    await user.type(screen.getByLabelText(m.interview_dates_end()), '2026-10-10')
+    await user.click(submit())
+    expect(screen.getByText(m.interview_dates_invalid())).toBeTruthy()
+    expect(onAnswer).not.toHaveBeenCalled()
+  })
+})
+
+describe('city', () => {
+  it('answers with the city that was picked from the suggestions', async () => {
+    const search: CitySearch = {
+      ...CITY_SEARCH,
+      query: 'gda',
+      searchable: true,
+      suggestions: [
+        {
+          slug: 'gdansk',
+          name: 'Gdańsk',
+          region: 'Pomorskie',
+          country: 'PL',
+          catalog_ready: true,
+        } as CitySearch['suggestions'][number],
+      ],
+    }
+    const onAnswer = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <InterviewCard
+        card={{ kind: 'city', question: 'Dokąd?', options: [] }}
+        disabled={false}
+        onAnswer={onAnswer}
+        citySearch={search}
+      />,
+    )
+    await user.click(screen.getByRole('combobox'))
+    await user.click(await screen.findByText('Gdańsk'))
+    expect(onAnswer).toHaveBeenCalledWith(m.interview_answer_city({ city: 'Gdańsk' }), {
+      kind: 'city',
+      name: 'Gdańsk',
+      slug: 'gdansk',
+    })
+  })
+})

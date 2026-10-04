@@ -312,6 +312,7 @@ function InterviewWorkspace({
             saved={voice.saved && { name: voice.saved.name, ok: voice.saved.status === 'done' }}
             mode={voice.mode}
             held={voice.held}
+            level={voice.level}
             micMuted={voice.micMuted}
             canOverride={voice.canOverride}
             disabled={interview.running}
@@ -386,6 +387,7 @@ function InterviewWorkspace({
             key={`${lines.length}:${interview.card.kind}:${interview.card.question}`}
             card={interview.card}
             disabled={interview.running}
+            citySearch={citySearch}
             onAnswer={(answer) => void interview.answerCard(answer)}
           />
         )}
