@@ -1,4 +1,5 @@
-import { CircleUser, Door, DoorOpen } from '@keyline-icons/react'
+import { CircleUser, Door, DoorOpen, ShieldCheck } from '@keyline-icons/react'
+import { Link } from '@tanstack/react-router'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -17,6 +18,8 @@ export interface AccountState {
   status: 'disabled' | 'loading' | 'anonymous' | 'authenticated'
   userName: string | undefined
   userPicture: string | undefined
+  /** The API says this account may open the permission panel (admins only). */
+  showPermissions?: boolean
   onLogin: () => void
   onLogout: () => void
 }
@@ -97,6 +100,14 @@ export function AccountMenu({
                 <ThemeRadioGroup state={theme} />
                 <DropdownMenuSeparator />
               </>
+            )}
+            {account.showPermissions && (
+              <DropdownMenuItem asChild>
+                <Link to="/admin/permissions">
+                  <ShieldCheck />
+                  {m.perm_title()}
+                </Link>
+              </DropdownMenuItem>
             )}
             <DropdownMenuItem onSelect={account.onLogout}>
               <Door />

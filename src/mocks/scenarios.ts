@@ -9,7 +9,9 @@ import {
   familyProfiles,
   type Invitation,
   invitation,
+  type Me,
   type Member,
+  me,
   needsApprovalBudget,
   outing,
   type Plan,
@@ -20,6 +22,7 @@ import {
   type Trip,
   trip,
 } from './fixtures'
+import { adminMe, createPermissionsWorld, type PermissionsWorld } from './permissions'
 
 export const scenarioNames = [
   'family-warsaw',
@@ -40,6 +43,8 @@ export const scenarioNames = [
   'join-claim-taken',
   'join-named',
   'join-named-taken',
+  'admin',
+  'admin-readonly',
 ] as const
 
 export type ScenarioName = (typeof scenarioNames)[number]
@@ -61,6 +66,10 @@ export function pickScenario(search: string, stored: string | null): ScenarioNam
 export interface World {
   /** How the API behaves: normally, with 500 for everything, or unreachable. */
   behaviour: 'normal' | 'server-error' | 'offline'
+  /** `GET /me`: who the caller is and what the API lets them do. */
+  me: Me
+  /** The roles, users and audit behind `/admin/permissions`. */
+  permissions: PermissionsWorld
   trips: Trip[]
   /** The city catalogue (`GET /places/cities`). */
   cities: City[]
@@ -126,6 +135,8 @@ export function createWorld(name: ScenarioName): World {
   const main = trip()
   const base: World = {
     behaviour: 'normal',
+    me: me(),
+    permissions: createPermissionsWorld(),
     trips: [main, outing()],
     cities: cities(),
     failures: {},
@@ -210,5 +221,9 @@ export function createWorld(name: ScenarioName): World {
           namedFor: PROFILE_IDS.zosia,
         },
       }
+    case 'admin':
+      return { ...base, me: adminMe('WRITE', base.me) }
+    case 'admin-readonly':
+      return { ...base, me: adminMe('READ', base.me) }
   }
 }

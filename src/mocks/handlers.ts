@@ -5,7 +5,6 @@ import {
   invitation,
   MOCK_DEMO_TOKEN,
   MOCK_USER_SUB,
-  me,
   type Plan,
   PROFILE_IDS,
   type Preferences,
@@ -16,6 +15,7 @@ import {
   type Trip,
   trip,
 } from './fixtures'
+import { permissionHandlers } from './permissions'
 import { createWorld, type ScenarioName, type World } from './scenarios'
 
 const API = '*/api/v1'
@@ -134,9 +134,10 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       )
     }),
 
+    ...permissionHandlers(world.permissions, () => world.me, latency),
     http.get(`${API}/me`, async () => {
       await latency()
-      return HttpResponse.json(me())
+      return HttpResponse.json(world.me)
     }),
 
     http.get(`${API}/trips`, async ({ request }) => {
