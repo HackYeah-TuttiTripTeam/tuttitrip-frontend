@@ -11,8 +11,8 @@ import {
   needsApprovalBudget,
   outing,
   type Plan,
-  type Preferences,
   PROFILE_IDS,
+  type Preferences,
   type Profile,
   plan,
   type Trip,
@@ -36,6 +36,7 @@ export const scenarioNames = [
   'join-claimable',
   'join-claim-taken',
   'join-named',
+  'join-named-taken',
 ] as const
 
 export type ScenarioName = (typeof scenarioNames)[number]
@@ -159,6 +160,16 @@ export function createWorld(name: ScenarioName): World {
           ...base.join,
           claimable: [PROFILE_IDS.zosia, PROFILE_IDS.antek],
           taken: [PROFILE_IDS.zosia],
+        },
+      }
+    case 'join-named-taken':
+      return {
+        ...base,
+        join: {
+          ...base.join,
+          claimable: [PROFILE_IDS.zosia],
+          taken: [PROFILE_IDS.zosia],
+          namedFor: PROFILE_IDS.zosia,
         },
       }
     case 'join-named':

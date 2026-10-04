@@ -2393,6 +2393,11 @@ export interface components {
              * @description People on the trip without an account that you may take over: id, name and age group only. For a named invitation only its profile. Empty when you are on the trip already.
              */
             claimable_profiles: components["schemas"]["ClaimableProfile"][];
+            /**
+             * Named Profile Id
+             * @description The profile this invitation is made for, or null for an open invitation. Set also when that profile is no longer free (`claimable_profiles` is then empty) and when you are on the trip already.
+             */
+            named_profile_id: string | null;
         };
         /**
          * InvitationRead

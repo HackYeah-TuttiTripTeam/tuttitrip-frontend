@@ -1,5 +1,14 @@
 import type { Member } from '@/api/queries/members'
-import type { Profile, ProfileUpdate } from '@/api/queries/profiles'
+import type { AgeGroup, Profile, ProfileUpdate } from '@/api/queries/profiles'
+import { m } from '@/paraglide/messages'
+
+export const GROUP_LABELS: Record<AgeGroup, () => string> = {
+  toddler: m.people_group_toddler,
+  child: m.people_group_child,
+  teen: m.people_group_teen,
+  adult: m.people_group_adult,
+  senior: m.people_group_senior,
+}
 
 /** The comfort fields the host can correct; the server fills them from the age. */
 export const COMFORT_FIELDS = [

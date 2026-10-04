@@ -139,11 +139,14 @@ export function JoinView() {
       destination={join.trip.destination}
       alreadyMember={join.trip.already_member}
       claimable={join.trip.claimable_profiles}
+      namedProfileId={join.trip.named_profile_id}
       defaultName={session.userName ?? ''}
       isSubmitting={join.isJoining}
       submitError={
         join.joinProblem === 'conflict'
-          ? m.join_claim_taken()
+          ? join.trip.named_profile_id
+            ? m.join_claim_named_failed()
+            : m.join_claim_taken()
           : join.joinProblem
             ? m.join_failed()
             : null

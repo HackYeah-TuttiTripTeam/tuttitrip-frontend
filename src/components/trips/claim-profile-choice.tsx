@@ -1,7 +1,8 @@
 import type { ClaimableProfile } from '@/api/queries/invitations'
-import { GROUP_LABELS } from '@/components/profiles/person-row'
 import { Field, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { lowerCase } from '@/lib/format'
+import { GROUP_LABELS } from '@/lib/people'
 import { m } from '@/paraglide/messages'
 
 /** The value of "none of these"; profile ids are UUIDs, so it cannot clash. */
@@ -18,16 +19,24 @@ interface ClaimProfileChoiceProps {
 export function ClaimProfileChoice({ profiles, value, onChange }: ClaimProfileChoiceProps) {
   return (
     <FieldSet>
-      <FieldLegend>{m.join_claim_legend()}</FieldLegend>
-      <p className="text-muted-foreground text-sm">{m.join_claim_hint()}</p>
-      <RadioGroup value={value} onValueChange={onChange} className="gap-2">
+      <FieldLegend id="join-claim-legend">{m.join_claim_legend()}</FieldLegend>
+      <p id="join-claim-hint" className="text-muted-foreground text-sm">
+        {m.join_claim_hint()}
+      </p>
+      <RadioGroup
+        value={value}
+        onValueChange={onChange}
+        aria-labelledby="join-claim-legend"
+        aria-describedby="join-claim-hint"
+        className="gap-2"
+      >
         {profiles.map((profile) => (
           <Option
             key={profile.profile_id}
             value={profile.profile_id}
             label={m.join_claim_option({
               name: profile.display_name,
-              group: GROUP_LABELS[profile.age_group]().toLowerCase(),
+              group: lowerCase(GROUP_LABELS[profile.age_group]()),
             })}
           />
         ))}

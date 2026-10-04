@@ -21,12 +21,17 @@ export const joinSchema = z.object({
 
 export type JoinValues = z.infer<typeof joinSchema>
 
+/** What the page asks: nothing (open link), "which of these is you", a named invitation, a member coming back. */
+type JoinMode = 'open' | 'choose' | 'named' | 'member'
+
 interface JoinFormProps {
   tripName: string
   destination: string | null
   alreadyMember: boolean
   /** People of the trip without an account; the joiner may be one of them. */
   claimable: ClaimableProfile[]
+  /** The profile the invitation is made for; null for an open link. */
+  namedProfileId: string | null
   /** Pre-filled with the account's name. */
   defaultName: string
   isSubmitting: boolean
@@ -40,6 +45,7 @@ export function JoinForm({
   destination,
   alreadyMember,
   claimable,
+  namedProfileId,
   defaultName,
   isSubmitting,
   submitError,
@@ -51,17 +57,31 @@ export function JoinForm({
   })
   const { errors } = form.formState
   const [picked, setPicked] = useState('')
+  const named = claimable.find((p) => p.profile_id === namedProfileId)
+  const mode: JoinMode = alreadyMember
+    ? 'member'
+    : namedProfileId
+      ? 'named'
+      : claimable.length > 0
+        ? 'choose'
+        : 'open'
   // A pick that is no longer offered (taken meanwhile, list refreshed) counts as no pick.
   const choice =
     picked === CLAIM_NEW || claimable.some((p) => p.profile_id === picked) ? picked : ''
-  const asking = !alreadyMember && claimable.length > 0
-  const claiming = asking && choice !== '' && choice !== CLAIM_NEW
-  const needsName = !alreadyMember && !claiming && (!asking || choice === CLAIM_NEW)
+  const claimId =
+    mode === 'named'
+      ? (named?.profile_id ?? null)
+      : mode === 'choose' && choice !== CLAIM_NEW
+        ? choice || null
+        : null
+  const needsName = mode === 'open' || (mode === 'choose' && choice === CLAIM_NEW)
+  const needsChoice = mode === 'choose' && choice === ''
+  const blocked = mode === 'named' && !named
 
   return (
     <form
       onSubmit={form.handleSubmit((values) =>
-        onSubmit(needsName ? values.name || null : null, claiming ? choice : null),
+        onSubmit(needsName ? values.name || null : null, claimId),
       )}
       noValidate
       className="flex max-w-md flex-col gap-6"
@@ -83,7 +103,17 @@ export function JoinForm({
         </p>
       )}
 
-      {asking && <ClaimProfileChoice profiles={claimable} value={choice} onChange={setPicked} />}
+      {mode === 'choose' && (
+        <ClaimProfileChoice profiles={claimable} value={choice} onChange={setPicked} />
+      )}
+
+      {mode === 'named' && (
+        <p role={named ? 'status' : 'alert'} className="text-sm">
+          {named
+            ? m.join_claim_named({ name: named.display_name })
+            : m.join_claim_named_unavailable()}
+        </p>
+      )}
 
       {needsName && (
         <Field data-invalid={Boolean(errors.name)}>
@@ -106,13 +136,22 @@ export function JoinForm({
         </p>
       )}
 
-      <Button
-        type="submit"
-        disabled={isSubmitting || (asking && choice === '')}
-        className="h-11 md:h-9"
-      >
-        {isSubmitting ? m.join_submitting() : alreadyMember ? m.join_open() : m.join_submit()}
-      </Button>
+      {needsChoice && (
+        <p id="join-submit-hint" className="-mb-3 text-muted-foreground text-sm">
+          {m.join_claim_choose()}
+        </p>
+      )}
+
+      {!blocked && (
+        <Button
+          type="submit"
+          disabled={isSubmitting || needsChoice}
+          aria-describedby={needsChoice ? 'join-submit-hint' : undefined}
+          className="h-11 md:h-9"
+        >
+          {isSubmitting ? m.join_submitting() : mode === 'member' ? m.join_open() : m.join_submit()}
+        </Button>
+      )}
     </form>
   )
 }
