@@ -4,15 +4,60 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>TuttiTrip</title>
-    <meta name="description" content="Planowanie wyjazdów w grupie: plan, po którym nikt nie czuje, że przegrał." />
+    <meta name="description" content="%DESCRIPTION_PL%" />
 
-    <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/icon-32.png" sizes="32x32" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
 
-    <!-- Browser chrome follows the light/dark surface of the app. -->
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+    <!-- Browser chrome follows the theme in use; the script below picks data-light or data-dark. -->
+    <meta name="theme-color" content="#f7fcf9" data-light="#f7fcf9" data-dark="#080f0c" />
+
+    <!-- Theme (#97): before first paint, set `.dark`, color-scheme and theme-color from the
+         saved choice (`tuttitrip-theme`: light | dark | system), else the system setting.
+         Keep in sync with src/lib/theme.ts, which takes over once the app is running. -->
+    <script>
+      ;(() => {
+        let dark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        try {
+          const saved = localStorage.getItem('tuttitrip-theme')
+          if (saved === 'light' || saved === 'dark') dark = saved === 'dark'
+        } catch {}
+        const root = document.documentElement
+        root.classList.toggle('dark', dark)
+        root.style.colorScheme = dark ? 'dark' : 'light'
+        const meta = document.querySelector('meta[name="theme-color"]')
+        if (meta) meta.content = meta.dataset[dark ? 'dark' : 'light']
+      })()
+    </script>
+
+    <!-- Language (#74): this file is the same for everyone, so before first paint set <html lang>
+         and the description to what the app will use: ?lang=, the saved choice (Paraglide's
+         localStorage key), then the browser's languages, else Polish. Keep in sync with
+         i18n.config.mjs and src/lib/seo.ts (requestLocale). Not on the public pages: there
+         the Worker marks <html data-seo> and owns lang and description. -->
+    <script>
+      ;(() => {
+        const root = document.documentElement
+        if (root.hasAttribute('data-seo')) return
+        const text = __DESCRIPTIONS__
+        const known = (l) => typeof l === 'string' && Object.hasOwn(text, l)
+        let lang = new URLSearchParams(location.search).get('lang')
+        if (!known(lang)) {
+          try {
+            lang = localStorage.getItem('PARAGLIDE_LOCALE')
+          } catch {}
+        }
+        if (!known(lang)) {
+          lang = (navigator.languages || []).map((l) => l.split('-')[0].toLowerCase()).find(known)
+        }
+        if (!known(lang)) return
+        root.lang = lang
+        const meta = document.querySelector('meta[name="description"]')
+        if (meta) meta.content = text[lang]
+      })()
+    </script>
 
     <!-- "Add to Home Screen": full-screen app on iOS and Android. -->
     <meta name="mobile-web-app-capable" content="yes" />

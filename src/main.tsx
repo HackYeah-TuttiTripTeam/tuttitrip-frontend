@@ -3,11 +3,31 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { captureDemoFragment } from '@/lib/demo-session'
 import { authConfig } from '@/lib/env'
+import { getLocale, syncDocumentLanguage } from '@/lib/i18n'
 import { registerServiceWorker } from '@/lib/pwa'
 import { queryClient } from '@/lib/query-client'
+import { returnToPath } from '@/lib/return-to'
+import { initTheme } from '@/lib/theme'
+import type * as MockEntry from '@/mocks/entry'
 import { router } from './router'
 import '@/styles/index.css'
+
+// First of all: /demo#t=<token> must lose its fragment before anything can read or send it.
+captureDemoFragment()
+
+syncDocumentLanguage()
+initTheme()
+
+// `pnpm dev:mock`: MSW answers the API and a fake user is signed in. __API_MOCK__ is replaced by
+// a literal at build time (vite.config.ts, the only place the condition is defined), so a
+// production build drops this branch and the import with it.
+let mock: typeof MockEntry | null = null
+if (__API_MOCK__) {
+  mock = await import('@/mocks/entry')
+  await mock.startMockApi()
+}
 
 const rootElement = document.getElementById('root')
 if (!rootElement) throw new Error('Missing #root element')
@@ -18,9 +38,9 @@ const app = (
   </QueryClientProvider>
 )
 
-// Auth0 redirects back with ?code=&state= (or ?error=&state=). The router would
-// redirect / -> /trips and drop those params before Auth0Provider reads them, so on
-// a callback the app waits until Auth0 has handled it.
+// Auth0 redirects back with ?code=&state= (or ?error=&state=). The router could navigate
+// away and drop those params before Auth0Provider reads them (a signed-in `/` goes to
+// /trips), so on a callback the app waits until Auth0 has handled it.
 const isAuthCallback =
   /[?&](code|error)=/.test(window.location.search) && /[?&]state=/.test(window.location.search)
 
@@ -30,17 +50,20 @@ function AfterAuthCallback() {
 }
 
 const onRedirectCallback = (appState?: AppState) => {
-  router.history.replace(typeof appState?.returnTo === 'string' ? appState.returnTo : '/trips')
+  router.history.replace(returnToPath(appState?.returnTo))
 }
 
 createRoot(rootElement).render(
   <StrictMode>
-    {authConfig ? (
+    {mock ? (
+      <mock.MockAuthProvider>{app}</mock.MockAuthProvider>
+    ) : authConfig ? (
       <Auth0Provider
         domain={authConfig.domain}
         clientId={authConfig.clientId}
         authorizationParams={{
           redirect_uri: window.location.origin,
+          ui_locales: getLocale(),
           audience: authConfig.audience,
         }}
         // Refresh tokens + localStorage keep the session alive in installed PWAs
@@ -58,4 +81,5 @@ createRoot(rootElement).render(
   </StrictMode>,
 )
 
-registerServiceWorker()
+// A service worker of the PWA would fight MSW's one over the same scope.
+if (!mock) registerServiceWorker()

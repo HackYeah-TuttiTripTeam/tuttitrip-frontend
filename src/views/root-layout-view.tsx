@@ -1,9 +1,30 @@
-import { Outlet, useNavigate } from '@tanstack/react-router'
-import { lazy, Suspense } from 'react'
+import { HeadContent, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import { GuidedTour } from '@/components/help/guided-tour'
 import { AppShell } from '@/components/shared/app-shell'
+import { BootScreen } from '@/components/shared/boot-screen'
+import { DemoBanner } from '@/components/shared/demo-banner'
+import { OfflineBanner } from '@/components/shared/offline-banner'
+import { PublicShell } from '@/components/shared/public-shell'
+import { Toaster } from '@/components/ui/sonner'
+import { useAdminAccess } from '@/hooks/use-admin-access'
 import { useApiAuthBridge } from '@/hooks/use-api-auth-bridge'
+import { useCleanServerHead } from '@/hooks/use-clean-server-head'
+import { useDemoStatus } from '@/hooks/use-demo-session'
+import { useHomeRedirect } from '@/hooks/use-home-redirect'
+import { useLocale } from '@/hooks/use-locale'
+import { useMe } from '@/hooks/use-me'
+import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
+import { useNotificationMenu } from '@/hooks/use-notification-menu'
+import { useNotificationStream } from '@/hooks/use-notification-stream'
+import { useNotificationToasts } from '@/hooks/use-notification-toasts'
+import { useOnline } from '@/hooks/use-online'
 import { useSession } from '@/hooks/use-session'
+import { useTheme } from '@/hooks/use-theme'
 import { appEnv } from '@/lib/env'
+import { hasStoredSession } from '@/lib/session-hint'
+import { shellFor } from '@/lib/shell'
+import { useHelpStore } from '@/stores/help-store'
 import { useUiStore } from '@/stores/ui-store'
 
 // Dev-only: the import() calls are dropped from production bundles.
@@ -26,30 +47,95 @@ const Devtools = import.meta.env.DEV
 
 export function RootLayoutView() {
   useApiAuthBridge()
+  useCleanServerHead()
   const session = useSession()
+  const { access } = useMe(session.status)
+  const { locale, setLocale } = useLocale()
+  const { theme, resolved, setTheme } = useTheme()
   const setCreateTripOpen = useUiStore((state) => state.setCreateTripOpen)
+  const helpTopic = useHelpStore((state) => state.topic)
+  const helpOpen = useHelpStore((state) => state.open)
+  const setHelpOpen = useHelpStore((state) => state.setOpen)
   const navigate = useNavigate()
+  const isDesktop = useMediaQuery(DESKTOP_QUERY)
+  const notifications = useNotificationMenu(session.status, isDesktop)
+  const showToast = useNotificationToasts()
+  useNotificationStream(session.status, showToast)
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  // Read once: a session stored while the page is open is Auth0's business, not a reason to blink.
+  const [storedSession] = useState(hasStoredSession)
+  const shell = shellFor(pathname, session.status, storedSession)
+  useHomeRedirect(pathname, session.status, storedSession)
+  const demo = useDemoStatus()
+  const { access: adminAccess } = useAdminAccess(session.status)
+  const online = useOnline()
+  const banner = (
+    <>
+      <OfflineBanner offline={!online} />
+      {demo === 'active' && <DemoBanner />}
+    </>
+  )
+  // The demo token ran out: say so on /demo, where the jury can enter again from the link.
+  useEffect(() => {
+    if (demo === 'expired' && pathname !== '/demo') void navigate({ to: '/demo', replace: true })
+  }, [demo, pathname, navigate])
+  const language = { locale, onChange: setLocale }
+  const envLabel = appEnv === 'main' ? null : appEnv
 
   return (
     <>
-      <AppShell
-        account={{
-          status: session.status,
-          userName: session.userName,
-          userPicture: session.userPicture,
-          onLogin: session.login,
-          onLogout: session.logout,
-        }}
-        envLabel={appEnv === 'main' ? null : appEnv}
-        onCreateTrip={() => {
-          // Creating a trip needs an account; ask guests to sign in first.
-          if (session.status === 'anonymous') return session.login()
-          void navigate({ to: '/trips', search: (prev) => prev })
-          setCreateTripOpen(true)
-        }}
-      >
-        <Outlet />
-      </AppShell>
+      <HeadContent />
+      {shell === 'bare' && <BootScreen />}
+      {shell === 'standalone' && <Outlet />}
+      {shell === 'public' && (
+        <PublicShell
+          status={session.status}
+          language={language}
+          theme={{ theme, resolved, onChange: setTheme }}
+          envLabel={envLabel}
+          onLogin={session.login}
+          onSignup={session.signup}
+          banner={banner}
+        >
+          <Outlet />
+        </PublicShell>
+      )}
+      {shell === 'app' && (
+        <AppShell
+          account={{
+            status: session.status,
+            userName: session.userName,
+            userPicture: session.userPicture,
+            showPermissions: access !== 'NONE',
+            onLogin: session.login,
+            onLogout: session.logout,
+            canAdminUsers: adminAccess !== 'NONE',
+          }}
+          language={language}
+          theme={{ theme, resolved, onChange: setTheme }}
+          envLabel={envLabel}
+          banner={banner}
+          notifications={notifications}
+          onHelp={helpTopic ? () => setHelpOpen(true) : null}
+          onCreateTrip={() => {
+            // Creating a trip needs an account; ask guests to sign in first.
+            if (session.status === 'anonymous') return session.login()
+            void navigate({ to: '/trips', search: {} })
+            setCreateTripOpen(true)
+          }}
+        >
+          <Outlet />
+        </AppShell>
+      )}
+      <Toaster
+        theme={resolved}
+        position={isDesktop ? 'top-right' : 'top-center'}
+        offset={{ top: 64 }}
+        mobileOffset={{ top: 'calc(env(safe-area-inset-top) + 64px)' }}
+        visibleToasts={3}
+        closeButton
+      />
+      <GuidedTour topic={helpTopic} open={helpOpen} onOpenChange={setHelpOpen} />
       <Suspense>
         <Devtools />
       </Suspense>

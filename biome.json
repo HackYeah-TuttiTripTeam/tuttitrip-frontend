@@ -14,8 +14,12 @@
       "!!**/.wrangler",
       "!!**/.tanstack",
       "!src/routeTree.gen.ts",
+      "!src/paraglide",
       "!src/api/schema.d.ts",
-      "!worker-configuration.d.ts"
+      "!worker-configuration.d.ts",
+      "!!.claude/skills/tuttitrip-design-system",
+      "!src/styles/theme.css",
+      "!docs/mocks/pitch-deck.html"
     ]
   },
   "plugins": ["./biome-plugins/no-hardcoded-colors.grit"],

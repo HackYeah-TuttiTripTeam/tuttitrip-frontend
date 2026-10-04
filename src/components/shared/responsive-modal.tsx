@@ -1,3 +1,4 @@
+import { cn } from 'cn'
 import type { ReactNode } from 'react'
 import {
   Dialog,
@@ -22,6 +23,8 @@ interface ResponsiveModalProps {
   title: string
   description: string
   children: ReactNode
+  /** A wide dialog on desktop, for forms laid out in two columns. Phones are unaffected. */
+  wide?: boolean
 }
 
 export function ResponsiveModal({
@@ -31,16 +34,23 @@ export function ResponsiveModal({
   title,
   description,
   children,
+  wide = false,
 }: ResponsiveModalProps) {
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent
+          className={cn('flex max-h-[90dvh] flex-col', wide ? 'sm:max-w-3xl' : 'sm:max-w-md')}
+        >
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
-          {children}
+          {/* Only the body scrolls: the header and the close button stay in view. The side
+              padding keeps focus rings of the fields from being clipped. */}
+          <div className="-mx-1 min-h-0 overflow-x-hidden overflow-y-auto px-1 py-1">
+            {children}
+          </div>
         </DialogContent>
       </Dialog>
     )
@@ -53,7 +63,7 @@ export function ResponsiveModal({
           <DrawerTitle>{title}</DrawerTitle>
           <DrawerDescription>{description}</DrawerDescription>
         </DrawerHeader>
-        <div className="px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">{children}</div>
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4">{children}</div>
       </DrawerContent>
     </Drawer>
   )

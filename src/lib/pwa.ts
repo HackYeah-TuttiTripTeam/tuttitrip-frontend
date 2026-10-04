@@ -1,7 +1,73 @@
 import { registerSW } from 'virtual:pwa-register'
+import { appEnv } from '@/lib/env'
+import { installStaleAssetReload } from '@/lib/stale-assets'
 
-/** Installs the service worker; new versions activate on the next load. */
+const UPDATE_CHECK_MS = 60 * 60 * 1000
+
+type ControllerEvents = Pick<ServiceWorkerContainer, 'controller' | 'addEventListener'>
+
+/**
+ * Reloads the page once when a NEW service worker takes control of it. The first
+ * install claims a page that had no controller; that is not an update and does not
+ * reload. The controller is tracked live: after the first claim every later
+ * `controllerchange` is an update. Returns nothing; `reload` is injected for tests.
+ */
+export function reloadOnControllerUpdate(
+  container: ControllerEvents,
+  reload: () => void = () => window.location.reload(),
+): void {
+  let hasController = container.controller !== null
+  let reloading = false
+  container.addEventListener('controllerchange', () => {
+    const isUpdate = hasController
+    hasController = true
+    if (!isUpdate || reloading) return
+    reloading = true
+    reload()
+  })
+}
+
+/** Caches only the production service worker uses (pwa.config.ts): its precache and the app shell. */
+const isProductionCache = (name: string) =>
+  name.startsWith('workbox-precache-') || name === 'app-shell'
+
+/**
+ * Outside production the service worker caches nothing, but a browser may still keep the
+ * precache and app shell of an older build (before #95, or a main build on localhost).
+ * They are never read again; delete them. On main Workbox cleans its own entries.
+ */
+export async function deleteUnusedCaches(
+  production: boolean,
+  storage: Pick<CacheStorage, 'keys' | 'delete'>,
+): Promise<void> {
+  if (production) return
+  const names = await storage.keys()
+  await Promise.all(names.filter(isProductionCache).map((name) => storage.delete(name)))
+}
+
+/**
+ * Installs the service worker. A new version skips waiting and claims the page
+ * (pwa.config.ts), then the page reloads once so it runs the new bundle. Chunks
+ * removed by a newer deploy trigger one guarded reload as well (stale-assets.ts).
+ */
 export function registerServiceWorker(): void {
+  installStaleAssetReload()
   if (!('serviceWorker' in navigator)) return
-  registerSW({ immediate: true })
+
+  reloadOnControllerUpdate(navigator.serviceWorker)
+  if ('caches' in window) void deleteUnusedCaches(appEnv === 'main', caches).catch(() => undefined)
+
+  registerSW({
+    immediate: true,
+    onRegisteredSW(_url, registration) {
+      if (!registration) return
+      // Long-lived tabs and installed PWAs also look for a new version when they
+      // come back to the foreground and once an hour.
+      const check = () => void registration.update().catch(() => undefined)
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') check()
+      })
+      setInterval(check, UPDATE_CHECK_MS)
+    },
+  })
 }

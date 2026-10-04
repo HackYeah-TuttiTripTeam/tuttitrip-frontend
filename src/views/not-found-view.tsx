@@ -1,20 +1,21 @@
+import { Compass } from '@keyline-icons/react'
 import { Link } from '@tanstack/react-router'
-import { Compass } from 'lucide-react'
 import { StatusMessage } from '@/components/shared/status-message'
 import { Button } from '@/components/ui/button'
+import { m } from '@/paraglide/messages'
 
 export function NotFoundView() {
   return (
     <StatusMessage
       icon={<Compass />}
-      title="Tu nic nie ma"
+      title={m.not_found_title()}
       action={
         <Button asChild variant="outline">
-          <Link to="/trips">Wróć do wyjazdów</Link>
+          <Link to="/trips">{m.not_found_back()}</Link>
         </Button>
       }
     >
-      Ten adres nie prowadzi do żadnej strony. Może link jest nieaktualny.
+      {m.not_found_body()}
     </StatusMessage>
   )
 }

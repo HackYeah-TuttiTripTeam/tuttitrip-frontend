@@ -1,4 +1,13 @@
-import { LogIn, LogOut, UserRound } from 'lucide-react'
+import {
+  Bell,
+  CircleUser,
+  Door,
+  DoorOpen,
+  Settings,
+  ShieldCheck,
+  ShieldUser,
+} from '@keyline-icons/react'
+import { Link } from '@tanstack/react-router'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -8,14 +17,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { isDev } from '@/lib/env'
+import { m } from '@/paraglide/messages'
 import { barItemClass, tabClass } from './nav-classes'
+import { ThemeRadioGroup, type ThemeState } from './theme-toggle'
 
 export interface AccountState {
   status: 'disabled' | 'loading' | 'anonymous' | 'authenticated'
   userName: string | undefined
   userPicture: string | undefined
+  /** The API says this account may open the permission panel (admins only). */
+  showPermissions?: boolean
   onLogin: () => void
   onLogout: () => void
+  /** From `GET /me`: whether to offer the accounts panel. Never inferred on the client. */
+  canAdminUsers?: boolean
 }
 
 function initials(name: string | undefined): string {
@@ -38,7 +54,7 @@ export function AccountAvatar({
     <Avatar className={className}>
       {account.userPicture && <AvatarImage src={account.userPicture} alt="" />}
       <AvatarFallback className="text-xs font-medium">
-        {account.status === 'authenticated' ? initials(account.userName) : <UserRound />}
+        {account.status === 'authenticated' ? initials(account.userName) : <CircleUser />}
       </AvatarFallback>
     </Avatar>
   )
@@ -51,23 +67,27 @@ export function AccountAvatar({
 export function AccountMenu({
   account,
   variant,
+  theme,
 }: {
   account: AccountState
   /** "bar": desktop top bar, "tab": mobile bottom action bar. */
   variant: 'bar' | 'tab'
+  /** Phones have no theme button in the top bar, so the tab menu carries the choice. */
+  theme?: ThemeState
 }) {
   const className = variant === 'bar' ? barItemClass : tabClass
 
   if (account.status === 'anonymous') {
     return (
       <button type="button" onClick={account.onLogin} className={className}>
-        <LogIn />
-        Zaloguj się
+        <DoorOpen />
+        {m.account_login()}
       </button>
     )
   }
 
-  const label = account.status === 'authenticated' ? (account.userName ?? 'Konto') : 'Konto'
+  const label =
+    account.status === 'authenticated' ? (account.userName ?? m.account_label()) : m.account_label()
 
   return (
     <DropdownMenu>
@@ -82,16 +102,57 @@ export function AccountMenu({
           <>
             <DropdownMenuLabel className="truncate">{account.userName}</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            {theme && variant === 'tab' && (
+              <>
+                <DropdownMenuLabel className="font-normal text-muted-foreground text-xs">
+                  {m.theme_label()}
+                </DropdownMenuLabel>
+                <ThemeRadioGroup state={theme} />
+                <DropdownMenuSeparator />
+              </>
+            )}
+            <DropdownMenuItem asChild>
+              <Link to="/account">
+                <Settings />
+                {m.account_settings_link()}
+              </Link>
+            </DropdownMenuItem>
+            {account.canAdminUsers && (
+              <DropdownMenuItem asChild>
+                <Link to="/admin/users">
+                  <ShieldUser />
+                  {m.admin_users_link()}
+                </Link>
+              </DropdownMenuItem>
+            )}
+            {account.showPermissions && (
+              <DropdownMenuItem asChild>
+                <Link to="/admin/permissions">
+                  <ShieldCheck />
+                  {m.perm_title()}
+                </Link>
+              </DropdownMenuItem>
+            )}
+            {variant === 'tab' && (
+              <DropdownMenuItem asChild className="min-h-11">
+                <Link to="/notifications">
+                  <Bell />
+                  {m.nav_notifications()}
+                </Link>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onSelect={account.onLogout}>
-              <LogOut />
-              Wyloguj się
+              <Door />
+              {m.account_logout()}
             </DropdownMenuItem>
           </>
         ) : (
           <DropdownMenuLabel className="font-normal text-muted-foreground leading-relaxed">
             {account.status === 'loading'
-              ? 'Sprawdzam sesję…'
-              : 'Logowanie jest wyłączone: uzupełnij VITE_AUTH0_DOMAIN i VITE_AUTH0_CLIENT_ID w .env.local.'}
+              ? m.account_checking_session()
+              : isDev
+                ? m.account_auth_disabled_dev()
+                : m.account_auth_disabled()}
           </DropdownMenuLabel>
         )}
       </DropdownMenuContent>

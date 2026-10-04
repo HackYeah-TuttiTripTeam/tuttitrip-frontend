@@ -1,5 +1,8 @@
 const read = (value: string | undefined) => value?.trim() || undefined
 
+/** True in `vite dev`; setup hints for developers are shown only then. */
+export const isDev = import.meta.env.DEV
+
 /** Deployment name shown in the UI: main, develop, a branch slug or local. */
 export const appEnv = read(import.meta.env.VITE_APP_ENV) ?? 'local'
 
@@ -17,4 +20,23 @@ function readAuthConfig(): AuthConfig | null {
 }
 
 /** Auth0 settings, or null when VITE_AUTH0_DOMAIN / VITE_AUTH0_CLIENT_ID are missing. */
-export const authConfig = readAuthConfig()
+export let authConfig: AuthConfig | null = readAuthConfig()
+
+/** For `pnpm dev:mock` only: the mock entry says "a session exists" before the app renders. */
+export function setAuthConfig(config: AuthConfig | null): void {
+  authConfig = config
+}
+
+export interface MapsConfig {
+  /** Browser key of Maps JavaScript API and Places UI Kit; public by design, limited by referrer. */
+  apiKey: string
+  /** Vector map id (needed by AdvancedMarker). */
+  mapId: string
+}
+
+/** Google Maps settings, or null when the key or the map id is missing: the UI then hides maps. */
+export const mapsConfig: MapsConfig | null = (() => {
+  const apiKey = read(import.meta.env.VITE_GOOGLE_MAPS_API_KEY)
+  const mapId = read(import.meta.env.VITE_GOOGLE_MAPS_MAP_ID)
+  return apiKey && mapId ? { apiKey, mapId } : null
+})()

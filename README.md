@@ -39,6 +39,8 @@ Skopiuj `.env.example` do `.env.local` (ten plik nie trafia do gita) i uzupełni
 | `VITE_AUTH0_DOMAIN` | domena tenanta Auth0 | puste, logowanie wyłączone |
 | `VITE_AUTH0_CLIENT_ID` | client id aplikacji SPA w Auth0 | puste, logowanie wyłączone |
 | `VITE_AUTH0_AUDIENCE` | identyfikator API w Auth0 (np. `https://tuttitrip-api.gburek.app`) | puste |
+| `VITE_GOOGLE_MAPS_API_KEY` | klucz przeglądarkowy Maps JavaScript API i Places UI Kit (ograniczony do domen TuttiTrip w Google Cloud) | puste, mapy wyłączone |
+| `VITE_GOOGLE_MAPS_MAP_ID` | identyfikator mapy wektorowej (potrzebny do `AdvancedMarker`) | puste, mapy wyłączone |
 
 Wszystkie te wartości lądują w kodzie przeglądarki, więc nie wpisuj tu sekretów. Tenant Auth0 konfiguruje zespół backendu. Bez `VITE_AUTH0_*` aplikacja działa, a w miejscu logowania wyświetla informację, że jest wyłączone.
 
@@ -75,11 +77,14 @@ Po zmianie w backendzie odpal `api:sync` i zacommituj `src/api/schema.d.ts`. CI 
 | `pnpm biome check --write .` | lint, formatowanie i porządkowanie importów (Biome) |
 | `pnpm tsc -b` | sprawdzenie typów |
 | `pnpm test:arch` | testy architektury (dependency-cruiser i `scripts/check-arch.mjs`) |
-| `pnpm verify` | to, co CI odpala przed buildem: `biome ci`, `tsc -b`, `test:arch` |
+| `pnpm test` | testy jednostkowe (Vitest, projekt `unit`), to samo robi CI |
+| `pnpm test:integration` | wolne testy `*.int.test.*` (pełne buildy produkcyjne), tylko lokalnie, przed PR |
+| `pnpm test:local` | `pnpm test` i `pnpm test:integration` |
+| `pnpm i18n` | kompilacja `messages/*.json` do `src/paraglide` (uruchamia się sama przy instalacji, `verify` i `build`) |
+| `pnpm verify` | to, co CI sprawdza: `i18n`, `biome ci`, `tsc -b`, `test:arch`, `test` (bez testów integracyjnych) |
 | `pnpm api:sync` | regeneracja typów API |
-| `pnpm pwa:icons` | ikony PWA z `public/logo.svg` |
 
-Przed każdym commitem: `pnpm biome check --write . && pnpm tsc -b && pnpm test:arch`.
+Przed każdym commitem: `pnpm biome check --write . && pnpm tsc -b && pnpm test:arch`. Przed oznaczeniem PR jako gotowego: `pnpm verify && pnpm test:integration && pnpm build`.
 
 ## Stack
 
@@ -109,10 +114,29 @@ Zasady pilnowane automatycznie (`pnpm test:arch` i Biome, CI odrzuca złamanie k
 3. W `hooks/` nie ma JSX (tylko pliki `.ts`).
 4. Pliki tras importują wyłącznie widoki i loadery.
 5. Żadnych zahardkodowanych kolorów w klasach Tailwinda (`bg-[#...]`, `text-[rgb(...)]`, `bg-red-500` i podobne). Używamy tokenów shadcn: `bg-primary`, `text-muted-foreground`, `border` i tak dalej.
+6. Wiadomości w `messages/pl.json` i `messages/en.json` mają te same klucze i parametry.
+7. W widokach i komponentach nie ma tekstów wpisanych na sztywno: wszystko przez `m.klucz()` z Paraglide.
 
 Sortowanie i filtrowanie zawsze trzymamy w adresie URL, np. `/trips?q=kraków&sort=name&dir=asc`. Taki link można wysłać komuś z rodziny i zobaczy dokładnie ten sam widok.
 
 Przykładowa funkcja, na której można się wzorować, to lista wyjazdów: `api/queries/trips.ts` → `hooks/use-trips.ts` → `components/trips/` → `views/trips-view.tsx` → `routes/trips.ts`.
+
+## Strony publiczne: SEO, zdjęcia i ruch
+
+- **Meta tagi** (`title`, opis, `canonical`, `hreflang`, Open Graph, Twitter, JSON-LD) dla `/`, `/about`, `/contact` i `/prywatnosc` (polityka prywatności)
+  buduje `src/lib/seo.ts` z tekstów Paraglide (`seo_*`). Wstrzykuje je Worker (`worker/index.ts`, `HTMLRewriter`),
+  więc boty bez JavaScriptu widzą je w pierwszej odpowiedzi, a po stronie klienta utrzymuje je `head` trasy
+  (`src/loaders/seo.ts`). Język strony: `?lang=pl|en`, potem `Accept-Language`, potem polski. `robots.txt` i
+  `sitemap.xml` też generuje Worker. Grafiki 1200x630 (`public/og/og-pl.png`, `og-en.png`) odtwarza
+  `CHROME=/ścieżka/do/chrome node scripts/og-images.mjs`.
+- **Zdjęcia** są w `src/assets/photos` (AVIF i WebP w kilku szerokościach). Zdjęcia miast i rodziny pochodzą z
+  Unsplash ([licencja](https://unsplash.com/license)) i mają podpis „Zdjęcie: autor / Unsplash” z linkami;
+  lista autorów, linki i daty pobrania są w `src/assets/photos/CREDITS.md`. Zdjęcie zespołu na `/contact` jest
+  własne. Nowe zdjęcie: pobierz przyciskiem „Download” na Unsplash (wolne zdjęcie, nie Unsplash+), dopisz wpis do
+  `CREDITS.md` i do `src/lib/photos.ts`.
+- **Ruch** (`src/lib/motion.ts`, bez biblioteki animacji): pojawianie się sekcji, rysowanie trasy przy
+  przewijaniu, suwaki w przykładzie sprawiedliwości, rozsuwanie miast. Przy `prefers-reduced-motion` zostaje
+  zwykłe pojawienie się.
 
 ## Środowiska i wdrożenia
 

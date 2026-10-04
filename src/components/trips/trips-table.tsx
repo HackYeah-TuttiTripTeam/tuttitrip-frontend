@@ -1,3 +1,5 @@
+import { ArrowDown, ArrowUp, ArrowUpDown } from '@keyline-icons/react'
+import { Link } from '@tanstack/react-router'
 import {
   createColumnHelper,
   functionalUpdate,
@@ -6,7 +8,6 @@ import {
   tableFeatures,
   useTable,
 } from '@tanstack/react-table'
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -16,8 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formatDate } from '@/lib/format'
+import { formatDate, formatDateRange } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { m } from '@/paraglide/messages'
 import { type SortDirection, TRIP_SORT_LABELS, type Trip, type TripSortKey } from './trip-columns'
 
 const features = tableFeatures({ rowSortingFeature })
@@ -25,24 +27,48 @@ const column = createColumnHelper<typeof features, Trip>()
 
 const columns = column.columns([
   column.accessor('name', {
-    header: TRIP_SORT_LABELS.name,
+    header: () => TRIP_SORT_LABELS.name(),
     cell: ({ row }) => (
       <div className="min-w-0">
-        <p className="truncate font-medium">{row.original.name}</p>
+        <Link
+          to="/trips/$tripId"
+          params={{ tripId: row.original.id }}
+          aria-label={m.trip_open_label({ name: row.original.name })}
+          className="block truncate rounded-md font-medium outline-none after:absolute after:inset-0 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          {row.original.name}
+        </Link>
         {/* On phones the destination column is hidden, so it rides under the name. */}
         <p className="truncate text-muted-foreground md:hidden">
-          {row.original.destination ?? 'Cel do ustalenia'}
+          {row.original.destination ?? m.trip_destination_undecided_long()}
         </p>
+        {row.original.my_status === 'pending' && (
+          <p className="mt-1 w-fit rounded-full border border-dashed px-2 py-0.5 text-xs">
+            {m.trip_status_pending()}
+          </p>
+        )}
       </div>
     ),
   }),
   column.accessor('destination', {
-    header: TRIP_SORT_LABELS.destination,
+    header: () => m.trip_sort_destination(),
+    enableSorting: false,
     cell: ({ getValue }) =>
-      getValue() ?? <span className="text-muted-foreground">Do ustalenia</span>,
+      getValue() ?? <span className="text-muted-foreground">{m.trip_destination_undecided()}</span>,
+  }),
+  column.accessor('start_date', {
+    header: () => TRIP_SORT_LABELS.start_date(),
+    cell: ({ row }) => {
+      const range = formatDateRange(row.original.start_date, row.original.end_date)
+      return range ? (
+        <span className="whitespace-nowrap tabular-nums">{range}</span>
+      ) : (
+        <span className="text-muted-foreground">{m.trip_dates_undecided()}</span>
+      )
+    },
   }),
   column.accessor('created_at', {
-    header: TRIP_SORT_LABELS.created_at,
+    header: () => TRIP_SORT_LABELS.created_at(),
     sortDescFirst: true,
     cell: ({ getValue }) => (
       <time dateTime={getValue()} className="whitespace-nowrap text-muted-foreground tabular-nums">
@@ -55,7 +81,8 @@ const columns = column.columns([
 const columnClass: Record<string, string> = {
   name: 'w-full md:w-1/2',
   destination: 'hidden md:table-cell',
-  created_at: 'text-right',
+  start_date: 'text-right md:text-left',
+  created_at: 'hidden text-right md:table-cell',
 }
 
 interface TripsTableProps {
@@ -67,7 +94,7 @@ interface TripsTableProps {
 
 const isSortKey = (id: string): id is TripSortKey => id in TRIP_SORT_LABELS
 
-/** Rows arrive sorted (see useTrips); the table only renders and toggles sort state. */
+/** Rows arrive sorted by the server (see useTrips); the table only renders and toggles sort state. */
 export function TripsTable({ trips, sort, dir, onSortChange }: TripsTableProps) {
   const sorting: SortingState = [{ id: sort, desc: dir === 'desc' }]
 
@@ -91,6 +118,7 @@ export function TripsTable({ trips, sort, dir, onSortChange }: TripsTableProps) 
         {table.getHeaderGroups().map((group) => (
           <TableRow key={group.id} className="hover:bg-transparent">
             {group.headers.map((header) => {
+              const sortable = header.column.getCanSort()
               const sorted = header.column.getIsSorted()
               const SortIcon =
                 sorted === 'asc' ? ArrowUp : sorted === 'desc' ? ArrowDown : ArrowUpDown
@@ -102,20 +130,26 @@ export function TripsTable({ trips, sort, dir, onSortChange }: TripsTableProps) 
                     sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none'
                   }
                 >
-                  <button
-                    type="button"
-                    onClick={header.column.getToggleSortingHandler()}
-                    className={cn(
-                      'inline-flex h-11 items-center gap-1.5 md:h-10 rounded-md px-2 font-medium text-xs outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50',
-                      sorted ? 'text-foreground' : 'text-muted-foreground',
-                    )}
-                  >
-                    <table.FlexRender header={header} />
-                    <SortIcon
-                      aria-hidden="true"
-                      className={cn('size-3.5', sorted ? 'text-primary' : 'opacity-40')}
-                    />
-                  </button>
+                  {sortable ? (
+                    <button
+                      type="button"
+                      onClick={header.column.getToggleSortingHandler()}
+                      className={cn(
+                        'inline-flex h-11 items-center gap-1.5 md:h-10 rounded-md px-2 font-medium text-xs outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                        sorted ? 'text-foreground' : 'text-muted-foreground',
+                      )}
+                    >
+                      <table.FlexRender header={header} />
+                      <SortIcon
+                        aria-hidden="true"
+                        className={cn('size-3.5', sorted ? 'text-primary' : 'opacity-40')}
+                      />
+                    </button>
+                  ) : (
+                    <span className="px-2 font-medium text-muted-foreground text-xs">
+                      <table.FlexRender header={header} />
+                    </span>
+                  )}
                 </TableHead>
               )
             })}
@@ -124,7 +158,7 @@ export function TripsTable({ trips, sort, dir, onSortChange }: TripsTableProps) 
       </TableHeader>
       <TableBody>
         {table.getRowModel().rows.map((row) => (
-          <TableRow key={row.id}>
+          <TableRow key={row.id} className="relative">
             {row.getAllCells().map((cell) => (
               <TableCell
                 key={cell.id}
