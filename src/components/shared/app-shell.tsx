@@ -1,8 +1,10 @@
 import { CircleQuestion, Map as MapIcon, Plus } from '@keyline-icons/react'
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
+import { NotificationMenu } from '@/components/notifications/notification-menu'
 import { Button } from '@/components/ui/button'
 import { TOUR } from '@/lib/help'
+import type { NotificationMenuProps } from '@/lib/notification-menu'
 import { m } from '@/paraglide/messages'
 import { AccountMenu, type AccountState } from './account-menu'
 import { BrandLogo } from './brand-mark'
@@ -18,6 +20,8 @@ interface AppShellProps {
   /** Deployment name; shown as a badge everywhere except production. */
   envLabel: string | null
   onCreateTrip: () => void
+  /** The bell with its panel; null when nobody is signed in. */
+  notifications: NotificationMenuProps | null
   /** Opens the visual help of the page on screen; null when the page has none (no button). */
   onHelp: (() => void) | null
   /** Notice above the header bar, e.g. the demo account banner. */
@@ -35,6 +39,7 @@ export function AppShell({
   theme,
   envLabel,
   onCreateTrip,
+  notifications,
   onHelp,
   banner,
   children,
@@ -87,9 +92,18 @@ export function AppShell({
                 {m.perm_title()}
               </Link>
             )}
+            {notifications && (
+              <Link
+                to="/notifications"
+                className="ml-6 flex h-full items-center border-transparent border-b-2 text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:underline [&.active]:border-primary [&.active]:text-foreground"
+              >
+                {m.nav_notifications()}
+              </Link>
+            )}
           </nav>
 
           <div className="ml-auto flex items-center gap-1 md:gap-3">
+            {notifications && <NotificationMenu {...notifications} />}
             <LanguageMenu language={language} />
             {onHelp && (
               <Button

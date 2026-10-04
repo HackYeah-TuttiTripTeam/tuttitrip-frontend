@@ -25,7 +25,9 @@ import {
   type MemberLocation,
   MOCK_USER_NAME,
   me,
+  type Notification,
   needsApprovalBudget,
+  notifications,
   outing,
   type Photo,
   type PlaceVoteSummary,
@@ -73,6 +75,11 @@ export const scenarioNames = [
   'join-claim-taken',
   'join-named',
   'join-named-taken',
+  'notifications-inbox',
+  'notifications-empty',
+  'notifications-error',
+  'notifications-live',
+  'notifications-stream-down',
   'admin',
   'admin-readonly',
   'vote-with-link',
@@ -156,6 +163,14 @@ export interface World {
   consent: { enabled: boolean; until: string | null }
   /** Invitations of the main trip, newest first (the host's list). */
   invitations: Invitation[]
+  /** The signed-in user's notifications, newest first; marking changes them in place. */
+  notifications: Notification[]
+  /** The live stream: `quiet` opens and stays silent, `live` adds a notification every few seconds, `down` answers 503. */
+  notificationStream: 'quiet' | 'live' | 'down'
+  /** How often the `live` stream adds a notification. */
+  notificationLiveEveryMs: number
+  /** Every /notifications call answers 500 (the rest of the API works). */
+  notificationsFail: boolean
   /** Voting links of the main trip, newest first (the host's panel; never holds a token). */
   voteLinks: VoteLink[]
   /** The group's answers per place (`GET /vote-summary`). */
@@ -256,6 +271,10 @@ export function createWorld(name: ScenarioName): World {
     locations: [],
     consent: { enabled: false, until: null },
     invitations: [invitation()],
+    notifications: notifications(6, 3),
+    notificationsFail: false,
+    notificationStream: 'quiet',
+    notificationLiveEveryMs: 4_000,
     voteLinks: [],
     voteSummary: voteSummary(),
     vote: { link: 'ok', profileName: 'Zosia', places: votePlaces(), writeFails: false },
@@ -473,6 +492,16 @@ export function createWorld(name: ScenarioName): World {
           namedFor: PROFILE_IDS.zosia,
         },
       }
+    case 'notifications-inbox':
+      return { ...base, notifications: notifications(134, 40) }
+    case 'notifications-empty':
+      return { ...base, notifications: [] }
+    case 'notifications-error':
+      return { ...base, notificationsFail: true }
+    case 'notifications-live':
+      return { ...base, notificationStream: 'live' }
+    case 'notifications-stream-down':
+      return { ...base, notificationStream: 'down' }
     case 'admin':
       return { ...base, me: adminMe('WRITE', base.me) }
     case 'admin-readonly':

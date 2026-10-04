@@ -17,6 +17,8 @@ import {
   location,
   MOCK_DEMO_TOKEN,
   MOCK_USER_SUB,
+  notification as makeNotification,
+  type Notification,
   type Photo,
   PIXEL_PNG_BASE64,
   type Plan,
@@ -211,6 +213,96 @@ function changeAccount(
   return new HttpResponse(null, { status: 204 })
 }
 
+/** The filters shared by the list and by bulk marking, like the API reads them. */
+function matchesNotificationFilter(item: Notification, filter: Schemas['NotificationFilter']) {
+  const { read, type, trip_id, created_from, created_to } = filter
+  return (
+    (read == null || (item.read_at !== null) === read) &&
+    (!type || type.length === 0 || type.includes(item.type)) &&
+    (!trip_id || item.trip_id === trip_id) &&
+    (!created_from || Date.parse(item.created_at) >= Date.parse(created_from)) &&
+    // The end of the range is exclusive.
+    (!created_to || Date.parse(item.created_at) < Date.parse(created_to))
+  )
+}
+
+/** GET /notifications like the API: filters, sort and the page come from the query string. */
+function listNotifications(all: Notification[], params: URLSearchParams) {
+  const read = params.get('read')
+  const filter: Schemas['NotificationFilter'] = {
+    read: read === null ? null : read === 'true',
+    type: params.getAll('type'),
+    trip_id: params.get('trip_id'),
+    created_from: params.get('created_from'),
+    created_to: params.get('created_to'),
+  }
+  const matching = all.filter((item) => matchesNotificationFilter(item, filter))
+  const sign = params.get('dir') === 'asc' ? 1 : -1
+  const byType = params.get('sort') === 'type'
+  // By type, then by date, both in the requested direction; the id is the last key.
+  matching.sort(
+    (a, b) =>
+      (byType ? sign * a.type.localeCompare(b.type) : 0) ||
+      sign * a.created_at.localeCompare(b.created_at) ||
+      a.id.localeCompare(b.id),
+  )
+  const size = Math.min(100, Math.max(1, Number(params.get('size')) || 20))
+  const page = Math.max(1, Number(params.get('page')) || 1)
+  return HttpResponse.json({
+    items: matching.slice((page - 1) * size, page * size),
+    total: matching.length,
+    page,
+    size,
+    pages: Math.ceil(matching.length / size),
+  })
+}
+
+/** The stream like the API sends it: `ready` first, `notification` with the id as SSE id. */
+function notificationStream(world: World, signal: AbortSignal) {
+  const encoder = new TextEncoder()
+  let timer: ReturnType<typeof setInterval> | undefined
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      const send = (event: string, data: unknown, id?: string) =>
+        controller.enqueue(
+          encoder.encode(
+            `${id ? `id: ${id}\n` : ''}event: ${event}\ndata: ${JSON.stringify(data)}\n\n`,
+          ),
+        )
+      send('ready', { unread: world.notifications.filter((n) => n.read_at === null).length })
+      if (world.notificationStream === 'live') {
+        timer = setInterval(() => {
+          const live = makeNotification({
+            created_at: new Date().toISOString(),
+            type: 'proposal_waiting',
+            params: { proposal_name: 'Muzeum zamiast parku' },
+            actions: [
+              { code: 'approve_proposal', params: {} },
+              { code: 'open_plan', params: {} },
+            ],
+          })
+          world.notifications = [live, ...world.notifications]
+          send('notification', live, live.id)
+        }, world.notificationLiveEveryMs)
+      }
+      signal.addEventListener('abort', () => {
+        clearInterval(timer)
+        try {
+          controller.close()
+        } catch {
+          // Already closed.
+        }
+      })
+    },
+    cancel() {
+      clearInterval(timer)
+    },
+  })
+  return new HttpResponse(stream, {
+    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+  })
+}
+
 function brokenHandlers(behaviour: 'server-error' | 'offline', latency: () => Promise<void>) {
   return [
     http.all(`${API}/*`, async () => {
@@ -267,6 +359,57 @@ function normalHandlers(
     http.get(`${API}/trips`, async ({ request }) => {
       await latency()
       return listTrips(world.trips, new URL(request.url).searchParams)
+    }),
+
+    http.get(`${API}/notifications`, async ({ request }) => {
+      await latency()
+      if (world.notificationsFail) return failure(500)
+      return listNotifications(world.notifications, new URL(request.url).searchParams)
+    }),
+
+    // Server-Sent Events: `ready`, then (scenario "notifications-live") a notification every few seconds.
+    http.get(`${API}/notifications/stream`, ({ request }) => {
+      if (world.notificationsFail || world.notificationStream === 'down') {
+        return HttpResponse.json({ detail: 'Service Unavailable' }, { status: 503 })
+      }
+      return notificationStream(world, request.signal)
+    }),
+
+    http.get(`${API}/notifications/unread-count`, async () => {
+      await latency()
+      if (world.notificationsFail) return failure(500)
+      return HttpResponse.json({
+        count: world.notifications.filter((n) => n.read_at === null).length,
+      })
+    }),
+
+    http.get(`${API}/notifications/:id`, async ({ params }) => {
+      await latency()
+      if (world.notificationsFail) return failure(500)
+      const found = world.notifications.find((item) => item.id === params.id)
+      return found ? HttpResponse.json(found) : notFound('Notification not found')
+    }),
+
+    // Exactly one of `ids` and `filters`; `filters: {}` is everything. Idempotent, like the API.
+    http.post(`${API}/notifications/mark`, async ({ request }) => {
+      await latency()
+      if (world.notificationsFail) return failure(500)
+      const body = (await request.json()) as Schemas['NotificationMark']
+      if ((body.ids == null) === (body.filters == null)) {
+        return HttpResponse.json({ detail: 'Send ids or filters, not both' }, { status: 422 })
+      }
+      const ids = new Set(body.ids ?? [])
+      const now = new Date().toISOString()
+      let updated = 0
+      world.notifications = world.notifications.map((item) => {
+        const selected = body.ids
+          ? ids.has(item.id)
+          : matchesNotificationFilter(item, body.filters ?? {})
+        if (!selected || (item.read_at !== null) === body.read) return item
+        updated += 1
+        return { ...item, read_at: body.read ? now : null }
+      })
+      return HttpResponse.json({ updated })
     }),
 
     http.get(`${API}/places/cities/search`, async ({ request }) => {
