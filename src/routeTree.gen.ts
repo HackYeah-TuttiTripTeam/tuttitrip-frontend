@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DemoRouteImport } from './routes/demo'
+import { Route as GlosRouteImport } from './routes/glos'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as PrywatnoscRouteImport } from './routes/prywatnosc'
 import { Route as TripsRouteImport } from './routes/trips'
@@ -37,6 +38,11 @@ const ContactRoute = ContactRouteImport.update({
 const DemoRoute = DemoRouteImport.update({
   id: '/demo',
   path: '/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GlosRoute = GlosRouteImport.update({
+  id: '/glos',
+  path: '/glos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JoinRoute = JoinRouteImport.update({
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
+  '/glos': typeof GlosRoute
   '/join': typeof JoinRoute
   '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
+  '/glos': typeof GlosRoute
   '/join': typeof JoinRoute
   '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
+  '/glos': typeof GlosRoute
   '/join': typeof JoinRoute
   '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/contact'
     | '/demo'
+    | '/glos'
     | '/join'
     | '/prywatnosc'
     | '/trips'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/contact'
     | '/demo'
+    | '/glos'
     | '/join'
     | '/prywatnosc'
     | '/trips'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/contact'
     | '/demo'
+    | '/glos'
     | '/join'
     | '/prywatnosc'
     | '/trips'
@@ -140,6 +152,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   ContactRoute: typeof ContactRoute
   DemoRoute: typeof DemoRoute
+  GlosRoute: typeof GlosRoute
   JoinRoute: typeof JoinRoute
   PrywatnoscRoute: typeof PrywatnoscRoute
   TripsRoute: typeof TripsRoute
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/demo'
       fullPath: '/demo'
       preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/glos': {
+      id: '/glos'
+      path: '/glos'
+      fullPath: '/glos'
+      preLoaderRoute: typeof GlosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/join': {
@@ -220,6 +240,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   ContactRoute: ContactRoute,
   DemoRoute: DemoRoute,
+  GlosRoute: GlosRoute,
   JoinRoute: JoinRoute,
   PrywatnoscRoute: PrywatnoscRoute,
   TripsRoute: TripsRoute,

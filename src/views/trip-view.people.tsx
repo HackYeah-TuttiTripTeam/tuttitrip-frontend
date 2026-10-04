@@ -9,6 +9,7 @@ import { useSession } from '@/hooks/use-session'
 import { m } from '@/paraglide/messages'
 import { TripInvitationsView } from './trip-view.invitations'
 import { TripPersonView } from './trip-view.person'
+import { TripVotingView } from './trip-view.voting'
 
 interface TripPeopleViewProps {
   tripId: string
@@ -37,7 +38,13 @@ export function TripPeopleView({
   const actions = useProfileActions(tripId)
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
 
-  const invitations = canManage ? <TripInvitationsView tripId={tripId} tripName={tripName} /> : null
+  const profileNames = new Map(people.map(({ profile }) => [profile.id, profile.display_name]))
+  const hostTools = canManage ? (
+    <>
+      <TripVotingView tripId={tripId} tripName={tripName} people={people} />
+      <TripInvitationsView tripId={tripId} tripName={tripName} profileNames={profileNames} />
+    </>
+  ) : null
 
   if (isPending) return <FamilyBuilderSkeleton />
 
@@ -82,7 +89,7 @@ export function TripPeopleView({
         onRemove={actions.remove}
         onOpenPerson={(profile) => onPersonChange(profile.id)}
       />
-      {invitations}
+      {hostTools}
     </div>
   )
 }
