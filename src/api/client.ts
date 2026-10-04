@@ -15,6 +15,8 @@ export type Schemas = components['schemas']
 
 type AccessTokenGetter = () => Promise<string | undefined>
 
+const bearer = (token: string) => `Bearer ${token}`
+
 let getAccessToken: AccessTokenGetter | null = null
 
 /**
@@ -27,6 +29,36 @@ export function setAccessTokenGetter(getter: AccessTokenGetter | null): void {
 
 export function canCallProtectedApi(): boolean {
   return getAccessToken !== null || getDemoToken() !== undefined
+}
+
+/**
+ * The `Authorization` header value for the current session, or undefined for a guest. One source
+ * for the fetch middleware below and for the notification stream, which cannot use the client.
+ */
+export async function getAuthorization(): Promise<string | undefined> {
+  // The demo session (lib/demo-session.ts) is the second token source next to Auth0's.
+  let demoToken = getDemoToken()
+  // The access token ran out between two requests: get a new one from the invitation first.
+  if (!demoToken && getDemoInvitation()) {
+    await renewDemoSession()
+    demoToken = getDemoToken()
+  }
+  if (demoToken) return bearer(demoToken)
+  if (!getAccessToken) return undefined
+  try {
+    const token = await getAccessToken()
+    return token ? bearer(token) : undefined
+  } catch (error) {
+    // Expired session: the request goes out anonymously and the API answers 401.
+    console.warn('Could not get an access token', error)
+    return undefined
+  }
+}
+
+/** After a 401: a new demo token from the invitation (Auth0 renews its own), then the header. */
+export async function refreshAuthorization(): Promise<string | undefined> {
+  if (getDemoInvitation()) await renewDemoSession()
+  return getAuthorization()
 }
 
 /**
@@ -43,25 +75,8 @@ export async function currentAccessToken(): Promise<string | undefined> {
 
 const authMiddleware: Middleware = {
   async onRequest({ request }) {
-    // The demo session (lib/demo-session.ts) is the second token source next to Auth0's.
-    let demoToken = getDemoToken()
-    // The access token ran out between two requests: get a new one from the invitation first.
-    if (!demoToken && getDemoInvitation()) {
-      await renewDemoSession()
-      demoToken = getDemoToken()
-    }
-    if (demoToken) {
-      request.headers.set('Authorization', `Bearer ${demoToken}`)
-      return request
-    }
-    if (!getAccessToken) return request
-    try {
-      const token = await getAccessToken()
-      if (token) request.headers.set('Authorization', `Bearer ${token}`)
-    } catch (error) {
-      // Expired session: send the request anonymously and let the API answer 401.
-      console.warn('Could not get an access token', error)
-    }
+    const authorization = await getAuthorization()
+    if (authorization) request.headers.set('Authorization', authorization)
     return request
   },
 }
@@ -87,8 +102,6 @@ const errorMiddleware: Middleware = {
     throw new ApiError(response.status, detail, body)
   },
 }
-
-const bearer = (token: string) => `Bearer ${token}`
 
 /**
  * The demo session's safety net, registered last so its onResponse runs first (openapi-fetch runs

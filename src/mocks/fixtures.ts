@@ -81,6 +81,7 @@ export const trip = (overrides: Partial<Trip> = {}): Trip => ({
   budget_day_max: null,
   budget_flex_pct: 10,
   fairness_alpha: 1,
+  propose_cheaper_alternatives: true,
   my_role: 'host',
   my_status: 'confirmed',
   kind: 'trip',
@@ -423,12 +424,12 @@ const days = (): PlanDay[] => [
 ]
 
 const withinBudget = (): PlanBudget => ({
-  unlimited: false,
   currency: 'PLN',
   cost: '1480.00',
   b_from: '1200.00',
   b_to: '1600.00',
   b_max: '1760.00',
+  unlimited: false,
   zone: 'up_to_b_to',
   over_budget: '0.00',
   needs_approval: false,
@@ -877,6 +878,67 @@ export const votePlaces = (): VotePlace[] =>
     veto_id: null,
   }))
 
+export type Notification = Schemas['NotificationRead']
+
+const NOTIFICATION_NOW = Date.parse('2026-10-04T12:00:00Z')
+
+export const notification = (overrides: Partial<Notification> = {}): Notification => ({
+  id: crypto.randomUUID(),
+  type: 'plan_ready',
+  trip_id: TRIP_ID,
+  params: {},
+  actions: [{ code: 'open_plan', params: {} }],
+  read_at: null,
+  created_at: new Date(NOTIFICATION_NOW).toISOString(),
+  ...overrides,
+})
+
+/** What each type carries, like the producers will send it: small string params and action codes. */
+const NOTIFICATION_SHAPES: Pick<Notification, 'type' | 'params' | 'actions'>[] = [
+  {
+    type: 'member_joined',
+    params: { member_name: 'Anna' },
+    actions: [{ code: 'open_people', params: {} }],
+  },
+  {
+    type: 'veto_added',
+    params: { place_name: 'Zamek Królewski', member_name: 'Marek' },
+    actions: [{ code: 'open_plan', params: {} }],
+  },
+  {
+    type: 'proposal_waiting',
+    params: { proposal_name: 'Muzeum zamiast parku' },
+    actions: [
+      { code: 'approve_proposal', params: {} },
+      { code: 'open_plan', params: {} },
+    ],
+  },
+  {
+    type: 'budget_approval_waiting',
+    params: { amount: '1 640 zł' },
+    actions: [
+      { code: 'approve_budget', params: {} },
+      { code: 'open_plan', params: {} },
+    ],
+  },
+  { type: 'plan_ready', params: {}, actions: [{ code: 'open_plan', params: {} }] },
+]
+
+/**
+ * `count` notifications, newest first: types rotate, every second one belongs to the outing,
+ * every seventh to no trip, and the unread ones are the first `unread` of the list.
+ */
+export const notifications = (count: number, unread = Math.ceil(count / 3)): Notification[] =>
+  Array.from({ length: count }, (_, index) => {
+    const created = new Date(NOTIFICATION_NOW - index * 37 * 60_000).toISOString()
+    return notification({
+      id: `5d1c0000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      ...NOTIFICATION_SHAPES[index % NOTIFICATION_SHAPES.length],
+      trip_id: index % 7 === 6 ? null : index % 2 === 0 ? TRIP_ID : OUTING_ID,
+      created_at: created,
+      read_at: index < unread ? null : created,
+    })
+  })
 export type Checkin = Schemas['CheckinRead']
 export type Photo = Schemas['PhotoRead']
 export type MemberLocation = Schemas['LocationRead']

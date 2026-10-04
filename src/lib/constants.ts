@@ -37,9 +37,34 @@ export const GAIN_POINTS_DIGITS = 1
 /** The "no filter" entry of a select, whose items need a non-empty value. */
 export const FILTER_ALL = 'all'
 
+/** What a new trip gets for `propose_cheaper_alternatives` (the API's default is on; its client type makes the field required). */
+export const PROPOSE_CHEAPER_DEFAULT = true
+
 /** The "any platform" entry of the platform switch. */
 export const PLATFORM_ANY = 'any'
 
+// Fixed values of the screens that are not tied to one feature. The numbers a screen shows come from
+// the API; these only describe limits, codes and file names.
+
+/** The `detail` of the 422 the draft plan answers with while the trip has no city yet. */
+export const MISSING_CITY_DETAIL = 'Podaj miasto'
+
+/** Longest remark on a proposal (ResponseCreate.remark). */
+export const PROPOSAL_REMARK_MAX_CHARS = 1000
+
+/** Machine codes of the 409 answers of the proposal endpoints (`detail.code`). */
+export const PROPOSAL_OUTDATED_CODE = 'proposal.outdated'
+export const PLAN_NOT_APPROVED_CODE = 'plan.not_approved'
+
+/** MIME type and extension of the calendar export. */
+export const ICS_MIME_TYPE = 'text/calendar'
+export const ICS_FILE_EXTENSION = '.ics'
+
+/** Name of the downloaded calendar file: `<prefix><plan hash>.ics`. */
+export const ICS_FILE_PREFIX = 'tuttitrip-plan-'
+
+/** Query-key prefix under which the assumptions of the last draft plan are kept (not stored by the API). */
+export const DRAFT_ASSUMPTIONS_KEY = 'draft-plan-assumptions'
 /** Longest name of a trip (TripCreate). */
 export const TRIP_NAME_MAX_CHARS = 200
 

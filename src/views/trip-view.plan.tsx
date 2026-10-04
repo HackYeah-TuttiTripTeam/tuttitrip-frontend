@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { ApiError } from '@/api/errors'
 import type { Trip } from '@/api/queries/trips'
 import { DayTabs } from '@/components/planning/day-tabs'
+import { DraftBanner } from '@/components/planning/draft-banner'
 import { PlanHashLabel } from '@/components/planning/plan-hash-label'
 import { PlanPrintout } from '@/components/planning/plan-printout'
 import { PlanSummary } from '@/components/planning/plan-summary'
@@ -18,6 +19,7 @@ import { StatusMessage } from '@/components/shared/status-message'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCreatePlan } from '@/hooks/use-create-plan'
+import { useDraftAssumptions } from '@/hooks/use-draft-plan'
 import { usePlan } from '@/hooks/use-plan'
 import { usePrinting } from '@/hooks/use-printing'
 import { useVerdicts } from '@/hooks/use-verdict'
@@ -25,6 +27,7 @@ import { TOUR } from '@/lib/help'
 import { m } from '@/paraglide/messages'
 import { PlanConsent } from './trip-view.consent'
 import { PlanDecisions } from './trip-view.decisions'
+import { TripPlanProposal } from './trip-view.plan.proposal'
 import { PlanDayPanel } from './trip-view.plan-day'
 
 const route = getRouteApi('/trips_/$tripId')
@@ -39,6 +42,7 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
   const printing = usePrinting()
   const { plan, isPending, hasNoPlan, forbidden, problem, refetch } = usePlan(tripId)
   const creation = useCreatePlan(tripId)
+  const assumptions = useDraftAssumptions(tripId, plan?.id)
   const [day, setDay] = useState(1)
   const [verdictPlace, setVerdictPlace] = useState<string | null>(null)
   const verdicts = useVerdicts(plan)
@@ -84,13 +88,13 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
     )
   }
 
-  const failure = creation.error && (
+  const failure = creation.error ? (
     <p role="alert" className="text-destructive text-sm">
       {creation.error instanceof ApiError && creation.error.status === 403
         ? m.plan_compute_forbidden()
         : m.plan_compute_failed()}
     </p>
-  )
+  ) : null
 
   if (hasNoPlan || !plan) {
     return (
@@ -166,6 +170,8 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
         <div role="status" className={recalculating ? 'text-muted-foreground text-sm' : 'sr-only'}>
           {recalculating && m.plan_recomputing_status()}
         </div>
+        {plan.params.draft && <DraftBanner assumptions={assumptions} />}
+        <TripPlanProposal tripId={tripId} canManage={canBuild} plan={plan} />
         <div data-tour={TOUR.planSummary}>
           <PlanSummary plan={plan} />
         </div>

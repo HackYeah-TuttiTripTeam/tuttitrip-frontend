@@ -1,11 +1,13 @@
 import { Mic, Sparkles } from '@keyline-icons/react'
 import { useEffect, useRef, useState } from 'react'
+import { BuildPlanButton } from '@/components/interview/build-plan-button'
 import { ChatThread } from '@/components/interview/chat-thread'
 import { Composer } from '@/components/interview/composer'
 import { FirstSentenceInput } from '@/components/interview/first-sentence-input'
 import { InterviewCard } from '@/components/interview/interview-card'
 import { KnowledgePanel } from '@/components/interview/knowledge-panel'
 import { LiveCaptions } from '@/components/interview/live-captions'
+import { ResumeHeader } from '@/components/interview/resume-header'
 import { VoiceButton } from '@/components/interview/voice-button'
 import { EditPersonForm } from '@/components/profiles/person-form'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
@@ -15,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCities } from '@/hooks/use-cities'
 import { useCitySearch } from '@/hooks/use-city-search'
+import { type DraftPlanError, useBuildPlanNow } from '@/hooks/use-draft-plan'
 import { type InterviewError, useInterview } from '@/hooks/use-interview'
 import { useInterviewSession } from '@/hooks/use-interview-session'
 import { useKnowledge } from '@/hooks/use-knowledge'
@@ -23,10 +26,11 @@ import { useProfileActions } from '@/hooks/use-profile-actions'
 import { useSaveTrip } from '@/hooks/use-save-trip'
 import { useSession } from '@/hooks/use-session'
 import { useVoiceCall, type VoiceProblem } from '@/hooks/use-voice-call'
-import { collectedCount } from '@/lib/interview'
+import { collectedCount, resumeSummary } from '@/lib/interview'
 import { VOICE_KNOWLEDGE_POLL_MS } from '@/lib/interview-constants'
 import { prefersReducedMotion } from '@/lib/motion'
 import { tripToFormValues } from '@/lib/trip-form'
+import { cn } from '@/lib/utils'
 import { visibleCaptions } from '@/lib/voice-events'
 import { m } from '@/paraglide/messages'
 
@@ -52,6 +56,13 @@ const VOICE_PROBLEM_TEXT: Record<VoiceProblem, () => string> = {
   failed: m.interview_voice_problem_failed,
 }
 
+const BUILD_ERROR_TEXT: Record<DraftPlanError, () => string> = {
+  no_city: m.interview_build_error_no_city,
+  forbidden: m.interview_build_error_forbidden,
+  offline: m.interview_build_error_offline,
+  failed: m.interview_build_error_failed,
+}
+
 type Editing = { kind: 'trip' } | { kind: 'person'; id: string } | null
 
 interface TripInterviewViewProps {
@@ -60,6 +71,8 @@ interface TripInterviewViewProps {
   canManage: boolean
   /** Opens the person's preferences in the Osoby tab. */
   onOpenPerson: (profileId: string) => void
+  /** "Build plan now" succeeded: the Plan tab shows the preliminary plan. */
+  onPlanBuilt: () => void
   /** The trip was just created by voice (`?voice=1`): start the call, or ask for the tap that may. */
   startVoice?: boolean
   /** The start request was taken over; the view drops the param so a reload does not repeat it. */
@@ -75,6 +88,7 @@ export function TripInterviewView({
   tripId,
   canManage,
   onOpenPerson,
+  onPlanBuilt,
   startVoice = false,
   onVoiceHandled,
 }: TripInterviewViewProps) {
@@ -89,6 +103,7 @@ export function TripInterviewView({
     <InterviewWorkspace
       tripId={tripId}
       onOpenPerson={onOpenPerson}
+      onPlanBuilt={onPlanBuilt}
       startVoice={startVoice}
       onVoiceHandled={onVoiceHandled}
     />
@@ -98,11 +113,13 @@ export function TripInterviewView({
 function InterviewWorkspace({
   tripId,
   onOpenPerson,
+  onPlanBuilt,
   startVoice,
   onVoiceHandled,
 }: {
   tripId: string
   onOpenPerson: (profileId: string) => void
+  onPlanBuilt: () => void
   startVoice: boolean
   onVoiceHandled?: () => void
 }) {
@@ -128,6 +145,13 @@ function InterviewWorkspace({
     startSession: history.startSession,
     onKnowledge: knowledge.applySnapshot,
     onRunEnd: knowledge.refresh,
+  })
+  // The plan is built from what the trip holds, so it waits until the assistant (or the call) has
+  // finished writing: a half-saved answer would be missing from it.
+  const build = useBuildPlanNow({
+    tripId,
+    busy: interview.running || voice.active,
+    onBuilt: onPlanBuilt,
   })
   const { cities } = useCities(session.status)
   const citySearch = useCitySearch(session.status)
@@ -182,6 +206,11 @@ function InterviewWorkspace({
   }
 
   const started = lines.length > 0 || interview.running || voice.captions.length > 0
+  // Back to a conversation from an earlier visit: say where it stood, until the host writes again.
+  const resume =
+    history.history.length > 0 && interview.lines.length === 0 && knowledge.knowledge
+      ? resumeSummary(knowledge.knowledge)
+      : null
   const collected = collectedCount(knowledge.knowledge)
   const closeEditing = () => setEditing(null)
   const editedProfile =
@@ -208,6 +237,15 @@ function InterviewWorkspace({
     />
   )
 
+  const buildButton = (
+    <BuildPlanButton
+      pending={build.isPending}
+      waiting={build.waiting}
+      onClick={build.build}
+      className="flex-1 md:flex-none"
+    />
+  )
+
   const panelButton = (
     <Button
       type="button"
@@ -222,6 +260,9 @@ function InterviewWorkspace({
   return (
     <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="flex min-w-0 flex-col gap-6">
+        {resume && (resume.known.length > 0 || resume.missing.length > 0) && (
+          <ResumeHeader summary={resume} />
+        )}
         {started ? (
           <ChatThread
             lines={lines}
@@ -318,17 +359,35 @@ function InterviewWorkspace({
         )}
         <div ref={end} />
 
-        {started && (
-          <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 -mx-4 border-t bg-background px-4 py-3 md:bottom-0 md:mx-0 md:border-t-0 md:px-0">
+        {build.error && (
+          <div
+            role="alert"
+            className="rounded-lg border border-destructive/40 p-4 text-sm leading-relaxed"
+          >
+            {BUILD_ERROR_TEXT[build.error]()}
+          </div>
+        )}
+
+        <div
+          className={cn(
+            'sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 -mx-4 flex flex-col gap-3 border-t bg-background px-4 py-3 md:bottom-0 md:mx-0 md:border-t-0 md:px-0 md:py-0 md:pb-3',
+            // Before the first sentence the bar holds only the phone buttons.
+            !started && 'md:hidden',
+          )}
+        >
+          <div className="flex items-center gap-2 md:hidden">
+            {buildButton}
+            {!started && panelButton}
+          </div>
+          {started && (
             <Composer
               disabled={interview.running || voice.active}
               onSend={(text) => void interview.send(text)}
             >
               {panelButton}
             </Composer>
-          </div>
-        )}
-        {!started && <div className="md:hidden">{panelButton}</div>}
+          )}
+        </div>
       </div>
 
       <aside
@@ -337,6 +396,12 @@ function InterviewWorkspace({
       >
         <h2 className="mb-3 font-medium text-base">{m.interview_panel_title()}</h2>
         {panel}
+        <div className="mt-5 flex flex-col items-start gap-2 border-t pt-5">
+          {buildButton}
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            {m.interview_build_hint()}
+          </p>
+        </div>
       </aside>
 
       <ResponsiveModal

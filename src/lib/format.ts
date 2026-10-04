@@ -183,6 +183,43 @@ export function budgetSummary(trip: BudgetFields): string | null {
   })
 }
 
+const relativeFormat = memoByLocale(
+  (tag) => new Intl.RelativeTimeFormat(tag, { numeric: 'auto', style: 'short' }),
+)
+const RELATIVE_STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['second', 60],
+  ['minute', 60],
+  ['hour', 24],
+  ['day', 7],
+  ['week', 4.345],
+  ['month', 12],
+  ['year', Number.POSITIVE_INFINITY],
+]
+
+/** "5 min temu" / "5 min ago": the largest unit that fits; `now` is injectable for tests. */
+export function formatRelative(iso: string, now: number = Date.now()): string {
+  let value = (new Date(iso).getTime() - now) / 1000
+  for (const [unit, size] of RELATIVE_STEPS) {
+    if (Math.abs(value) < size) return relativeFormat().format(Math.round(value), unit)
+    value /= size
+  }
+  return formatDate(iso)
+}
+
+const MS_PER_MINUTE = 60_000
+const MINUTES_PER_HOUR = 60
+const HOURS_PER_DAY = 24
+
+/** "5 min temu" / "5 min. ago": how long ago a position or an entry was updated. */
+export function formatAgo(iso: string, now: number = Date.now()): string {
+  const minutes = Math.round((new Date(iso).getTime() - now) / MS_PER_MINUTE)
+  const format = relativeFormat()
+  if (Math.abs(minutes) < MINUTES_PER_HOUR) return format.format(minutes, 'minute')
+  const hours = Math.round(minutes / MINUTES_PER_HOUR)
+  if (Math.abs(hours) < HOURS_PER_DAY) return format.format(hours, 'hour')
+  return format.format(Math.round(hours / HOURS_PER_DAY), 'day')
+}
+
 /** "+0,04" / "−0,04" (a minus sign, not a hyphen), for a change; zero has no sign. */
 export function formatSigned(value: number, maximumFractionDigits = 2): string {
   return withMinusSign(
@@ -216,22 +253,4 @@ export function formatSignedMinutes(minutes: number): string {
   if (minutes === 0) return formatDuration(0)
   const text = formatDuration(Math.abs(minutes))
   return minutes > 0 ? `+${text}` : `\u2212${text}`
-}
-
-const MS_PER_MINUTE = 60_000
-const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
-
-const relativeFormat = memoByLocale(
-  (tag) => new Intl.RelativeTimeFormat(tag, { numeric: 'auto', style: 'short' }),
-)
-
-/** "5 min temu" / "5 min. ago": how long ago a position or an entry was updated. */
-export function formatAgo(iso: string, now: number = Date.now()): string {
-  const minutes = Math.round((new Date(iso).getTime() - now) / MS_PER_MINUTE)
-  const format = relativeFormat()
-  if (Math.abs(minutes) < MINUTES_PER_HOUR) return format.format(minutes, 'minute')
-  const hours = Math.round(minutes / MINUTES_PER_HOUR)
-  if (Math.abs(hours) < HOURS_PER_DAY) return format.format(hours, 'hour')
-  return format.format(Math.round(hours / HOURS_PER_DAY), 'day')
 }

@@ -1,4 +1,12 @@
-import { CircleUser, Door, DoorOpen, Settings, ShieldCheck, ShieldUser } from '@keyline-icons/react'
+import {
+  Bell,
+  CircleUser,
+  Door,
+  DoorOpen,
+  Settings,
+  ShieldCheck,
+  ShieldUser,
+} from '@keyline-icons/react'
 import { Link } from '@tanstack/react-router'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -122,6 +130,14 @@ export function AccountMenu({
                 <Link to="/admin/permissions">
                   <ShieldCheck />
                   {m.perm_title()}
+                </Link>
+              </DropdownMenuItem>
+            )}
+            {variant === 'tab' && (
+              <DropdownMenuItem asChild className="min-h-11">
+                <Link to="/notifications">
+                  <Bell />
+                  {m.nav_notifications()}
                 </Link>
               </DropdownMenuItem>
             )}
