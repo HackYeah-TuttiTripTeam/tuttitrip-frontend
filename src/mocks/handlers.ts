@@ -1,7 +1,16 @@
 import { delay, HttpResponse, http, type RequestHandler } from 'msw'
 import type { Schemas } from '@/api/client'
 import {
+  centsToDecimal,
+  compareDecimals,
+  parseDecimalInput,
+  sumDecimals,
+  toCents,
+} from '@/lib/money'
+import {
   checkin,
+  type Expense,
+  expenseParticipants,
   INVITATION_TOKEN,
   invitation,
   location,
@@ -683,6 +692,7 @@ function normalHandlers(
       )
     }),
 
+    ...expenseHandlers(world, latency, findTrip, canWrite),
     // Voting links of the host. Like the real API the token is in the 201 answer only, and
     // creating a link for a person with an account is a 409.
     http.get(`${API}/trips/:tripId/vote-links`, async ({ params }) => {
@@ -1136,3 +1146,247 @@ function viewPreferences(world: World, profileId: string, isManager: boolean): P
 
 const withoutUndefined = <T extends object>(body: T): Partial<T> =>
   Object.fromEntries(Object.entries(body).filter(([, value]) => value !== undefined)) as Partial<T>
+
+type ExpenseDetail = { type: string; loc: string[]; msg: string }
+
+/** The API's own rules for an expense (backend `expenses/logic/split.py`), as 422 items with codes. */
+function checkExpense(
+  world: World,
+  merged: Expense,
+  entered: Schemas['ShareInput'][],
+): ExpenseDetail[] {
+  const found: ExpenseDetail[] = []
+  const add = (type: string, field: string, msg: string) =>
+    found.push({ type, loc: ['body', field], msg })
+  const onTrip = new Set(world.profiles.map((profile) => profile.id))
+  if (compareDecimals(merged.amount, '0') <= 0)
+    add('expense.amount_not_positive', 'amount', 'Amount must be above zero')
+  if (!onTrip.has(merged.payer_profile_id))
+    add('expense.payer_not_on_trip', 'payer_profile_id', 'Payer is not on the trip')
+  if (entered.length === 0)
+    return [
+      ...found,
+      {
+        type: 'expense.participants_required',
+        loc: ['body', 'participants'],
+        msg: 'At least one participant',
+      },
+    ]
+  if (entered.some((share) => !onTrip.has(share.profile_id)))
+    add('expense.participant_not_on_trip', 'participants', 'A participant is not on the trip')
+  if (merged.split_method !== 'equal') {
+    const values = entered.map((share) =>
+      share.value == null ? null : parseDecimalInput(String(share.value), 4),
+    )
+    if (values.some((value) => value === null))
+      add('expense.share_value_required', 'participants', 'Every participant needs a value')
+    else if (values.some((value) => value !== null && compareDecimals(value, '0') <= 0))
+      add('expense.share_value_not_positive', 'participants', 'Values must be above zero')
+    else if (
+      merged.split_method === 'percent' &&
+      compareDecimals(sumDecimals(values.filter((v): v is string => v !== null)), '100') !== 0
+    )
+      add('expense.percent_sum', 'participants', 'Percentages must add up to 100')
+  }
+  return found
+}
+
+/** Balances and transfers from the stored parts: a plain greedy matching, enough for a mock. */
+function settle(world: World, tripId: string) {
+  const balance = new Map<string, bigint>()
+  let total = 0n
+  for (const item of world.expenses.filter((e) => e.trip_id === tripId)) {
+    total += toCents(item.amount)
+    balance.set(
+      item.payer_profile_id,
+      (balance.get(item.payer_profile_id) ?? 0n) + toCents(item.amount),
+    )
+    for (const part of item.participants) {
+      balance.set(part.profile_id, (balance.get(part.profile_id) ?? 0n) - toCents(part.amount))
+    }
+  }
+  const creditors = [...balance]
+    .filter(([, cents]) => cents > 0n)
+    .sort((a, b) => (a[1] > b[1] ? -1 : 1))
+  const debtors = [...balance]
+    .filter(([, cents]) => cents < 0n)
+    .sort((a, b) => (a[1] < b[1] ? -1 : 1))
+  const transfers: { from_profile_id: string; to_profile_id: string; amount: string }[] = []
+  let [i, j] = [0, 0]
+  while (i < debtors.length && j < creditors.length) {
+    const [debtor, owed] = debtors[i] ?? ['', 0n]
+    const [creditor, due] = creditors[j] ?? ['', 0n]
+    const pay = -owed < due ? -owed : due
+    transfers.push({
+      from_profile_id: debtor,
+      to_profile_id: creditor,
+      amount: centsToDecimal(pay),
+    })
+    debtors[i] = [debtor, owed + pay]
+    creditors[j] = [creditor, due - pay]
+    if (debtors[i]?.[1] === 0n) i += 1
+    if (creditors[j]?.[1] === 0n) j += 1
+  }
+  return {
+    currency: world.trips.find((t) => t.id === tripId)?.currency ?? null,
+    total_spent: centsToDecimal(total),
+    closed_at: world.settlementClosed ? '2026-10-12T10:00:00Z' : null,
+    balances: world.profiles
+      .filter((profile) => profile.trip_id === tripId)
+      .map((profile) => ({
+        profile_id: profile.id,
+        amount: centsToDecimal(balance.get(profile.id) ?? 0n),
+      })),
+    transfers,
+  }
+}
+
+function listExpenses(all: Expense[], params: URLSearchParams) {
+  const [from, to] = [params.get('date_from'), params.get('date_to')]
+  const matching = all.filter(
+    (e) =>
+      (!from || e.spent_on >= from) &&
+      (!to || e.spent_on <= to) &&
+      (!params.get('payer_profile_id') || e.payer_profile_id === params.get('payer_profile_id')) &&
+      (!params.get('participant_profile_id') ||
+        e.participants.some((p) => p.profile_id === params.get('participant_profile_id'))) &&
+      (!params.get('category') || e.category === params.get('category')),
+  )
+  const sort = params.get('sort') ?? 'spent_on'
+  const sign = params.get('dir') === 'asc' ? 1 : -1
+  const key = (e: Expense) =>
+    sort === 'amount'
+      ? e.amount.padStart(14, '0')
+      : sort === 'created_at'
+        ? e.created_at
+        : e.spent_on
+  matching.sort((a, b) => sign * key(a).localeCompare(key(b)) || a.id.localeCompare(b.id))
+  const size = Math.min(100, Math.max(1, Number(params.get('size')) || 20))
+  const page = Math.max(1, Number(params.get('page')) || 1)
+  return HttpResponse.json({
+    items: matching.slice((page - 1) * size, page * size),
+    total: matching.length,
+    page,
+    size,
+    pages: Math.ceil(matching.length / size),
+  })
+}
+
+function expenseHandlers(
+  world: World,
+  latency: () => Promise<void>,
+  findTrip: (id: unknown) => Trip | undefined,
+  canWrite: (id: unknown) => boolean,
+): RequestHandler[] {
+  // Like the API: the author, a host and a co-host may change or delete an expense.
+  const mayChange = (tripId: unknown, item: Expense) =>
+    canWrite(tripId) || item.created_by_sub === MOCK_USER_SUB
+  const closedSettlement = () =>
+    HttpResponse.json({ detail: 'The settlement is closed' }, { status: 409 })
+  const unprocessable422 = (detail: ExpenseDetail[]) =>
+    HttpResponse.json({ detail }, { status: 422 })
+
+  return [
+    http.get(`${API}/trips/:tripId/expenses`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      return listExpenses(
+        world.expenses.filter((e) => e.trip_id === params.tripId),
+        new URL(request.url).searchParams,
+      )
+    }),
+
+    http.post(`${API}/trips/:tripId/expenses`, async ({ params, request }) => {
+      await latency()
+      const found = findTrip(params.tripId)
+      if (!found) return notFound('Trip not found')
+      if (world.settlementClosed) return closedSettlement()
+      const body = (await request.json()) as Schemas['ExpenseCreate']
+      const created: Expense = {
+        id: crypto.randomUUID(),
+        trip_id: found.id,
+        payer_profile_id: body.payer_profile_id,
+        amount: parseDecimalInput(String(body.amount)) ?? '0',
+        currency: body.currency ?? found.currency ?? 'PLN',
+        description: body.description,
+        spent_on: body.spent_on,
+        category: body.category ?? null,
+        split_method: body.split_method,
+        trip_amount: parseDecimalInput(String(body.amount)) ?? '0',
+        exchange_rate: null,
+        status: 'confirmed',
+        has_evidence: false,
+        participants: [],
+        created_by_sub: MOCK_USER_SUB,
+        created_at: new Date().toISOString(),
+      }
+      const errors = checkExpense(world, created, body.participants)
+      if (errors.length > 0) return unprocessable422(errors)
+      created.participants = expenseParticipants(
+        created.amount,
+        created.split_method,
+        body.participants.map((p) => ({
+          profile_id: p.profile_id,
+          value: p.value == null ? null : String(p.value),
+        })),
+      )
+      world.expenses.unshift(created)
+      return HttpResponse.json(created, { status: 201 })
+    }),
+
+    http.patch(`${API}/trips/:tripId/expenses/:expenseId`, async ({ params, request }) => {
+      await latency()
+      const current = world.expenses.find(
+        (e) => e.id === params.expenseId && e.trip_id === params.tripId,
+      )
+      if (!current) return notFound('Expense not found')
+      if (!mayChange(params.tripId, current)) return forbidden()
+      if (world.settlementClosed) return closedSettlement()
+      const body = (await request.json()) as Schemas['ExpenseUpdate']
+      const merged: Expense = {
+        ...current,
+        payer_profile_id: body.payer_profile_id ?? current.payer_profile_id,
+        amount:
+          body.amount == null ? current.amount : (parseDecimalInput(String(body.amount)) ?? '0'),
+        description: body.description ?? current.description,
+        spent_on: body.spent_on ?? current.spent_on,
+        category: body.category === undefined ? current.category : body.category,
+        split_method: body.split_method ?? current.split_method,
+      }
+      const entered =
+        body.participants ??
+        current.participants.map((p) => ({ profile_id: p.profile_id, value: p.value }))
+      const errors = checkExpense(world, merged, entered)
+      if (errors.length > 0) return unprocessable422(errors)
+      merged.participants = expenseParticipants(
+        merged.amount,
+        merged.split_method,
+        entered.map((p) => ({
+          profile_id: p.profile_id,
+          value: p.value == null ? null : String(p.value),
+        })),
+      )
+      world.expenses = world.expenses.map((e) => (e.id === merged.id ? merged : e))
+      return HttpResponse.json(merged)
+    }),
+
+    http.delete(`${API}/trips/:tripId/expenses/:expenseId`, async ({ params }) => {
+      await latency()
+      const current = world.expenses.find(
+        (e) => e.id === params.expenseId && e.trip_id === params.tripId,
+      )
+      if (!current) return notFound('Expense not found')
+      if (!mayChange(params.tripId, current)) return forbidden()
+      if (world.settlementClosed) return closedSettlement()
+      world.expenses = world.expenses.filter((e) => e.id !== current.id)
+      return new HttpResponse(null, { status: 204 })
+    }),
+
+    // Backend issue #84 (not merged when this was written): the shape follows the issue.
+    http.get(`${API}/trips/:tripId/expenses/settlement`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      return HttpResponse.json(settle(world, String(params.tripId)))
+    }),
+  ]
+}

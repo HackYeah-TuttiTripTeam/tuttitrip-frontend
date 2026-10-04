@@ -1,4 +1,12 @@
-import { Calendar, Images, MessageSquare, Navigation, UserCheck, Users } from '@keyline-icons/react'
+import {
+  Calendar,
+  Images,
+  MessageSquare,
+  Navigation,
+  UserCheck,
+  Users,
+  Wallet,
+} from '@keyline-icons/react'
 import type { ReactNode } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TOUR } from '@/lib/help'
@@ -12,6 +20,7 @@ const TAB_LABELS: Record<TripTab, () => string> = {
   plan: m.trip_tab_plan,
   photos: m.trip_tab_photos,
   locations: m.trip_tab_locations,
+  expenses: m.trip_tab_expenses,
 }
 
 const TAB_ICONS: Record<TripTab, ReactNode> = {
@@ -21,6 +30,7 @@ const TAB_ICONS: Record<TripTab, ReactNode> = {
   plan: <Calendar />,
   photos: <Images />,
   locations: <Navigation />,
+  expenses: <Wallet />,
 }
 
 interface TripTabsProps {
@@ -34,13 +44,16 @@ interface TripTabsProps {
   members: ReactNode
   /** The content of the Plan tab: a view, so this component stays free of the data layer. */
   plan: ReactNode
+  /** The content of the Wydatki tab: a view. */
+  expenses: ReactNode
   /** The content of the Zdjęcia tab. */
   photos: ReactNode
   /** The content of the Lokalizacje tab. */
   locations: ReactNode
 }
 
-/** Wywiad, Osoby, Członkowie, Plan, Zdjęcia, Lokalizacje: a scrollable segment switch. */
+/** Wywiad, Osoby, Członkowie, Plan, Wydatki, Zdjęcia, Lokalizacje: a scrollable segment switch. */
+
 export function TripTabs({
   tab,
   onTabChange,
@@ -50,6 +63,7 @@ export function TripTabs({
   plan,
   photos,
   locations,
+  expenses,
 }: TripTabsProps) {
   return (
     <Tabs
@@ -78,6 +92,7 @@ export function TripTabs({
       <TabsContent value="plan">{plan}</TabsContent>
       <TabsContent value="photos">{photos}</TabsContent>
       <TabsContent value="locations">{locations}</TabsContent>
+      <TabsContent value="expenses">{expenses}</TabsContent>
     </Tabs>
   )
 }

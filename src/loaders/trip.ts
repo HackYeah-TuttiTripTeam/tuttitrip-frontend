@@ -5,6 +5,12 @@ import type { VoteSummarySort } from '@/api/queries/vote-links'
 import { VOICE_START_FLAG } from '@/lib/constants'
 import { TRIP_TABS, type TripTab } from '@/lib/trip-tabs'
 import { VOTE_SOURCES, VOTE_SUMMARY_SORTS } from '@/lib/vote-constants'
+import {
+  type ExpenseSection,
+  expenseSectionSchema,
+  expensesListDefaults,
+  expensesListShape,
+} from './expenses'
 import type { RouterContext } from './router-context'
 
 /** Sort keys of the lists the trip page shows (the API's `sort` values). */
@@ -16,6 +22,8 @@ export const SORT_DIRS = ['asc', 'desc'] as const
 
 /** Values left out of the URL (see stripSearchParams in routes/trips_.$tripId.ts). */
 export const tripSearchDefaults = {
+  ...expensesListDefaults,
+  section: 'list',
   tab: 'interview',
   vpage: 1,
   vsort: 'name',
@@ -41,6 +49,7 @@ export const tripSearchDefaults = {
   ph_sort: (typeof PHOTO_SORT_KEYS)[number]
   ph_dir: (typeof SORT_DIRS)[number]
   ph_owner: (typeof PHOTO_OWNERS)[number]
+  section: ExpenseSection
 }
 
 const CHECKIN_FILTER_MAX_CHARS = 200
@@ -98,6 +107,9 @@ export const tripSearchSchema = z.object({
     .enum(PHOTO_OWNERS)
     .default(tripSearchDefaults.ph_owner)
     .catch(tripSearchDefaults.ph_owner),
+  /** The Wydatki tab: the part (list or settlement) and the list state, see loaders/expenses.ts. */
+  section: expenseSectionSchema,
+  ...expensesListShape,
 })
 
 export type TripSearch = z.output<typeof tripSearchSchema>
