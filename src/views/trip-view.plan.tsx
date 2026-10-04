@@ -9,7 +9,6 @@ import {
 } from '@keyline-icons/react'
 import { getRouteApi } from '@tanstack/react-router'
 import { useState } from 'react'
-import { ApiError } from '@/api/errors'
 import type { Plan } from '@/api/queries/plans'
 import type { Trip } from '@/api/queries/trips'
 import { DayCost } from '@/components/planning/cost-breakdown'
@@ -34,11 +33,53 @@ import { useSession } from '@/hooks/use-session'
 import { percentOf } from '@/lib/fairness'
 import { TOUR } from '@/lib/help'
 import { dayCost, dayTickets } from '@/lib/plan-cost'
+import { classifyPlanFailure } from '@/lib/plan-error'
 import { m } from '@/paraglide/messages'
 import { FairnessAside } from './trip-view.fairness'
 import { TripPlanProposal } from './trip-view.plan.proposal'
 import { PlanDayPanel } from './trip-view.plan-day'
 import { StopActions } from './trip-view.stop-actions'
+
+/** What to tell the user about a failed or still running "build plan" call. */
+function planFailureMessage(
+  error: Error | null,
+  fetching: ReturnType<typeof useCreatePlan>['fetching'],
+  city: string,
+) {
+  if (fetching && 'failed' in fetching) {
+    return (
+      <p role="alert" className="text-destructive text-sm">
+        {m.plan_fetching_places_failed({ city })}
+      </p>
+    )
+  }
+  if (fetching) {
+    const text =
+      fetching.percent === null
+        ? m.plan_fetching_places({ city })
+        : m.plan_fetching_places_progress({ city, percent: fetching.percent })
+    return (
+      <p role="status" className="text-muted-foreground text-sm">
+        {text}
+      </p>
+    )
+  }
+  if (!error) return null
+  const failure = classifyPlanFailure(error)
+  const text =
+    failure.kind === 'forbidden'
+      ? m.plan_compute_forbidden()
+      : failure.kind === 'city_missing'
+        ? m.plan_compute_city_missing()
+        : failure.kind === 'message'
+          ? failure.text
+          : m.plan_compute_failed()
+  return (
+    <p role="alert" className="text-destructive text-sm">
+      {text}
+    </p>
+  )
+}
 
 const route = getRouteApi('/trips_/$tripId')
 
@@ -104,13 +145,8 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
     )
   }
 
-  const failure = creation.error ? (
-    <p role="alert" className="text-destructive text-sm">
-      {creation.error instanceof ApiError && creation.error.status === 403
-        ? m.plan_compute_forbidden()
-        : m.plan_compute_failed()}
-    </p>
-  ) : null
+  const city = trip.destination ?? trip.city_slug ?? ''
+  const failure = planFailureMessage(creation.error, creation.fetching, city)
 
   if (hasNoPlan || !plan) {
     return (
