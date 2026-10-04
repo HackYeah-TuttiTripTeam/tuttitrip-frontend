@@ -100,6 +100,7 @@ describe('missing files', () => {
       '/demo',
       '/about',
       '/contact',
+      '/prywatnosc',
       '/',
       '/index.html',
     ]) {
@@ -149,6 +150,21 @@ describe('public pages', () => {
     expect(seen?.headers.get('if-none-match')).toBeNull()
     expect(response.headers.get('etag')).toBeNull()
     expect(response.headers.get('last-modified')).toBeNull()
+  })
+
+  it('serves the privacy page with its own metadata, and lists it in the sitemap', async () => {
+    const response = await worker.fetch(
+      new Request('https://app.test/prywatnosc?lang=en'),
+      env(page),
+    )
+    const body = await response.text()
+    expect(body).toContain('<title data-seo>TuttiTrip privacy policy</title>')
+    expect(body).toContain('rel="canonical" href="https://app.test/prywatnosc?lang=en"')
+    expect(body).toContain('hreflang="pl" href="https://app.test/prywatnosc"')
+    const sitemap = await (
+      await worker.fetch(new Request('https://app.test/sitemap.xml'), env(page))
+    ).text()
+    expect(sitemap).toContain('<loc>https://app.test/prywatnosc</loc>')
   })
 
   it('redirects a trailing slash to the clean URL, keeping the query', async () => {
