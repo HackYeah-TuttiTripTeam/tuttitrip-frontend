@@ -1,11 +1,12 @@
 import { delay, HttpResponse, http, type RequestHandler } from 'msw'
 import type { Schemas } from '@/api/client'
+import { defaultValues, inRange, PARAMETERS } from '@/lib/planning-parameters'
 import {
   INVITATION_TOKEN,
   invitation,
   MOCK_DEMO_TOKEN,
   MOCK_USER_SUB,
-  me,
+  meWithPlanning,
   type Plan,
   PROFILE_IDS,
   type Preferences,
@@ -73,6 +74,72 @@ function brokenHandlers(behaviour: 'server-error' | 'offline', latency: () => Pr
   ]
 }
 
+/** Version 0: what the API serves before the administrator stores a version. */
+const builtInVersion = (): Schemas['ParametersRead'] => ({
+  version: 0,
+  values: defaultValues(),
+  note: null,
+  created_by_sub: null,
+  created_at: null,
+})
+
+function planningHandlers(world: World, latency: () => Promise<void>): RequestHandler[] {
+  const { planning } = world
+  const current = () => planning.versions[0] ?? builtInVersion()
+  return [
+    http.get(`${API}/admin/planning/parameters`, async () => {
+      await latency()
+      return planning.level === 'NONE' ? forbidden() : HttpResponse.json(current())
+    }),
+
+    http.get(`${API}/admin/planning/parameters/versions`, async ({ request }) => {
+      await latency()
+      if (planning.level === 'NONE') return forbidden()
+      const query = new URL(request.url).searchParams
+      const size = Number(query.get('size') ?? 20)
+      const page = Number(query.get('page') ?? 1)
+      const rows = query.get('dir') === 'asc' ? [...planning.versions].reverse() : planning.versions
+      return HttpResponse.json({
+        items: rows.slice((page - 1) * size, page * size),
+        total: rows.length,
+        page,
+        size,
+        pages: Math.ceil(rows.length / size),
+      })
+    }),
+
+    // Like the API: the whole set, every value checked against its range.
+    http.post(`${API}/admin/planning/parameters`, async ({ request }) => {
+      await latency()
+      if (planning.level !== 'WRITE') return forbidden()
+      const body = (await request.json()) as Schemas['ParametersCreate']
+      const values = { ...defaultValues(), ...body.values }
+      const invalid = PARAMETERS.filter((spec) => !inRange(spec, values[spec.key]))
+      if (invalid.length > 0) {
+        return HttpResponse.json(
+          {
+            detail: invalid.map((spec) => ({
+              type: 'less_than_equal',
+              loc: ['body', 'values', spec.key],
+              msg: `Value out of range for ${spec.key}`,
+            })),
+          },
+          { status: 422 },
+        )
+      }
+      const stored: Schemas['ParametersRead'] = {
+        version: (planning.versions[0]?.version ?? 0) + 1,
+        values,
+        note: body.note ?? null,
+        created_by_sub: MOCK_USER_SUB,
+        created_at: new Date().toISOString(),
+      }
+      planning.versions.unshift(stored)
+      return HttpResponse.json(stored, { status: 201 })
+    }),
+  ]
+}
+
 function normalHandlers(world: World, latency: () => Promise<void>): RequestHandler[] {
   const findTrip = (id: unknown) => world.trips.find((candidate) => candidate.id === id)
   const canWrite = (id: unknown) => findTrip(id)?.my_role !== 'member'
@@ -97,8 +164,10 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
 
     http.get(`${API}/me`, async () => {
       await latency()
-      return HttpResponse.json(me())
+      return HttpResponse.json(meWithPlanning(world.planning.level))
     }),
+
+    ...planningHandlers(world, latency),
 
     http.get(`${API}/trips`, async () => {
       await latency()

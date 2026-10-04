@@ -1961,6 +1961,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/planning/parameters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Parameters in force
+         * @description The newest version of the algorithm parameters (section 6 of `docs/algorytm.md`); version 0 is the built-in default. `alpha` is the default slider of new trips.
+         *
+         *     Wymagane uprawnienie: `admin.planning_weights:READ`.
+         */
+        get: operations["get_parameters_api_v1_admin_planning_parameters_get"];
+        put?: never;
+        /**
+         * Store a new version of the parameters
+         * @description The whole set (omitted fields take the default), checked against the ranges of the specification: a value outside gets 422. New plans use the new version and record its number; stored plans are not recomputed.
+         *
+         *     Wymagane uprawnienie: `admin.planning_weights:WRITE`.
+         */
+        post: operations["create_parameters_api_v1_admin_planning_parameters_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/planning/parameters/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * History of parameter versions
+         * @description Paged, newest first by default.
+         *
+         *     Wymagane uprawnienie: `admin.planning_weights:READ`.
+         */
+        get: operations["list_versions_api_v1_admin_planning_parameters_versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5208,6 +5258,200 @@ export interface components {
              * @description Weights of some people (each once); the rest keep theirs.
              */
             weights?: components["schemas"]["WeightItem"][] | null;
+        };
+        Unit: number;
+        /** Page[ParametersRead] */
+        Page_ParametersRead_: {
+            /** Items */
+            items: components["schemas"]["ParametersRead"][];
+            /**
+             * Total
+             * @description Rows matching the filters.
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /**
+             * Pages
+             * @description Pages in total; 0 when empty.
+             */
+            pages: number;
+        };
+        /**
+         * ParametersRead
+         * @description A stored version of the parameters.
+         */
+        ParametersRead: {
+            /**
+             * Version
+             * @description 0 is the built-in default (no row).
+             */
+            version: number;
+            values: components["schemas"]["AlgorithmParams"];
+            /** Note */
+            note?: string | null;
+            /**
+             * Created By Sub
+             * @description The administrator; null for version 0.
+             */
+            created_by_sub?: string | null;
+            /** Created At */
+            created_at?: string | null;
+        };
+        /**
+         * ParametersCreate
+         * @description A new version: the whole set (omitted fields take the default), plus a note.
+         *
+         *     The ranges are those of ``AlgorithmParams`` (section 6 of docs/algorytm.md).
+         */
+        ParametersCreate: {
+            values?: components["schemas"]["AlgorithmParams"];
+            /** Note */
+            note?: string | null;
+        };
+        /**
+         * AlgorithmParams
+         * @description Section 6 of the specification: defaults and allowed ranges.
+         */
+        AlgorithmParams: {
+            /**
+             * Alpha
+             * @description Fairness slider: 0 utility, 1 Nash, 3 almost egalitarian (E5).
+             * @default 1
+             */
+            alpha: number;
+            /**
+             * Kappa Attractions
+             * @description Daily saturation of attractions (E2).
+             * @default 0.6
+             */
+            kappa_attractions: number;
+            /**
+             * Kappa Food
+             * @description Daily saturation of food (E2).
+             * @default 1.2
+             */
+            kappa_food: number;
+            /**
+             * Tau Ref Min
+             * @description Reference visit time of an attraction, min (E2).
+             * @default 90
+             */
+            tau_ref_min: number;
+            /**
+             * Epsilon
+             * @description Stability of the geometric mean (E1).
+             * @default 0.01
+             */
+            epsilon: number;
+            /**
+             * Lambda Floor
+             * @description Added to every pool share before ``Z`` normalises it (E1).
+             * @default 0.1
+             */
+            lambda_floor: number;
+            /**
+             * @description ``rho``: weight of an explicit vote against the interest profile (E1).
+             * @default 0.7
+             */
+            vote_weight: components["schemas"]["Unit"];
+            /**
+             * Unverified Markup
+             * @description ``delta``: markup of an unverified price (E6).
+             * @default 0.15
+             */
+            unverified_markup: number;
+            /**
+             * @description ``rho_unc``: points for an unconfirmed lodging requirement (E2).
+             * @default 0.4
+             */
+            uncertain_requirement: components["schemas"]["Unit"];
+            /**
+             * Strong Preference
+             * @description ``theta``: pool share that makes a preference strong (E5).
+             * @default 0.4
+             */
+            strong_preference: number;
+            /**
+             * Smoothing
+             * @description ``s``: smoothing in ``r_i`` (E4).
+             * @default 10
+             */
+            smoothing: number;
+            /**
+             * @description The floor is at most this share of the person's own maximum (E4).
+             * @default 0.6
+             */
+            floor_share: components["schemas"]["Unit"];
+            /**
+             * Violation Penalty
+             * @description Penalty of a missed floor, own place or tag minimum (E5).
+             * @default 1000
+             */
+            violation_penalty: number;
+            /**
+             * Cost Comfort
+             * @description ``q_cost`` at ``B_do`` (E2).
+             * @default 60
+             */
+            cost_comfort: number;
+            /**
+             * Good Reason Points
+             * @description Gain of a strongly-preferring person that justifies exceeding the budget (E6).
+             * @default 8
+             */
+            good_reason_points: number;
+            /**
+             * @description Rise of ``min r`` that justifies exceeding the budget (E6).
+             * @default 0.05
+             */
+            good_reason_min_r: components["schemas"]["Unit"];
+            /**
+             * @description Welfare gain over the cheaper plan required for approval (E6).
+             * @default 0.03
+             */
+            good_reason_welfare: components["schemas"]["Unit"];
+            /**
+             * @description E6: the cheaper alternative costs at most ``c - margin * B_do`` (5%).
+             * @default 0.05
+             */
+            cheaper_margin: components["schemas"]["Unit"];
+            /**
+             * Verdict Fits
+             * @description Extension, outside v1.0: ``V_p`` from which a place "fits" (backend#51).
+             * @default 0.1
+             */
+            verdict_fits: number;
+            /**
+             * Verdict Iconic
+             * @description Extension, outside v1.0: lowest ``V_p`` of "iconic, but not yours".
+             * @default -0.3
+             */
+            verdict_iconic: number;
+            /**
+             * @description ``m_ip`` from which a place counts as the person's own (E5).
+             * @default 0.6
+             */
+            own_place_match: components["schemas"]["Unit"];
+            /**
+             * Stairs Limit
+             * @description E0: a place is rejected at ``stairs_p * sensitivity_i`` from here.
+             * @default 0.9
+             */
+            stairs_limit: number;
+            /**
+             * Segment Factor
+             * @description E0: a place is rejected when ``d_p > factor * s_i``.
+             * @default 1.5
+             */
+            segment_factor: number;
+            /**
+             * @description E1: ``m_ip`` when there is neither an interest profile nor a vote.
+             * @default 0.5
+             */
+            no_data_match: components["schemas"]["Unit"];
         };
     };
     responses: never;
@@ -8670,6 +8914,136 @@ export interface operations {
                 content?: never;
             };
             /** @description Brak uprawnienia `places.catalog:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_parameters_api_v1_admin_planning_parameters_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParametersRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.planning_weights:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    create_parameters_api_v1_admin_planning_parameters_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParametersCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParametersRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.planning_weights:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_versions_api_v1_admin_planning_parameters_versions_get: {
+        parameters: {
+            query?: {
+                /** @description Page number, from 1. */
+                page?: number;
+                /** @description Items per page (max 100). */
+                size?: number;
+                dir?: components["schemas"]["SortDir"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ParametersRead_"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.planning_weights:READ` */
             403: {
                 headers: {
                     [name: string]: unknown;

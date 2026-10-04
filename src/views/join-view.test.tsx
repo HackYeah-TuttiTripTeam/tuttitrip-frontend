@@ -44,7 +44,8 @@ function recordRequests() {
   const seen: { method: string; path: string; href: string; body: unknown }[] = []
   server.events.on('request:start', async ({ request }) => {
     const { pathname } = new URL(request.url)
-    if (!pathname.startsWith('/api/v1/')) return
+    // /me is the app shell's own check of the menu, not something the join page asks for.
+    if (!pathname.startsWith('/api/v1/') || pathname === '/api/v1/me') return
     seen.push({
       method: request.method,
       path: pathname,

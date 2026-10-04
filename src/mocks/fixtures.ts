@@ -2,6 +2,7 @@
 // after `pnpm api:sync` a contract change breaks `tsc` here instead of silently drifting.
 // Amounts are decimal strings, like in the API.
 import type { Schemas } from '@/api/client'
+import { defaultValues } from '@/lib/planning-parameters'
 
 export type Trip = Schemas['TripRead']
 export type Profile = Schemas['ProfileRead']
@@ -12,6 +13,7 @@ export type PlanBudget = Schemas['PlanBudget']
 export type PersonFairness = Schemas['PersonFairness']
 export type PlanDomainCode = Schemas['PlanDomainCode']
 export type Me = Schemas['MeResponse']
+export type ParametersVersion = Schemas['ParametersRead']
 export type Member = Schemas['MemberRead']
 export type Invitation = Schemas['InvitationRead']
 export type City = Schemas['CityRead']
@@ -459,6 +461,42 @@ export const me = (): Me => ({
   is_admin: false,
   access: { trips: 'WRITE', 'trips.core': 'WRITE', 'profiles.core': 'WRITE' },
 })
+
+/** The administrator's window on the algorithm parameters: none, read-only or full. */
+export type PlanningLevel = 'NONE' | 'READ' | 'WRITE'
+
+/** `GET /me` of the signed-in mock user, with the access to the algorithm parameters given. */
+export const meWithPlanning = (level: PlanningLevel): Me => {
+  const base = me()
+  return level === 'NONE'
+    ? base
+    : { ...base, access: { ...base.access, 'admin.planning_weights': level } }
+}
+
+/** Versions the administrator already stored, newest first (the API lists rows, not version 0). */
+export const parameterVersions = (): ParametersVersion[] => [
+  {
+    version: 3,
+    values: { ...defaultValues(), alpha: 1.5, strong_preference: 0.45 },
+    note: 'α w górę po skargach na rozstrzał',
+    created_by_sub: 'auth0|admin-ola',
+    created_at: '2026-10-03T16:20:00Z',
+  },
+  {
+    version: 2,
+    values: { ...defaultValues(), strong_preference: 0.45 },
+    note: 'θ w górę, za często prosimy o zgodę',
+    created_by_sub: 'auth0|admin-ola',
+    created_at: '2026-10-02T09:05:00Z',
+  },
+  {
+    version: 1,
+    values: { ...defaultValues(), cost_comfort: 50 },
+    note: null,
+    created_by_sub: 'auth0|admin-kuba',
+    created_at: '2026-10-01T12:00:00Z',
+  },
+]
 
 export const INVITATION_ID = 'c5d8e1a0-3b7f-4a29-9e64-0d2f6b8a1c33'
 /** The token of the invitation every scenario's host already holds (shown only once in reality). */

@@ -4,6 +4,7 @@ import { AppShell } from '@/components/shared/app-shell'
 import { BootScreen } from '@/components/shared/boot-screen'
 import { DemoBanner } from '@/components/shared/demo-banner'
 import { PublicShell } from '@/components/shared/public-shell'
+import { useAdminAccess } from '@/hooks/use-admin-access'
 import { useApiAuthBridge } from '@/hooks/use-api-auth-bridge'
 import { useCleanServerHead } from '@/hooks/use-clean-server-head'
 import { useDemoStatus } from '@/hooks/use-demo-session'
@@ -38,6 +39,7 @@ export function RootLayoutView() {
   useApiAuthBridge()
   useCleanServerHead()
   const session = useSession()
+  const adminAccess = useAdminAccess(session.status)
   const { locale, setLocale } = useLocale()
   const { theme, resolved, setTheme } = useTheme()
   const setCreateTripOpen = useUiStore((state) => state.setCreateTripOpen)
@@ -80,6 +82,7 @@ export function RootLayoutView() {
             status: session.status,
             userName: session.userName,
             userPicture: session.userPicture,
+            showPlanning: adminAccess.level !== 'NONE',
             onLogin: session.login,
             onLogout: session.logout,
           }}
@@ -90,7 +93,7 @@ export function RootLayoutView() {
           onCreateTrip={() => {
             // Creating a trip needs an account; ask guests to sign in first.
             if (session.status === 'anonymous') return session.login()
-            void navigate({ to: '/trips', search: (prev) => prev })
+            void navigate({ to: '/trips', search: true })
             setCreateTripOpen(true)
           }}
         >

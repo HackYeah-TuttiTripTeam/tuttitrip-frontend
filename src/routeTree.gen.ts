@@ -16,6 +16,7 @@ import { Route as DemoRouteImport } from './routes/demo'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as PrywatnoscRouteImport } from './routes/prywatnosc'
 import { Route as TripsRouteImport } from './routes/trips'
+import { Route as AdminPlanningRouteImport } from './routes/admin.planning'
 import { Route as TripsTripIdRouteImport } from './routes/trips_.$tripId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -53,6 +54,11 @@ const TripsRoute = TripsRouteImport.update({
   path: '/trips',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminPlanningRoute = AdminPlanningRouteImport.update({
+  id: '/admin/planning',
+  path: '/admin/planning',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TripsTripIdRoute = TripsTripIdRouteImport.update({
   id: '/trips_/$tripId',
   path: '/trips/$tripId',
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/join': typeof JoinRoute
   '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
+  '/admin/planning': typeof AdminPlanningRoute
   '/trips/$tripId': typeof TripsTripIdRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/join': typeof JoinRoute
   '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
+  '/admin/planning': typeof AdminPlanningRoute
   '/trips/$tripId': typeof TripsTripIdRoute
 }
 export interface FileRoutesById {
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/join': typeof JoinRoute
   '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
+  '/admin/planning': typeof AdminPlanningRoute
   '/trips_/$tripId': typeof TripsTripIdRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/join'
     | '/prywatnosc'
     | '/trips'
+    | '/admin/planning'
     | '/trips/$tripId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/join'
     | '/prywatnosc'
     | '/trips'
+    | '/admin/planning'
     | '/trips/$tripId'
   id:
     | '__root__'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/join'
     | '/prywatnosc'
     | '/trips'
+    | '/admin/planning'
     | '/trips_/$tripId'
   fileRoutesById: FileRoutesById
 }
@@ -131,6 +143,7 @@ export interface RootRouteChildren {
   JoinRoute: typeof JoinRoute
   PrywatnoscRoute: typeof PrywatnoscRoute
   TripsRoute: typeof TripsRoute
+  AdminPlanningRoute: typeof AdminPlanningRoute
   TripsTripIdRoute: typeof TripsTripIdRoute
 }
 
@@ -185,6 +198,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TripsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/planning': {
+      id: '/admin/planning'
+      path: '/admin/planning'
+      fullPath: '/admin/planning'
+      preLoaderRoute: typeof AdminPlanningRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/trips_/$tripId': {
       id: '/trips_/$tripId'
       path: '/trips/$tripId'
@@ -203,6 +223,7 @@ const rootRouteChildren: RootRouteChildren = {
   JoinRoute: JoinRoute,
   PrywatnoscRoute: PrywatnoscRoute,
   TripsRoute: TripsRoute,
+  AdminPlanningRoute: AdminPlanningRoute,
   TripsTripIdRoute: TripsTripIdRoute,
 }
 export const routeTree = rootRouteImport

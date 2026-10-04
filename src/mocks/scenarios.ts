@@ -12,10 +12,13 @@ import {
   type Member,
   needsApprovalBudget,
   outing,
+  type ParametersVersion,
   type Plan,
+  type PlanningLevel,
   PROFILE_IDS,
   type Preferences,
   type Profile,
+  parameterVersions,
   plan,
   type Trip,
   trip,
@@ -39,6 +42,8 @@ export const scenarioNames = [
   'join-claim-taken',
   'join-named',
   'join-named-taken',
+  'planning-admin',
+  'planning-readonly',
 ] as const
 
 export type ScenarioName = (typeof scenarioNames)[number]
@@ -80,6 +85,8 @@ export interface World {
   plan: Plan | null
   /** Invitations of the main trip, newest first (the host's list). */
   invitations: Invitation[]
+  /** The algorithm parameters: what the caller may do with them and the stored versions. */
+  planning: { level: PlanningLevel; versions: ParametersVersion[] }
   /** Whether POST /auth/demo accepts the invitation token (false: switched off, answers 404). */
   demoEnabled: boolean
   /** POST /auth/demo answers 429: too many attempts from this address. */
@@ -114,6 +121,7 @@ export function createWorld(name: ScenarioName): World {
     preferencesSaveFails: false,
     plan: plan(main.id),
     invitations: [invitation()],
+    planning: { level: 'NONE', versions: [] },
     demoEnabled: true,
     demoRateLimited: false,
     join: {
@@ -138,6 +146,10 @@ export function createWorld(name: ScenarioName): World {
         trips: [trip({ my_role: 'member' }), outing({ my_role: 'member' })],
         members: familyMembers('member'),
       }
+    case 'planning-admin':
+      return { ...base, planning: { level: 'WRITE', versions: parameterVersions() } }
+    case 'planning-readonly':
+      return { ...base, planning: { level: 'READ', versions: parameterVersions() } }
     case 'preferences-save-error':
       return { ...base, preferencesSaveFails: true }
     case 'server-error':

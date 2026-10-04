@@ -1,4 +1,5 @@
-import { CircleUser, Door, DoorOpen } from '@keyline-icons/react'
+import { CircleUser, Door, DoorOpen, SlidersHorizontal } from '@keyline-icons/react'
+import { Link } from '@tanstack/react-router'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -17,6 +18,8 @@ export interface AccountState {
   status: 'disabled' | 'loading' | 'anonymous' | 'authenticated'
   userName: string | undefined
   userPicture: string | undefined
+  /** The API says this account may open the algorithm parameters (administrators). */
+  showPlanning?: boolean
   onLogin: () => void
   onLogout: () => void
 }
@@ -97,6 +100,14 @@ export function AccountMenu({
                 <ThemeRadioGroup state={theme} />
                 <DropdownMenuSeparator />
               </>
+            )}
+            {account.showPlanning && (
+              <DropdownMenuItem asChild>
+                <Link to="/admin/planning">
+                  <SlidersHorizontal />
+                  {m.planning_menu()}
+                </Link>
+              </DropdownMenuItem>
             )}
             <DropdownMenuItem onSelect={account.onLogout}>
               <Door />
