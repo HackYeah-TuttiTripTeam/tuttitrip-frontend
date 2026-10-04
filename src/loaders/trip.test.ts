@@ -92,4 +92,20 @@ describe('tripSearchSchema', () => {
       tripSearchSchema.parse({ section: 'x', page: 'abc', sort: 'name', size: 7 }),
     ).toMatchObject({ section: 'list', page: 1, sort: 'spent_on', size: 20 })
   })
+
+  it('reads the accommodation tab and the checked offer', () => {
+    const offer = '3f0c2a52-6d0b-4a39-8f0e-7a7c9a1c0b11'
+    expect(tripSearchSchema.parse({ tab: 'accommodation', offer })).toMatchObject({
+      tab: 'accommodation',
+      offer,
+    })
+    expect(tripSearchSchema.parse({ offer: 'not-a-uuid' }).offer).toBeUndefined()
+  })
+
+  it('defaults the decision log to the newest page and drops a bad kind', () => {
+    expect(tripSearchSchema.parse({})).toMatchObject({ dl_page: 1, dl_dir: 'desc' })
+    expect(tripSearchSchema.parse({ dl_kind: 'must' }).dl_kind).toBe('must')
+    expect(tripSearchSchema.parse({ dl_kind: 'nope' }).dl_kind).toBeUndefined()
+    expect(tripSearchSchema.parse({ dl_dir: 'up' }).dl_dir).toBe('desc')
+  })
 })

@@ -17,7 +17,9 @@ import { DayTabs } from '@/components/planning/day-tabs'
 import { DraftBanner } from '@/components/planning/draft-banner'
 import { PlanHashLabel } from '@/components/planning/plan-hash-label'
 import { PlanPrintout } from '@/components/planning/plan-printout'
+import { PlanProgress } from '@/components/planning/plan-progress'
 import { PlanSummary } from '@/components/planning/plan-summary'
+import { VerdictChip } from '@/components/planning/verdict-chip'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
 import { StatusMessage } from '@/components/shared/status-message'
 import { Button } from '@/components/ui/button'
@@ -28,13 +30,17 @@ import { useFairness } from '@/hooks/use-fairness'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
 import { usePlaceFeedback } from '@/hooks/use-place-feedback'
 import { usePlan } from '@/hooks/use-plan'
+import { usePlanProgress } from '@/hooks/use-plan-progress'
 import { usePrinting } from '@/hooks/use-printing'
 import { useProfiles } from '@/hooks/use-profiles'
 import { useSession } from '@/hooks/use-session'
+import { useVerdicts } from '@/hooks/use-verdict'
 import { percentOf } from '@/lib/fairness'
 import { TOUR } from '@/lib/help'
 import { dayCost, dayTickets } from '@/lib/plan-cost'
 import { m } from '@/paraglide/messages'
+import { PlanConsent } from './trip-view.consent'
+import { PlanDecisions } from './trip-view.decisions'
 import { FairnessAside } from './trip-view.fairness'
 import { TripPlanProposal } from './trip-view.plan.proposal'
 import { PlanDayPanel } from './trip-view.plan-day'
@@ -53,6 +59,7 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
   const { plan, isPending, isRecalculating, hasNoPlan, forbidden, problem, refetch } =
     usePlan(tripId)
   const creation = useCreatePlan(tripId)
+  const progress = usePlanProgress(tripId, creation.isPending || isRecalculating)
   const session = useSession()
   const { people } = useProfiles(tripId, session.status)
   const feedback = usePlaceFeedback(tripId)
@@ -62,6 +69,8 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
   const assumptions = useDraftAssumptions(tripId, plan?.id)
   const [day, setDay] = useState(1)
   const [fairnessOpen, setFairnessOpen] = useState(false)
+  const [verdictPlace, setVerdictPlace] = useState<string | null>(null)
+  const verdicts = useVerdicts(plan)
   const { view } = route.useSearch()
   const navigate = route.useNavigate()
   const setView = (next: typeof view) =>
@@ -130,6 +139,7 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
                   {creation.isPending ? m.plan_computing() : m.plan_compute()}
                 </Button>
               )}
+              {(creation.isPending || isRecalculating) && <PlanProgress progress={progress} />}
               {failure}
             </div>
           }
@@ -208,11 +218,13 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
           >
             {recalculating && m.plan_recomputing_status()}
           </div>
+          {recalculating && <PlanProgress progress={progress} />}
           {plan.params.draft && <DraftBanner assumptions={assumptions} />}
           <TripPlanProposal tripId={tripId} canManage={canBuild} plan={plan} />
           <div data-tour={TOUR.planSummary}>
             <PlanSummary plan={plan} />
           </div>
+          <PlanConsent plan={plan} trip={trip} />
           {!isDesktop && <FairnessSummary plan={plan} onOpen={() => setFairnessOpen(true)} />}
           {failure}
           {feedback.failed && (
@@ -254,24 +266,47 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
                     view={view}
                     onViewChange={setView}
                     renderStopActions={(stop) => (
-                      <StopActions
-                        tripId={tripId}
-                        stop={stop}
-                        currency={plan.budget.currency}
-                        names={names}
-                        meProfileId={meProfileId}
-                        canActForOthers={canBuild}
-                        ratings={ratings}
-                        vetoes={vetoes}
-                        feedbackReady={!feedback.failed}
-                        isDesktop={isDesktop}
-                      />
+                      <>
+                        {verdicts.byPlace.get(stop.place_id) && (
+                          <div>
+                            <VerdictChip
+                              verdict={verdicts.byPlace.get(stop.place_id)?.verdict ?? 'fits'}
+                              onClick={() => setVerdictPlace(stop.place_id)}
+                            />
+                          </div>
+                        )}
+                        <StopActions
+                          tripId={tripId}
+                          stop={stop}
+                          currency={plan.budget.currency}
+                          names={names}
+                          meProfileId={meProfileId}
+                          canActForOthers={canBuild}
+                          ratings={ratings}
+                          vetoes={vetoes}
+                          feedbackReady={!feedback.failed}
+                          isDesktop={isDesktop}
+                        />
+                      </>
                     )}
                   />
                 )
               }
             />
           </div>
+          <PlanDecisions
+            plan={plan}
+            trip={trip}
+            index={verdicts}
+            verdictPlace={verdictPlace}
+            onVerdictPlace={setVerdictPlace}
+            onShowOnPlan={(placeId) => {
+              const found = plan.days.find((planDay) =>
+                planDay.items.some((stop) => stop.place_id === placeId),
+              )
+              if (found) setDay(found.index)
+            }}
+          />
         </div>
         {isDesktop && (
           <aside

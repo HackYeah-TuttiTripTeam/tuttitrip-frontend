@@ -16,7 +16,9 @@ import { tripTopics } from '@/lib/help-topics'
 import { tripHasEnded } from '@/lib/trip-dates'
 import type { TripTab } from '@/lib/trip-tabs'
 import { expenseSearchReset } from '@/loaders/expenses'
+import { decisionLogReset } from '@/loaders/trip'
 import { m } from '@/paraglide/messages'
+import { TripAccommodationView } from './trip-view.accommodation'
 import { TripDelete } from './trip-view.delete'
 import { TripExpensesView } from './trip-view.expenses'
 import { TripLocationsView } from './trip-view.locations'
@@ -47,7 +49,13 @@ export function TripView() {
   // replace: switching tabs should not fill the back button.
   const setTab = (next: TripTab) =>
     void navigate({
-      search: (prev) => ({ ...prev, ...expenseSearchReset, tab: next, person: undefined }),
+      search: (prev) => ({
+        ...prev,
+        ...expenseSearchReset,
+        ...decisionLogReset,
+        tab: next,
+        person: undefined,
+      }),
       replace: true,
     })
 
@@ -207,6 +215,7 @@ export function TripView() {
         photos={<TripPhotosView key={trip.id} tripId={trip.id} isHost={trip.my_role === 'host'} />}
         locations={<TripLocationsView key={trip.id} tripId={trip.id} />}
         expenses={<TripExpensesView key={trip.id} trip={trip} />}
+        accommodation={<TripAccommodationView key={trip.id} trip={trip} />}
       />
     </div>
   )
@@ -216,7 +225,7 @@ function TripSkeleton() {
   return (
     <div className="flex flex-col gap-6">
       <TripHeaderSkeleton />
-      <Skeleton aria-hidden="true" className="h-[54px] w-full rounded-full md:max-w-md" />
+      <Skeleton aria-hidden="true" className="h-[54px] w-full rounded-full md:max-w-xl" />
     </div>
   )
 }

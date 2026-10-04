@@ -2310,6 +2310,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/interview/voice/{call_id}/card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Voice Card
+         * @description The card of a live call, for the client to show next to the captions.
+         *
+         *     A voice call has no AG-UI stream, so the client polls this while the call
+         *     runs (the panel is polled the same way). The kind and options are the ones
+         *     the server fixed, not the model's.
+         *
+         *     Args:
+         *         call_id: The id from the offer's answer.
+         *         membership: The caller's membership (co-host or above).
+         *
+         *     Returns:
+         *         The card the assistant last showed, or null.
+         *
+         *     Wymagane uprawnienie: `interview:READ`.
+         */
+        get: operations["voice_card_api_v1_trips__trip_id__interview_voice__call_id__card_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/interview/voice/release": {
         parameters: {
             query?: never;
@@ -2459,6 +2492,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/plans/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stage of the plan computation that is running
+         * @description Poll while `POST .../plans` is in flight (about every 500 ms). Returns the stage (`catalogue`, `reference`, `search`, `floors`, `budget`, `verdicts`; `item` of `items` inside a stage that has units) or `null` when no plan is being computed for the trip. Any member may read it. Only the stage is exposed, never data, and it does not affect the plan or its `plan_hash`. A plan answered from an existing version has no stages, so the answer is `null`.
+         *
+         *     Wymagane uprawnienie: `planning.plans:READ`.
+         */
+        get: operations["get_plan_progress_api_v1_trips__trip_id__plans_progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/plans/latest": {
         parameters: {
             query?: never;
@@ -2530,6 +2585,28 @@ export interface paths {
         get: operations["get_plan_calendar_api_v1_trips__trip_id__plans__plan_id__calendar_ics_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/plans/{plan_id}/replan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replan the rest of a day (rain), from a moment on
+         * @description Extension outside v1.0: replaces the rest of a day with the best plan under rain (`u_ip` times `0.3 + 0.7 * [indoor]`), by the same goal `J` and the same hard rules, penalising the number of changes and the shift of kept visits. Stops that started before `as_of` stay. Nothing is stored. A co-host's or host's replan is `active`; a member's that touches other people is `pending_host`. Weather is not fetched: rain is a person's decision.
+         *
+         *     Wymagane uprawnienie: `planning.plans:WRITE`.
+         */
+        post: operations["replan_day_api_v1_trips__trip_id__plans__plan_id__replan_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4291,7 +4368,7 @@ export interface components {
          * @description UI card the web client renders for a question (the cards of plan.md).
          * @enum {string}
          */
-        CardKind: "family_builder" | "slider" | "requirement_toggles" | "swipe" | "dot_pool" | "budget_range" | "choice" | "confirm";
+        CardKind: "family_builder" | "slider" | "requirement_toggles" | "swipe" | "dot_pool" | "budget_range" | "choice" | "confirm" | "city" | "date_range";
         /**
          * CheckinRead
          * @description One check-in as the trip's members see it.
@@ -4848,6 +4925,24 @@ export interface components {
          */
         ExampleVerdict: "like" | "dislike";
         /**
+         * ExceptionalNight
+         * @description A night spent in another base than the rest (backend#71, an extension).
+         */
+        ExceptionalNight: {
+            /**
+             * Night
+             * @description 1-based night.
+             */
+            night: number;
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            /** Name */
+            name: string;
+        };
+        /**
          * ExchangeRateRead
          * @description The rate an expense in a foreign currency was converted at (never changes).
          */
@@ -5166,6 +5261,22 @@ export interface components {
         FairnessScore: {
             /** Score */
             score: number;
+        };
+        /**
+         * FamilyTicket
+         * @description A family ticket that is cheaper than the single tickets of the group.
+         */
+        FamilyTicket: {
+            /**
+             * Total
+             * @description The whole group's price with the family ticket.
+             */
+            total: string;
+            /**
+             * Singles Total
+             * @description What the same group pays with single tickets.
+             */
+            singles_total: string;
         };
         /**
          * Feature
@@ -6937,6 +7048,19 @@ export interface components {
             weakest_domain: components["schemas"]["PlanDomainCode"] | null;
         };
         /**
+         * PersonPoints
+         * @description Points of one person.
+         */
+        PersonPoints: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Points */
+            points: number;
+        };
+        /**
          * PersonUtility
          * @description One person's satisfaction with a plan and their vote weight.
          */
@@ -7332,6 +7456,12 @@ export interface components {
              */
             alpha?: number | null;
             /**
+             * Exceptional Nights
+             * @description Extension (backend#71), outside v1.0: how many nights may be spent in another lodging than the base. 0 gives one base for all nights.
+             * @default 0
+             */
+            exceptional_nights: number;
+            /**
              * @description Recorded with the plan and part of its input hash, but it has no effect on the computation yet: the weights come from the profiles (`PUT /trips/{id}/profiles/weights`).
              * @default default
              */
@@ -7418,9 +7548,28 @@ export interface components {
         };
         /**
          * PlanLodging
-         * @description The lodging base (one for all nights).
+         * @description The lodging base (one for all nights, section 9; exceptional nights apart).
          */
         PlanLodging: {
+            /**
+             * Place Id
+             * @description Catalog place of the base; null if unknown.
+             */
+            place_id?: string | null;
+            /** @description Null for a plan without visits. */
+            search_area?: components["schemas"]["SearchArea"] | null;
+            /** Exceptional */
+            exceptional?: components["schemas"]["ExceptionalNight"][];
+            /**
+             * Extra Cost
+             * @description What the exceptional nights add to c(P).
+             */
+            extra_cost?: string | null;
+            /**
+             * Extra Points
+             * @description u_i with the exceptional nights minus without, per person.
+             */
+            extra_points?: components["schemas"]["PersonPoints"][];
             /** Name */
             name: string;
             /** Lat */
@@ -7459,6 +7608,34 @@ export interface components {
              * @default false
              */
             draft: boolean;
+        };
+        /**
+         * PlanProgressRead
+         * @description Where the computation of the trip's plan is.
+         */
+        PlanProgressRead: {
+            /** @description Stage of docs/algorytm.md being computed. */
+            step: components["schemas"]["PlanStep"];
+            /**
+             * Position
+             * @description 1-based place of `step` among the stages, in order.
+             */
+            position: number;
+            /**
+             * Total
+             * @description Number of stages (some may be skipped).
+             */
+            total: number;
+            /**
+             * Item
+             * @description 1-based unit of work in the stage (e.g. person 2 of 4).
+             */
+            item?: number | null;
+            /**
+             * Items
+             * @description Units in the stage; set with `item`.
+             */
+            items?: number | null;
         };
         /**
          * PlanRead
@@ -7521,6 +7698,13 @@ export interface components {
              */
             verdicts?: components["schemas"]["PlanVerdict"][] | null;
             budget: components["schemas"]["PlanBudget"];
+            /** @description Ticket costs for getting around, for information only. */
+            transit?: components["schemas"]["PlanTransit"] | null;
+            /**
+             * Transit Tickets
+             * @description The tickets by day (information; empty without a tariff).
+             */
+            transit_tickets?: components["schemas"]["TransitTicket"][];
             /**
              * Upgrades
              * @description Upgrades for a plan that costs less than B_od, best first; empty when there is no real one.
@@ -7528,6 +7712,12 @@ export interface components {
             upgrades?: components["schemas"]["PlanUpgrade"][];
             telemetry: components["schemas"]["PlanTelemetry"];
         };
+        /**
+         * PlanStep
+         * @description Stage of the computation; the declaration order is the order of work.
+         * @enum {string}
+         */
+        PlanStep: "catalogue" | "reference" | "search" | "floors" | "budget" | "verdicts";
         /**
          * PlanStop
          * @description One place in a day, in visiting order.
@@ -7592,6 +7782,13 @@ export interface components {
             /** Hours Verified At */
             hours_verified_at?: string | null;
             /**
+             * Price Lines
+             * @description Each person's price with the discount; null: no price data.
+             */
+            price_lines?: components["schemas"]["PriceLine"][] | null;
+            /** @description Set when a family ticket is cheaper than singles. */
+            family_ticket?: components["schemas"]["FamilyTicket"] | null;
+            /**
              * Google Place Id
              * @description For the Places UI Kit card; no Places data is returned.
              */
@@ -7618,6 +7815,35 @@ export interface components {
             solo_runs: number;
             /** Elapsed Ms */
             elapsed_ms: number;
+        };
+        /**
+         * PlanTransit
+         * @description What getting around costs: information, never part of `c(P)` or the budget.
+         *
+         *     Tickets are chosen per kind of passenger from the city's tariff (a single per
+         *     ride, a 24-hour ticket per day, 72-hour or weekly tickets over the span of
+         *     the rides). A city without a tariff has `total` null and `verified` false.
+         */
+        PlanTransit: {
+            /**
+             * Total
+             * @description Null when the tariff is unknown.
+             */
+            total: string | null;
+            /**
+             * Verified
+             * @description Every fare used comes from a source.
+             */
+            verified: boolean;
+            /** Source Url */
+            source_url?: string | null;
+            /**
+             * Rides Per Day
+             * @description Rides between the stops of each day (stops minus one).
+             */
+            rides_per_day: number[];
+            /** By Category */
+            by_category?: components["schemas"]["TransitCategoryTicket"][];
         };
         /**
          * PlanUpgrade
@@ -7791,6 +8017,29 @@ export interface components {
         };
         /** @enum {string} */
         PriceBasis: "budget_day_max" | "budget_total_max_per_night";
+        /**
+         * PriceDiscount
+         * @description Why one person pays what they pay: the discount their price carries.
+         * @enum {string}
+         */
+        PriceDiscount: "none" | "child" | "senior" | "student" | "free" | "family";
+        /**
+         * PriceLine
+         * @description One person's entry price at a stop (backend#54).
+         */
+        PriceLine: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /**
+             * Price
+             * @description After the unverified-price markup (delta).
+             */
+            price: string;
+            discount: components["schemas"]["PriceDiscount"];
+        };
         /**
          * PriceUnit
          * @description What a price is charged for: E6 multiplies ``night`` prices by the nights.
@@ -8213,6 +8462,96 @@ export interface components {
             detail: components["schemas"]["ReceiptValidationError"][];
         };
         /**
+         * ReplanChange
+         * @description One change in the rest of the day.
+         */
+        ReplanChange: {
+            kind: components["schemas"]["ReplanChangeKind"];
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Shift Min
+             * @description For `moved`: minutes later (+) or earlier (-).
+             */
+            shift_min?: number | null;
+        };
+        /**
+         * ReplanChangeKind
+         * @description What happened to a stop.
+         * @enum {string}
+         */
+        ReplanChangeKind: "removed" | "added" | "moved";
+        /**
+         * ReplanContext
+         * @description Why the rest of a day is replanned (backend#74; an extension).
+         * @enum {string}
+         */
+        ReplanContext: "rain";
+        /**
+         * ReplanRead
+         * @description The rest of a day, replanned. Nothing is stored; applying it is up to the client.
+         *
+         *     A host's replan is `active`; a member's replan that touches other people
+         *     waits for the host (`pending_host`). Extension outside v1.0.
+         */
+        ReplanRead: {
+            context: components["schemas"]["ReplanContext"];
+            /** Day */
+            day: number;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            status: components["schemas"]["ReplanStatus"];
+            /**
+             * Stops
+             * @description The whole day after the replan.
+             */
+            stops: components["schemas"]["PlanStop"][];
+            /** Changes */
+            changes: components["schemas"]["ReplanChange"][];
+            /**
+             * Affected
+             * @description People whose welfare changes by half a point or more.
+             */
+            affected: string[];
+            /** J Replan */
+            j_replan: number;
+            /** Elapsed Ms */
+            elapsed_ms: number;
+        };
+        /**
+         * ReplanRequest
+         * @description Replan the rest of a day, from a moment on.
+         */
+        ReplanRequest: {
+            /** @default rain */
+            context: components["schemas"]["ReplanContext"];
+            /**
+             * Day
+             * @description 1-based day of the plan.
+             */
+            day: number;
+            /**
+             * As Of
+             * Format: date-time
+             * @description The moment of the replan; stops that started before it stay.
+             */
+            as_of: string;
+        };
+        /**
+         * ReplanStatus
+         * @description Whether a replan is in force.
+         * @enum {string}
+         */
+        ReplanStatus: "active" | "pending_host";
+        /**
          * RequirementCheck
          * @description Result for one requirement: ``met`` and ``unmet`` come with a quote.
          *
@@ -8404,6 +8743,21 @@ export interface components {
             violations: components["schemas"]["Finding"][];
             /** Warnings */
             warnings: components["schemas"]["Finding"][];
+        };
+        /**
+         * SearchArea
+         * @description Where to look for lodging: the centre of the stay's attractions and a radius.
+         *
+         *     Computed from the chosen plan (the visit time ``tau_p`` weights the centre),
+         *     not part of ``J``; it feeds the search link and the map.
+         */
+        SearchArea: {
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Radius M */
+            radius_m: number;
         };
         /**
          * SearchLinkParam
@@ -8733,6 +9087,64 @@ export interface components {
             amount: string;
         };
         /**
+         * TransitCategoryTicket
+         * @description What one kind of passenger buys for the rides of the trip.
+         */
+        TransitCategoryTicket: {
+            /**
+             * Category
+             * @description adult, child or senior (by age).
+             */
+            category: string;
+            /**
+             * Ticket Type
+             * @description single, 24h, 72h or weekly.
+             */
+            ticket_type: string;
+            /**
+             * Count
+             * @description Tickets per person.
+             */
+            count: number;
+            /** People */
+            people: number;
+            /**
+             * Cost
+             * @description For all people of the category.
+             */
+            cost: string;
+        };
+        /**
+         * TransitTicket
+         * @description A transport ticket bought on a day; information only, never in `c(P)`.
+         *
+         *     A ticket that covers several days (72 hours, a week) appears on the first
+         *     day it is used.
+         */
+        TransitTicket: {
+            /**
+             * Day
+             * @description 1-based day of the plan.
+             */
+            day: number;
+            ticket: components["schemas"]["TransitTicketKind"];
+            /**
+             * Cost
+             * @description For the whole group.
+             */
+            cost: string;
+            /** Verified */
+            verified: boolean;
+            /** Source Url */
+            source_url?: string | null;
+        };
+        /**
+         * TransitTicketKind
+         * @description A public transport ticket.
+         * @enum {string}
+         */
+        TransitTicketKind: "single" | "day" | "h72" | "week" | "family";
+        /**
          * TripCreate
          * @description POST payload: a whole trip in one request.
          *
@@ -8856,6 +9268,12 @@ export interface components {
             my_role: components["schemas"]["TripRole"];
             /** @description Whether the caller confirmed they are going (`confirmed`). */
             my_status: components["schemas"]["MemberStatus"];
+            /**
+             * Is Sample
+             * @description The sample trip a new account gets (named `Przykład: ...`); the host can delete it like any trip.
+             * @default false
+             */
+            is_sample?: boolean;
             /**
              * Kind
              * @description ``outing`` for a single day without a stay, otherwise ``trip``.
@@ -9125,6 +9543,14 @@ export interface components {
              * @description Use it to hang up.
              */
             call_id: string;
+        };
+        /**
+         * VoiceCardRead
+         * @description The card of a live call; a call has no stream, so the client polls for it.
+         */
+        VoiceCardRead: {
+            /** @description The card the assistant put on screen last, with the kind and options the server fixed; null before the first one. */
+            card?: components["schemas"]["ShownCard"] | null;
         };
         /**
          * VoiceOffer
@@ -13547,6 +13973,59 @@ export interface operations {
             };
         };
     };
+    voice_card_api_v1_trips__trip_id__interview_voice__call_id__card_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceCardRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `interview:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such live call on this trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     voice_release_api_v1_trips__trip_id__interview_voice_release_post: {
         parameters: {
             query?: never;
@@ -13797,6 +14276,58 @@ export interface operations {
             };
         };
     };
+    get_plan_progress_api_v1_trips__trip_id__plans_progress_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanProgressRead"] | null;
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_latest_plan_api_v1_trips__trip_id__plans_latest_get: {
         parameters: {
             query?: never;
@@ -13961,6 +14492,61 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    replan_day_api_v1_trips__trip_id__plans__plan_id__replan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplanRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The day is not in the plan, or the trip cannot be planned. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

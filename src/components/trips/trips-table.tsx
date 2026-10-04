@@ -21,6 +21,7 @@ import {
 import { formatDate, formatDateRange } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { m } from '@/paraglide/messages'
+import { SampleBadge } from './sample-badge'
 import { type SortDirection, TRIP_SORT_LABELS, type Trip, type TripSortKey } from './trip-columns'
 
 const features = tableFeatures({ rowSortingFeature })
@@ -43,6 +44,11 @@ const columns = column.columns([
         <p className="truncate text-muted-foreground md:hidden">
           {row.original.destination ?? m.trip_destination_undecided_long()}
         </p>
+        {row.original.is_sample && (
+          <div className="mt-1">
+            <SampleBadge />
+          </div>
+        )}
         {row.original.my_status === 'pending' && (
           <p className="mt-1 w-fit rounded-full border border-dashed px-2 py-0.5 text-xs">
             {m.trip_status_pending()}

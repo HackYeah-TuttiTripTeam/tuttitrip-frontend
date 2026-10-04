@@ -23,6 +23,12 @@ interface ResponsiveModalProps {
   title: string
   description: string
   children: ReactNode
+  /**
+   * False for a decision that must not be dismissed by accident (Confirm-Destroy): a click outside,
+   * Escape, the close button and the drag-down gesture do nothing; only the buttons inside the
+   * modal close it.
+   */
+  dismissible?: boolean
   /** A wide dialog on desktop, for forms laid out in two columns. Phones are unaffected. */
   wide?: boolean
 }
@@ -34,12 +40,16 @@ export function ResponsiveModal({
   title,
   description,
   children,
+  dismissible = true,
   wide = false,
 }: ResponsiveModalProps) {
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
+          showCloseButton={dismissible}
+          onInteractOutside={dismissible ? undefined : (event) => event.preventDefault()}
+          onEscapeKeyDown={dismissible ? undefined : (event) => event.preventDefault()}
           className={cn('flex max-h-[90dvh] flex-col', wide ? 'sm:max-w-3xl' : 'sm:max-w-md')}
         >
           <DialogHeader>
@@ -57,7 +67,12 @@ export function ResponsiveModal({
   }
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
+    <Drawer
+      open={open}
+      onOpenChange={onOpenChange}
+      repositionInputs={false}
+      dismissible={dismissible}
+    >
       <DrawerContent>
         <DrawerHeader className="group-data-[vaul-drawer-direction=bottom]/drawer-content:text-left">
           <DrawerTitle>{title}</DrawerTitle>

@@ -9,6 +9,7 @@ import { KnowledgePanel } from '@/components/interview/knowledge-panel'
 import { LiveCaptions } from '@/components/interview/live-captions'
 import { ResumeHeader } from '@/components/interview/resume-header'
 import { VoiceControls } from '@/components/interview/voice-controls'
+import { PlanProgress } from '@/components/planning/plan-progress'
 import { EditPersonForm } from '@/components/profiles/person-form'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
 import { StatusMessage } from '@/components/shared/status-message'
@@ -22,6 +23,7 @@ import { type InterviewError, useInterview } from '@/hooks/use-interview'
 import { useInterviewSession } from '@/hooks/use-interview-session'
 import { useKnowledge } from '@/hooks/use-knowledge'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
+import { usePlanProgress } from '@/hooks/use-plan-progress'
 import { useProfileActions } from '@/hooks/use-profile-actions'
 import { useSaveTrip } from '@/hooks/use-save-trip'
 import { useSession } from '@/hooks/use-session'
@@ -160,6 +162,8 @@ function InterviewWorkspace({
     busy: interview.running || voice.active,
     onBuilt: onPlanBuilt,
   })
+  // Only the request in flight has a stage; while it waits for the assistant nothing is computed.
+  const buildProgress = usePlanProgress(tripId, build.isPending && !build.waiting)
   const { cities } = useCities(session.status)
   const citySearch = useCitySearch(session.status)
   const saveTrip = useSaveTrip(knowledge.knowledge?.trip ?? null, cities)
@@ -312,6 +316,7 @@ function InterviewWorkspace({
             saved={voice.saved && { name: voice.saved.name, ok: voice.saved.status === 'done' }}
             mode={voice.mode}
             held={voice.held}
+            level={voice.level}
             micMuted={voice.micMuted}
             canOverride={voice.canOverride}
             disabled={interview.running}
@@ -386,10 +391,13 @@ function InterviewWorkspace({
             key={`${lines.length}:${interview.card.kind}:${interview.card.question}`}
             card={interview.card}
             disabled={interview.running}
+            citySearch={citySearch}
             onAnswer={(answer) => void interview.answerCard(answer)}
           />
         )}
         <div ref={end} />
+
+        {build.isPending && !build.waiting && <PlanProgress progress={buildProgress} />}
 
         {build.error && (
           <div

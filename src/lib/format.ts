@@ -242,3 +242,38 @@ export function formatAgo(iso: string, now: number = Date.now()): string {
   if (Math.abs(hours) < HOURS_PER_DAY) return format.format(hours, 'hour')
   return format.format(Math.round(hours / HOURS_PER_DAY), 'day')
 }
+
+/** "+0,04" / "−0,04" (a minus sign, not a hyphen), for a change; zero has no sign. */
+export function formatDelta(value: number, maximumFractionDigits = 2): string {
+  return withMinusSign(
+    new Intl.NumberFormat(INTL_TAG[getLocale()], {
+      maximumFractionDigits,
+      signDisplay: 'exceptZero',
+      useGrouping: 'always',
+    }).format(value),
+  )
+}
+
+/** Intl writes a hyphen-minus; a change of a number reads better with the minus sign (U+2212). */
+const withMinusSign = (text: string) => text.replace('-', '\u2212')
+
+/** "+120 zł" / "−45,50 zł" for a change of money sent as a decimal string. */
+export function formatSignedDecimal(amount: string, currency = 'PLN'): string {
+  const whole = /^-?\d+(\.0+)?$/.test(amount)
+  return withMinusSign(
+    new Intl.NumberFormat(INTL_TAG[getLocale()], {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: whole ? 0 : 2,
+      signDisplay: 'exceptZero',
+      useGrouping: 'always',
+    }).format(amount as `${number}`),
+  )
+}
+
+/** "+25 min" / "−1 h 5 min" for a change of time in minutes. */
+export function formatSignedMinutes(minutes: number): string {
+  if (minutes === 0) return formatDuration(0)
+  const text = formatDuration(Math.abs(minutes))
+  return minutes > 0 ? `+${text}` : `\u2212${text}`
+}
