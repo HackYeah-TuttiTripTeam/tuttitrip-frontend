@@ -22,7 +22,9 @@
     // SPA fallback itself (200 index.html, Worker not invoked, verified on a preview), so only
     // the Worker can turn a chunk removed by a newer deploy into a 404 (worker/index.ts).
     // The public pages and the crawler files go through it for their per-page metadata and
-    // first screen. Every other navigation is the assets layer's SPA fallback, no script.
+    // first screen. /demo (the jury's link, token in the fragment) stays off this list on purpose:
+    // it is the SPA fallback like any other app route, with no Worker code in its path.
+    // Every other navigation is the assets layer's SPA fallback, no script.
     "run_worker_first": [
       "/api/*",
       "/assets/*",

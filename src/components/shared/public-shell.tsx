@@ -15,6 +15,8 @@ export interface PublicShellProps {
   envLabel: string | null
   onLogin: () => void
   onSignup: () => void
+  /** Notice above the header bar, e.g. the demo account banner. */
+  banner?: ReactNode
   children: ReactNode
 }
 
@@ -26,6 +28,7 @@ export function PublicShell({
   envLabel,
   onLogin,
   onSignup,
+  banner,
   children,
 }: PublicShellProps) {
   return (
@@ -37,6 +40,7 @@ export function PublicShell({
         {m.shell_skip_to_content()}
       </a>
 
+      {banner}
       <PublicHeader
         status={status}
         language={language}

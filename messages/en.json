@@ -21,8 +21,13 @@
   "trips_tagline": "Plans you put together as a group.",
   "trips_count": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} trip",
         "countPlural=*": "{count} trips"
@@ -31,8 +36,14 @@
   ],
   "trips_count_filtered": [
     {
-      "declarations": ["input count", "input total", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "input total",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} trip of {total}",
         "countPlural=*": "{count} trips of {total}"
@@ -178,8 +189,13 @@
   "plan_total": "Plan cost for the whole group: {amount}",
   "plan_lodging": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "Lodging: {name}, {count} night. {cost}",
         "countPlural=*": "Lodging: {name}, {count} nights. {cost}"
@@ -190,8 +206,13 @@
   "plan_lodging_cost_none": "Lodging price: no data",
   "people_count": [
     {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
+      "declarations": [
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": [
+        "countPlural"
+      ],
       "match": {
         "countPlural=one": "{count} person",
         "countPlural=*": "{count} people"
@@ -206,8 +227,13 @@
   "people_list_label": "People on this trip",
   "people_age": [
     {
-      "declarations": ["input age", "local agePlural = age: plural"],
-      "selectors": ["agePlural"],
+      "declarations": [
+        "input age",
+        "local agePlural = age: plural"
+      ],
+      "selectors": [
+        "agePlural"
+      ],
       "match": {
         "agePlural=one": "{age} year old",
         "agePlural=*": "{age} years old"
@@ -589,5 +615,22 @@
   "prefs_interest_cycling": "Cycling",
   "prefs_interest_wellness": "Spa and wellness",
   "prefs_interests_hint_autosave": "What this person likes to see and do. Changes in this section are saved at once.",
-  "prefs_error_partial": "The constraints are saved, the walking distance and nap are not yet."
+  "prefs_error_partial": "The constraints are saved, the walking distance and nap are not yet.",
+  "demo_account_name": "Demo account",
+  "demo_banner_label": "Demo account",
+  "demo_banner_text": "Shared jury demo account: other jurors see your changes, and the data resets daily.",
+  "demo_banner_admin_link": "Ask for an administrator account",
+  "demo_entering_title": "Entering the demo",
+  "demo_entering_body": "One moment, we are getting the Warsaw trip ready.",
+  "demo_invalid_title": "This demo link does not work",
+  "demo_invalid_body": "The link is wrong or switched off. Ask the team for a current link.",
+  "demo_unavailable_title": "Could not enter the demo",
+  "demo_unavailable_body": "The server is not answering. Check your connection and open the link again.",
+  "demo_expired_title": "The demo session has expired",
+  "demo_expired_body": "Open the link you got from the team again to return to the demo trip.",
+  "demo_missing_title": "The link has no token",
+  "demo_missing_body": "The demo only opens from the full link from the team. Open it again.",
+  "demo_back_home": "Back to the home page",
+  "demo_rate_limited_title": "Too many attempts",
+  "demo_rate_limited_body": "Too many attempts, wait a minute and open the link again."
 }

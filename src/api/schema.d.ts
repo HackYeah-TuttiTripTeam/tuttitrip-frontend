@@ -1508,6 +1508,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/accommodation/search-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search links to lodging platforms with the trip's parameters
+         * @description Dates, group (adults, children's ages), area and a nightly price ceiling from the budget. Nothing is fetched from the platforms: a person opens the link after the approval card and pastes offers back. Each parameter says whether the platform documents it; `fallback_url` has no filters. A hard platform requirement removes the other platforms. The result is a small fixed set (at most one link per platform), so it is not paginated. A trip without dates or a single-day outing gets 422.
+         *
+         *     Wymagane uprawnienie: `accommodation:READ`.
+         */
+        get: operations["get_search_links_api_v1_trips__trip_id__accommodation_search_links_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/accommodation/search-links/opened": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Log of approved platform searches
+         * @description Read the log (any member), newest first by default.
+         *
+         *     Args:
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *         query: Page, sort and filters.
+         *
+         *     Returns:
+         *         One page of entries.
+         *
+         *     Wymagane uprawnienie: `accommodation:READ`.
+         */
+        get: operations["list_search_openings_api_v1_trips__trip_id__accommodation_search_links_opened_get"];
+        put?: never;
+        /**
+         * Log that the host approved opening a platform search
+         * @description Appends an entry (platform, link, parameters, author) to the log. The parameters are rebuilt on the server from the trip's current data.
+         *
+         *     Wymagane uprawnienie: `accommodation:WRITE`.
+         */
+        post: operations["post_search_opened_api_v1_trips__trip_id__accommodation_search_links_opened_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/expenses": {
         parameters: {
             query?: never;
@@ -2577,6 +2635,27 @@ export interface components {
          */
         MinTagDomain: "food" | "attractions";
         /**
+         * NightlyPrice
+         * @description Upper price filter per night and where it came from.
+         *
+         *     Not a lodging price or an accommodation budget: it is the group's whole
+         *     daily budget used as a ceiling. Label it "group daily limit" in the UI.
+         */
+        NightlyPrice: {
+            /**
+             * Amount
+             * @description Whole units of `currency`, rounded down.
+             */
+            amount: number;
+            /**
+             * Currency
+             * @description ISO 4217.
+             */
+            currency: string;
+            /** @description `budget_day_max`: the trip's daily limit. `budget_total_max_per_night`: the total limit divided by the nights. Both are the group's whole budget for everything, used only as a ceiling for the search, never as the price of a night. */
+            basis: components["schemas"]["PriceBasis"];
+        };
+        /**
          * OpeningHours
          * @description Simple weekly opening hours in the city's local time zone.
          *
@@ -2595,11 +2674,36 @@ export interface components {
             closed_dates?: string[];
         };
         /**
+         * OpeningSort
+         * @description Sort keys of the openings log.
+         * @enum {string}
+         */
+        OpeningSort: "opened_at";
+        /**
          * OsmType
          * @description OpenStreetMap element type; ``osm_id`` is unique only per type.
          * @enum {string}
          */
         OsmType: "node" | "way" | "relation";
+        /** Page[SearchOpeningRead] */
+        Page_SearchOpeningRead_: {
+            /** Items */
+            items: components["schemas"]["SearchOpeningRead"][];
+            /**
+             * Total
+             * @description Rows matching the filters.
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /**
+             * Pages
+             * @description Pages in total; 0 when empty.
+             */
+            pages: number;
+        };
         /**
          * Payment
          * @description Who paid how much, and who shares the cost (split equally).
@@ -3233,6 +3337,12 @@ export interface components {
             explanation?: string | null;
         };
         /**
+         * Platform
+         * @description Booking platform, checked deterministically by the offer link's domain.
+         * @enum {string}
+         */
+        Platform: "airbnb" | "booking";
+        /**
          * PreferencesRead
          * @description Preferences of one person.
          *
@@ -3301,6 +3411,8 @@ export interface components {
             /** @description Omitted: the default for the person's age group. */
             importance_pool?: components["schemas"]["ImportancePool"] | null;
         };
+        /** @enum {string} */
+        PriceBasis: "budget_day_max" | "budget_total_max_per_night";
         /**
          * PriceUnit
          * @description What a price is charged for: E6 multiplies ``night`` prices by the nights.
@@ -3611,6 +3723,120 @@ export interface components {
             /** Grants */
             grants: components["schemas"]["FeatureGrant"][];
         };
+        /**
+         * SearchLinkParam
+         * @description One query parameter of a search link.
+         */
+        SearchLinkParam: {
+            /** Name */
+            name: string;
+            /** Value */
+            value: string;
+            /**
+             * Official
+             * @description False when the platform does not document the parameter, so it may stop working; the card should say so.
+             */
+            official: boolean;
+        };
+        /**
+         * SearchLinkRead
+         * @description A search link to one platform.
+         */
+        SearchLinkRead: {
+            platform: components["schemas"]["Platform"];
+            /**
+             * Url
+             * @description Search with all filters; opened by a person.
+             */
+            url: string;
+            /**
+             * Fallback Url
+             * @description Same place without filters, for when a parameter stops working.
+             */
+            fallback_url: string;
+            /** Params */
+            params: components["schemas"]["SearchLinkParam"][];
+        };
+        /**
+         * SearchLinksRead
+         * @description What a host sees on the approval card before opening a platform.
+         */
+        SearchLinksRead: {
+            /**
+             * Check In
+             * Format: date
+             */
+            check_in: string;
+            /**
+             * Check Out
+             * Format: date
+             */
+            check_out: string;
+            /** Nights */
+            nights: number;
+            /** Adults */
+            adults: number;
+            /**
+             * Child Ages
+             * @description Ages of the people under 18.
+             */
+            child_ages: number[];
+            /**
+             * Area
+             * @description City or destination; null when unknown.
+             */
+            area: string | null;
+            /** @description Group daily limit used as a search ceiling (not a night price); null when the trip has no budget or no currency is known. */
+            price_per_night: components["schemas"]["NightlyPrice"] | null;
+            /**
+             * Platforms Restricted
+             * @description True when a hard platform requirement removed some platforms.
+             */
+            platforms_restricted: boolean;
+            /** Requirements Version */
+            requirements_version: number;
+            /** Links */
+            links: components["schemas"]["SearchLinkRead"][];
+        };
+        /**
+         * SearchOpenWrite
+         * @description The host approved opening this platform's search.
+         */
+        SearchOpenWrite: {
+            platform: components["schemas"]["Platform"];
+        };
+        /**
+         * SearchOpeningRead
+         * @description One approved opening in the append-only log.
+         */
+        SearchOpeningRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            platform: components["schemas"]["Platform"];
+            /** Url */
+            url: string;
+            /** Params */
+            params: components["schemas"]["SearchLinkParam"][];
+            /**
+             * Actor Sub
+             * @description Who approved it (Auth0 `sub`).
+             */
+            actor_sub: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+        };
+        /**
+         * SortDir
+         * @description Sort direction.
+         * @enum {string}
+         */
+        SortDir: "asc" | "desc";
         /**
          * StopTransfer
          * @description The leg to a stop from the previous one.
@@ -6648,6 +6874,174 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RequirementsRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `accommodation:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_search_links_api_v1_trips__trip_id__accommodation_search_links_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchLinksRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `accommodation:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_search_openings_api_v1_trips__trip_id__accommodation_search_links_opened_get: {
+        parameters: {
+            query?: {
+                platform?: components["schemas"]["Platform"] | null;
+                /** @description Page number, from 1. */
+                page?: number;
+                /** @description Items per page (max 100). */
+                size?: number;
+                dir?: components["schemas"]["SortDir"];
+                sort?: components["schemas"]["OpeningSort"];
+            };
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_SearchOpeningRead_"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `accommodation:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_search_opened_api_v1_trips__trip_id__accommodation_search_links_opened_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchOpenWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchOpeningRead"];
                 };
             };
             /** @description Brak tokenu albo zły token */

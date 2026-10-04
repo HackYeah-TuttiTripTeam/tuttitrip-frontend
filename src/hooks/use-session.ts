@@ -1,6 +1,10 @@
 import { useAuth0 } from '@auth0/auth0-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
+import { clearDemoSession } from '@/lib/demo-session'
 import { authConfig, isDev } from '@/lib/env'
 import { m } from '@/paraglide/messages'
+import { useDemoStatus } from './use-demo-session'
 
 export type SessionStatus = 'disabled' | 'loading' | 'anonymous' | 'authenticated'
 
@@ -39,6 +43,36 @@ function describeAuthError(error: Error | undefined): string | undefined {
 export function useSession(): Session {
   // Outside <Auth0Provider> this returns the SDK's inert default context.
   const auth0 = useAuth0()
+  const demo = useDemoStatus()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  const leaveDemo = (extra?: { authorizationParams: { screen_hint: string } }) => {
+    clearDemoSession()
+    queryClient.clear()
+    if (authConfig) void auth0.loginWithRedirect({ appState: returnToHere(), ...extra })
+    else void navigate({ to: '/', replace: true })
+  }
+
+  // The shared jury account: signed in without Auth0. Logout only forgets the tab's session.
+  if (demo === 'active') {
+    return {
+      status: 'authenticated',
+      error: undefined,
+      userName: m.demo_account_name(),
+      userPicture: undefined,
+      // A real login replaces the shared account: forget it first, then go to Auth0 (without
+      // Auth0 configured there is nowhere to go, and the session simply ends).
+      login: () => leaveDemo(),
+      signup: () => leaveDemo({ authorizationParams: { screen_hint: 'signup' } }),
+      logout: () => {
+        clearDemoSession()
+        // The next visitor of this tab must not see the jury's cached data.
+        queryClient.clear()
+        void navigate({ to: '/', replace: true })
+      },
+    }
+  }
 
   if (!authConfig) {
     return {

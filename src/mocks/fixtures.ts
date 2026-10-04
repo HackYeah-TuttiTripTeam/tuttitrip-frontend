@@ -21,6 +21,9 @@ export type Preferences = Schemas['PreferencesRead']
 export const MOCK_USER_SUB = 'auth0|mock-user'
 export const MOCK_USER_NAME = 'Ola Testowa'
 
+/** The invitation token the mock API accepts at POST /auth/demo (scenario "demo-disabled" refuses it). */
+export const MOCK_DEMO_TOKEN = 'mock-demo-token'
+
 export const TRIP_ID = '3f0c2a52-6d0b-4a39-8f0e-7a7c9a1c0b11'
 export const OUTING_ID = '9a6d1f34-2b7e-4c58-b1d3-5e8f0a7c4d22'
 

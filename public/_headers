@@ -1,0 +1,4 @@
+# Static assets (index.html for the SPA fallback included); the Worker sets the same on its pages.
+# The fragment of /demo#t=<token> is never sent in a Referer, and same-origin keeps the path home.
+/*
+  Referrer-Policy: same-origin
