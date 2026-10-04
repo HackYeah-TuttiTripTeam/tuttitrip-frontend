@@ -2,6 +2,7 @@ import { Calendar, MessageSquare, UserCheck, Users } from '@keyline-icons/react'
 import type { ReactNode } from 'react'
 import { StatusMessage } from '@/components/shared/status-message'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { TOUR } from '@/lib/help'
 import { TRIP_TABS, type TripTab } from '@/lib/trip-tabs'
 import { m } from '@/paraglide/messages'
 
@@ -40,7 +41,11 @@ export function TripTabs({ tab, onTabChange, people, members, plan }: TripTabsPr
         if (next) onTabChange(next)
       }}
     >
-      <TabsList aria-label={m.trip_tabs_label()} className="md:max-w-xl print:hidden">
+      <TabsList
+        aria-label={m.trip_tabs_label()}
+        className="md:max-w-xl print:hidden"
+        data-tour={TOUR.tripTabs}
+      >
         {TRIP_TABS.map((value) => (
           <TabsTrigger key={value} value={value}>
             <span aria-hidden="true">{TAB_ICONS[value]}</span>

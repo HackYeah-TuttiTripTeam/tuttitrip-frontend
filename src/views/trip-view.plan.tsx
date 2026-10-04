@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useCreatePlan } from '@/hooks/use-create-plan'
 import { usePlan } from '@/hooks/use-plan'
 import { usePrinting } from '@/hooks/use-printing'
+import { TOUR } from '@/lib/help'
 import { m } from '@/paraglide/messages'
 
 interface TripPlanViewProps {
@@ -81,27 +82,29 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
 
   if (hasNoPlan || !plan) {
     return (
-      <StatusMessage
-        icon={<Calendar />}
-        title={m.plan_empty_title()}
-        action={
-          <div className="flex flex-col items-start gap-3 md:items-center">
-            {canBuild && (
-              <Button
-                size="lg"
-                className="h-11 rounded-full px-6"
-                onClick={creation.create}
-                disabled={creation.isPending}
-              >
-                {creation.isPending ? m.plan_computing() : m.plan_compute()}
-              </Button>
-            )}
-            {failure}
-          </div>
-        }
-      >
-        {canBuild ? m.plan_empty_body_manage() : m.plan_empty_body_member()}
-      </StatusMessage>
+      <div data-tour={TOUR.planEmpty}>
+        <StatusMessage
+          icon={<Calendar />}
+          title={m.plan_empty_title()}
+          action={
+            <div className="flex flex-col items-start gap-3 md:items-center">
+              {canBuild && (
+                <Button
+                  size="lg"
+                  className="h-11 rounded-full px-6"
+                  onClick={creation.create}
+                  disabled={creation.isPending}
+                >
+                  {creation.isPending ? m.plan_computing() : m.plan_compute()}
+                </Button>
+              )}
+              {failure}
+            </div>
+          }
+        >
+          {canBuild ? m.plan_empty_body_manage() : m.plan_empty_body_member()}
+        </StatusMessage>
+      </div>
     )
   }
 
@@ -115,7 +118,10 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
     <>
       {printing && <PlanPrintout plan={plan} trip={trip} />}
       <div className="flex flex-col gap-4 print:hidden" aria-busy={recalculating}>
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div
+          className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
+          data-tour={TOUR.planActions}
+        >
           <p className="flex flex-col text-sm leading-[22px]">
             <span className="font-medium">{m.plan_version({ n: plan.version })}</span>
             <PlanHashLabel hash={plan.plan_hash} />
@@ -148,9 +154,14 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
         <div role="status" className={recalculating ? 'text-muted-foreground text-sm' : 'sr-only'}>
           {recalculating && m.plan_recomputing_status()}
         </div>
-        <PlanSummary plan={plan} />
+        <div data-tour={TOUR.planSummary}>
+          <PlanSummary plan={plan} />
+        </div>
         {failure}
-        <div className={recalculating ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+        <div
+          className={recalculating ? 'opacity-60 transition-opacity' : 'transition-opacity'}
+          data-tour={TOUR.planDays}
+        >
           <DayTabs
             days={plan.days}
             value={current}

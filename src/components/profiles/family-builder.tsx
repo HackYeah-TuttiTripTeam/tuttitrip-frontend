@@ -5,6 +5,7 @@ import { ResponsiveModal } from '@/components/shared/responsive-modal'
 import { StatusMessage } from '@/components/shared/status-message'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { TOUR } from '@/lib/help'
 import { type EditValues, hasAccount, type Person, type SaveResult } from '@/lib/people'
 import { m } from '@/paraglide/messages'
 import { AddPersonForm, type AddPersonValues, EditPersonForm } from './person-form'
@@ -50,7 +51,11 @@ export function FamilyBuilder({
   )
 
   return (
-    <section aria-labelledby="people-heading" className="flex flex-col gap-4">
+    <section
+      aria-labelledby="people-heading"
+      className="flex flex-col gap-4"
+      data-tour={TOUR.peopleList}
+    >
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-col">
           <h2 id="people-heading" className="font-medium text-lg">

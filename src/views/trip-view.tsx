@@ -5,9 +5,12 @@ import { TripHeader, TripHeaderSkeleton } from '@/components/trips/trip-header'
 import { TripTabs } from '@/components/trips/trip-tabs'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useHelpTopic } from '@/hooks/use-help-topic'
 import { useSession } from '@/hooks/use-session'
 import { useTrip } from '@/hooks/use-trip'
 import { isDev } from '@/lib/env'
+import { TOUR } from '@/lib/help'
+import { tripTopics } from '@/lib/help-topics'
 import type { TripTab } from '@/lib/trip-tabs'
 import { m } from '@/paraglide/messages'
 import { TripMembersView } from './trip-view.members'
@@ -23,6 +26,8 @@ export function TripView() {
   const navigate = route.useNavigate()
   const session = useSession()
   const { trip, isPending, problem, refetch } = useTrip(tripId, session.status)
+  // Only a loaded trip has the elements the steps point at.
+  useHelpTopic(trip && !problem ? tripTopics[tab] : null)
 
   // replace: switching tabs should not fill the back button.
   const setTab = (next: TripTab) =>
@@ -117,7 +122,7 @@ export function TripView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="print:hidden">
+      <div className="print:hidden" data-tour={TOUR.tripHeader}>
         <TripHeader trip={trip} actions={<TripSettings trip={trip} />} />
       </div>
       {trip.my_status === 'pending' && tab !== 'members' && (

@@ -11,6 +11,7 @@ import { useDeleteTrip } from '@/hooks/use-delete-trip'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
 import { useSaveTrip } from '@/hooks/use-save-trip'
 import { useSession } from '@/hooks/use-session'
+import { TOUR } from '@/lib/help'
 import { tripToFormValues } from '@/lib/trip-form'
 import { m } from '@/paraglide/messages'
 
@@ -52,6 +53,7 @@ function TripSettingsEditor({ trip }: { trip: Trip }) {
       <Button
         variant="outline"
         className="h-11 shrink-0 rounded-full md:h-9"
+        data-tour={TOUR.tripSettings}
         onClick={() => setOpen(true)}
       >
         <Settings aria-hidden="true" />
