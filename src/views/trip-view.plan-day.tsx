@@ -1,5 +1,5 @@
 import { MapPin } from '@keyline-icons/react'
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, type ReactNode, Suspense, useEffect, useMemo, useState } from 'react'
 import type { PlanDay, PlanStop } from '@/api/queries/plans'
 import { PlaceCardDialog } from '@/components/planning/place-card-dialog'
 import { PlanTimeline, stopDomId } from '@/components/planning/plan-timeline'
@@ -22,6 +22,8 @@ interface PlanDayPanelProps {
   currency: string
   view: PlanPane
   onViewChange: (view: PlanPane) => void
+  /** What a stop gets under its card besides the place-card button: rating, veto, verdict. */
+  renderStopActions?: (stop: PlanStop) => ReactNode
 }
 
 /**
@@ -29,7 +31,13 @@ interface PlanDayPanelProps {
  * (side by side on desktop, a Lista | Mapa switch on phones). Without the key the list stays and
  * a note says the map is unavailable. The place card opens only on a tap.
  */
-export function PlanDayPanel({ day, currency, view, onViewChange }: PlanDayPanelProps) {
+export function PlanDayPanel({
+  day,
+  currency,
+  view,
+  onViewChange,
+  renderStopActions,
+}: PlanDayPanelProps) {
   const maps = useMapsSettings()
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
   const [selected, setSelected] = useState<string | null>(null)
@@ -74,19 +82,22 @@ export function PlanDayPanel({ day, currency, view, onViewChange }: PlanDayPanel
             stops={day.items}
             currency={currency}
             selectedPlaceId={selected}
-            renderActions={(stop) =>
-              config && stop.google_place_id ? (
-                <Button
-                  variant="outline"
-                  className="h-11 w-fit rounded-full px-4"
-                  onClick={() => setCard(stop)}
-                >
-                  <MapPin aria-hidden="true" />
-                  {m.place_card_open()}
-                  <span className="sr-only"> {stop.name}</span>
-                </Button>
-              ) : null
-            }
+            renderActions={(stop) => (
+              <>
+                {renderStopActions?.(stop)}
+                {config && stop.google_place_id ? (
+                  <Button
+                    variant="outline"
+                    className="h-11 w-fit rounded-full px-4"
+                    onClick={() => setCard(stop)}
+                  >
+                    <MapPin aria-hidden="true" />
+                    {m.place_card_open()}
+                    <span className="sr-only"> {stop.name}</span>
+                  </Button>
+                ) : null}
+              </>
+            )}
           />
         )}
         {config && showMap && (
