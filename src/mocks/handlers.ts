@@ -296,13 +296,66 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
         if (world.preferencesSaveFails)
           return HttpResponse.json({ detail: 'Internal Server Error' }, { status: 500 })
         const body = (await request.json()) as Schemas['PreferencesWrite']
+        const pool = body.importance_pool
+        if (pool && Object.values(pool).reduce((sum, points) => sum + points, 0) !== 10)
+          return HttpResponse.json({ detail: 'The pool must add up to 10' }, { status: 422 })
         const current = storedPreferences(world, profile.id)
-        Object.assign(current, withoutUndefined(body), {
+        // Like the API: entries with a place_id are ratings, a PUT never takes one away.
+        const { example_places: examples = current.example_places, ...rest } = body
+        const typed = examples.filter((place) => !place.place_id)
+        const catalog = [
+          ...current.example_places.filter(
+            (place) => place.place_id && !examples.some((e) => e.place_id === place.place_id),
+          ),
+          ...examples.filter((place) => place.place_id),
+        ]
+        Object.assign(current, withoutUndefined(rest), {
+          example_places: [...typed, ...catalog],
           filled: true,
           updated_by_sub: MOCK_USER_SUB,
           updated_at: new Date().toISOString(),
         })
         return HttpResponse.json(viewPreferences(world, profile.id, true))
+      },
+    ),
+
+    // Catalog and ratings. A rating is merged into `example_places` of the preferences, like in the API.
+    http.get(`${API}/places`, async ({ request }) => {
+      await latency()
+      const city = new URL(request.url).searchParams.get('city')
+      return HttpResponse.json(world.places.filter((place) => place.city_slug === city))
+    }),
+
+    http.put(
+      `${API}/trips/:tripId/profiles/:profileId/ratings/:placeId`,
+      async ({ params, request }) => {
+        await latency()
+        if (!findTrip(params.tripId)) return notFound('Trip not found')
+        const profile = world.profiles.find((p) => p.id === params.profileId)
+        if (!profile) return notFound('Profile not found')
+        if (!canWrite(params.tripId) && !isMe(world, profile.id)) return forbidden()
+        const place = world.places.find((p) => p.id === params.placeId)
+        if (!place) return notFound('Place not found')
+        if (world.preferencesSaveFails)
+          return HttpResponse.json({ detail: 'Internal Server Error' }, { status: 500 })
+        const body = (await request.json()) as Schemas['RatingUpdate']
+        const current = storedPreferences(world, profile.id)
+        current.example_places = current.example_places.filter((e) => e.place_id !== place.id)
+        if (body.value !== 'neutral')
+          current.example_places.push({
+            name: place.name,
+            place_id: place.id,
+            verdict: body.value === 'want' ? 'like' : 'dislike',
+          })
+        return HttpResponse.json({
+          trip_id: String(params.tripId),
+          profile_id: profile.id,
+          place_id: place.id,
+          value: body.value,
+          reason_code: body.reason_code ?? null,
+          updated_by_sub: MOCK_USER_SUB,
+          updated_at: new Date().toISOString(),
+        })
       },
     ),
 

@@ -1,11 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { fetchClient } from '@/api/client'
-import {
-  type Preferences,
-  type PreferencesWrite,
-  preferencesQueryOptions,
-} from '@/api/queries/preferences'
+import type { Preferences, PreferencesWrite } from '@/api/queries/preferences'
 import { applyWrite, toWrite } from '@/lib/preferences'
+import { usePreferencesSync } from './use-preferences-sync'
 
 /** One change, written against whatever the preferences are when it is applied. */
 export type PreferencesChange = (current: Preferences) => PreferencesWrite
@@ -17,14 +14,11 @@ export type PreferencesChange = (current: Preferences) => PreferencesWrite
  * A failure, like the last save, reloads from the server, which also takes the value back.
  */
 export function useUpdatePreferences(tripId: string, profileId: string) {
-  const queryClient = useQueryClient()
-  const queryKey = preferencesQueryOptions(tripId, profileId).queryKey
-  const scopeId = `preferences-${profileId}`
+  const { queryClient, queryKey, scope, reloadIfLast } = usePreferencesSync(tripId, profileId)
   const path = { params: { path: { trip_id: tripId, profile_id: profileId } } }
-  const reload = () => queryClient.invalidateQueries({ queryKey })
 
   return useMutation({
-    scope: { id: scopeId },
+    scope,
     mutationFn: async (change: PreferencesChange) => {
       const confirmed = await fetchClient.GET(
         '/api/v1/trips/{trip_id}/profiles/{profile_id}/preferences',
@@ -42,13 +36,7 @@ export function useUpdatePreferences(tripId: string, profileId: string) {
       const shown = queryClient.getQueryData<Preferences>(queryKey)
       if (shown) queryClient.setQueryData(queryKey, applyWrite(shown, change(shown)))
     },
-    onError: reload,
-    // Only the last save reloads, or a reload would overwrite the value of a save still queued.
-    onSuccess: () =>
-      queryClient.isMutating({
-        predicate: (mutation) => mutation.options.scope?.id === scopeId,
-      }) === 1
-        ? reload()
-        : undefined,
+    onError: reloadIfLast,
+    onSuccess: reloadIfLast,
   })
 }

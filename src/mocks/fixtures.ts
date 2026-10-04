@@ -16,6 +16,7 @@ export type Member = Schemas['MemberRead']
 export type Invitation = Schemas['InvitationRead']
 export type City = Schemas['CityRead']
 export type Preferences = Schemas['PreferencesRead']
+export type CatalogPlace = Schemas['PlaceRead']
 
 /** The signed-in test user, the host of most scenarios. */
 export const MOCK_USER_SUB = 'auth0|mock-user'
@@ -210,6 +211,10 @@ export const familyPreferences = (): Preferences[] => [
   preferences(PROFILE_IDS.mama, {
     filled: true,
     interests: { history: 1, museums: 1, local_food: 1 },
+    min_tags: [
+      { domain: 'food', tag: 'polish' },
+      { domain: 'attractions', tag: 'museums' },
+    ],
     updated_at: '2026-10-02T09:00:00Z',
   }),
   preferences(PROFILE_IDS.tata, {
@@ -500,4 +505,61 @@ export const cities = (): City[] => [
     center_lat: 51.5072,
     center_lon: -0.1276,
   }),
+]
+
+const CATALOG_IDS = {
+  narodowe: '5d1c8e20-3b4a-4c75-9e2f-0000000000b1',
+  zamek: '5d1c8e20-3b4a-4c75-9e2f-0000000000b2',
+  lazienki: '5d1c8e20-3b4a-4c75-9e2f-0000000000b3',
+  kopernik: '5d1c8e20-3b4a-4c75-9e2f-0000000000b4',
+  polin: '5d1c8e20-3b4a-4c75-9e2f-0000000000b5',
+} as const
+
+export const CATALOG_PLACE_IDS = CATALOG_IDS
+
+/** A catalog place of Warsaw with what the pool screen needs; the planning fields are neutral. */
+const catalogPlace = (
+  id: string,
+  name: string,
+  overrides: Partial<CatalogPlace> = {},
+): CatalogPlace => ({
+  id,
+  city_slug: 'warszawa',
+  name,
+  category: 'museum',
+  tags: ['museums'],
+  lat: 52.23,
+  lon: 21.02,
+  osm_type: null,
+  osm_id: null,
+  google_place_id: null,
+  hours: { opening_hours: null, source_url: null, verified: false, checked_at: null },
+  prices: [],
+  typical_visit_min: 90,
+  segment_km: 0.5,
+  transfer_min: 5,
+  queue_min: 0,
+  stairs: 0.2,
+  wheelchair: true,
+  indoor: true,
+  iconic: false,
+  cuisine: null,
+  diet_tags: [],
+  amenities: [],
+  source_key: null,
+  source: 'sheet',
+  ...overrides,
+})
+
+/** The Warsaw catalog the liked and disliked places are searched in. */
+export const catalogPlaces = (): CatalogPlace[] => [
+  catalogPlace(CATALOG_IDS.narodowe, 'Muzeum Narodowe'),
+  catalogPlace(CATALOG_IDS.zamek, 'Zamek Królewski', { category: 'attraction', tags: ['history'] }),
+  catalogPlace(CATALOG_IDS.lazienki, 'Łazienki Królewskie', {
+    category: 'park',
+    tags: ['parks'],
+    indoor: false,
+  }),
+  catalogPlace(CATALOG_IDS.kopernik, 'Centrum Nauki Kopernik', { tags: ['science', 'kids'] }),
+  catalogPlace(CATALOG_IDS.polin, 'Muzeum Polin'),
 ]

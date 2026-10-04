@@ -1,6 +1,8 @@
 import type { Schemas } from '@/api/client'
 import {
+  type CatalogPlace,
   type City,
+  catalogPlaces,
   cities,
   familyMembers,
   familyPreferences,
@@ -70,7 +72,9 @@ export interface World {
   members: Member[]
   /** Preferences of everyone on the main trip (constraints, diet, interests). */
   preferences: Preferences[]
-  /** Every PUT of preferences answers 500, to see the rollback. */
+  /** The catalog of the main trip's city (`GET /places`). */
+  places: CatalogPlace[]
+  /** Every PUT of preferences or of a place rating answers 500, to see the rollback. */
   preferencesSaveFails: boolean
   /** The latest plan of the main trip; null until "Policz plan" creates one. */
   plan: Plan | null
@@ -106,6 +110,7 @@ export function createWorld(name: ScenarioName): World {
     profiles: familyProfiles(),
     members: familyMembers(),
     preferences: familyPreferences(),
+    places: catalogPlaces(),
     preferencesSaveFails: false,
     plan: plan(main.id),
     invitations: [invitation()],

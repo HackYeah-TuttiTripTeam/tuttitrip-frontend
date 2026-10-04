@@ -684,5 +684,46 @@
   "privacy_changes_p1": "Gdy zmieni się to, co robi aplikacja, zaktualizujemy tę stronę i datę na jej górze.",
   "privacy_contact_title": "Kontakt",
   "privacy_contact_p1": "Zespół HackYeah-TuttiTripTeam jest na GitHubie i na stronie Kontakt.",
-  "privacy_contact_link": "Przejdź do strony Kontakt"
+  "privacy_contact_link": "Przejdź do strony Kontakt",
+  "prefs_pool_title": "Co jest najważniejsze",
+  "prefs_pool_hint": "Rozdziel {total} kropek między pięć dziedzin. Im więcej kropek, tym mocniej plan pilnuje tej dziedziny.",
+  "prefs_pool_child": "Dla dziecka punkty ustawia rodzic.",
+  "prefs_pool_domain_lodging": "Nocleg",
+  "prefs_pool_domain_food": "Jedzenie",
+  "prefs_pool_domain_attractions": "Atrakcje",
+  "prefs_pool_domain_pace": "Tempo",
+  "prefs_pool_domain_cost": "Koszt",
+  "prefs_pool_value": "{domain}: {points} z {total} punktów",
+  "prefs_pool_more": "Dodaj punkt: {domain}",
+  "prefs_pool_less": "Zabierz punkt: {domain}",
+  "prefs_pool_remaining": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Została {count} kropka do rozdania",
+        "countPlural=few": "Zostały {count} kropki do rozdania",
+        "countPlural=many": "Zostało {count} kropek do rozdania",
+        "countPlural=*": "Zostało {count} kropek do rozdania"
+      }
+    }
+  ],
+  "prefs_pool_complete": "Wszystkie kropki rozdane.",
+  "prefs_pool_need_all": "Rozdaj wszystkie kropki, żeby zapisać.",
+  "prefs_pool_save": "Zapisz pulę",
+  "prefs_pool_reset": "Cofnij zmiany",
+  "prefs_pool_min": "Automatyczne minimum, miejsc na tag: {count}.",
+  "prefs_pool_default": "Na razie domyślnie, według wieku. Zapis ustawia własne.",
+  "prefs_pool_readonly_label": "Pula ważności",
+  "prefs_places_title": "Lubiane i nielubiane miejsca",
+  "prefs_places_hint": "Przykłady, które pomagają dopasować propozycje do tej osoby.",
+  "prefs_places_name_label": "Nazwa miejsca",
+  "prefs_places_name_placeholder": "Na przykład Muzeum Narodowe",
+  "prefs_places_suggestions": "Podpowiedzi z katalogu",
+  "prefs_places_add_like": "Dodaj do lubianych",
+  "prefs_places_add_dislike": "Dodaj do nielubianych",
+  "prefs_places_liked": "Lubiane",
+  "prefs_places_disliked": "Nielubiane",
+  "prefs_places_none": "Brak.",
+  "prefs_places_remove": "Usuń: {name}"
 }

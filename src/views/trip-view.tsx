@@ -128,6 +128,7 @@ export function TripView() {
             tripId={trip.id}
             tripName={trip.name}
             canManage={trip.my_role !== 'member'}
+            citySlug={trip.city_slug}
             personId={person}
             onPersonChange={setPerson}
           />
