@@ -41,7 +41,7 @@ export function useSaveTrip(trip: Trip | null, cities: City[]) {
       if (!trip) {
         return await create.mutateAsync({
           body: {
-            propose_cheaper_alternatives: null,
+            propose_cheaper_alternatives: PROPOSE_CHEAPER_DEFAULT,
             ...formValuesToPatch(values, currency),
             name: values.name.trim(),
           },
