@@ -83,6 +83,29 @@ export function formatPercent(share: number): string {
   }).format(share)
 }
 
+/** "+4" / "−3" / "0": a change with its sign (the minus is a real minus sign). */
+export function formatSigned(value: number, maximumFractionDigits = 0): string {
+  return new Intl.NumberFormat(INTL_TAG[getLocale()], {
+    signDisplay: 'exceptZero',
+    maximumFractionDigits,
+    useGrouping: 'always',
+  }).format(value)
+}
+
+/** A number with exactly `digits` decimal places: "0,90" / "0.90", "74" for 0 digits. */
+export function formatFixed(value: number, digits: number): string {
+  return new Intl.NumberFormat(INTL_TAG[getLocale()], {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value)
+}
+
+/** "+90 zł" / "−45 zł" / "0 zł": a change of money with its sign. */
+export function formatMoneyDelta(delta: number, currency = 'PLN'): string {
+  if (delta === 0) return formatMoney(0, currency)
+  return `${delta > 0 ? '+' : '−'}${formatMoney(Math.abs(delta), currency)}`
+}
+
 /** Locale-aware, accent- and case-insensitive comparison for sorting names. */
 export function compareText(a: string, b: string): number {
   return collator().compare(a, b)
@@ -183,13 +206,32 @@ export function budgetSummary(trip: BudgetFields): string | null {
   })
 }
 
-const MS_PER_MINUTE = 60_000
-const MINUTES_PER_HOUR = 60
-const HOURS_PER_DAY = 24
-
 const relativeFormat = memoByLocale(
   (tag) => new Intl.RelativeTimeFormat(tag, { numeric: 'auto', style: 'short' }),
 )
+const RELATIVE_STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['second', 60],
+  ['minute', 60],
+  ['hour', 24],
+  ['day', 7],
+  ['week', 4.345],
+  ['month', 12],
+  ['year', Number.POSITIVE_INFINITY],
+]
+
+/** "5 min temu" / "5 min ago": the largest unit that fits; `now` is injectable for tests. */
+export function formatRelative(iso: string, now: number = Date.now()): string {
+  let value = (new Date(iso).getTime() - now) / 1000
+  for (const [unit, size] of RELATIVE_STEPS) {
+    if (Math.abs(value) < size) return relativeFormat().format(Math.round(value), unit)
+    value /= size
+  }
+  return formatDate(iso)
+}
+
+const MS_PER_MINUTE = 60_000
+const MINUTES_PER_HOUR = 60
+const HOURS_PER_DAY = 24
 
 /** "5 min temu" / "5 min. ago": how long ago a position or an entry was updated. */
 export function formatAgo(iso: string, now: number = Date.now()): string {

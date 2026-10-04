@@ -96,7 +96,7 @@ hand-written shapes: after `pnpm api:sync` a contract change breaks `tsc`, not t
 silently). Amounts are decimal strings. MSW 3 keeps the 2.x API (`http`, `HttpResponse`,
 `setupServer`, `setupWorker`); the one rename to know is `onUnhandledRequest` -> `onUnhandledFrame`
 (in `listen()` and `start()`). Profiles carry `customized_fields`; members (host, co-host, member,
-with `is_me`) are served from `/trips/{id}/members` and join profiles on `profile_id`. Named scenarios (`src/mocks/scenarios.ts`):
+with `is_me`) are served from `/trips/{id}/members` and join profiles on `profile_id`. Notifications are served by the default world too (6, 3 unread). Named scenarios (`src/mocks/scenarios.ts`):
 
 | Scenario | What it serves |
 | --- | --- |
@@ -110,6 +110,11 @@ with `is_me`) are served from `/trips/{id}/members` and join profiles on `profil
 | `join-dead` | Preview and accept answer 404 (expired, revoked or full: one answer for all) |
 | `join-already-member` | Preview says `already_member`; accept is idempotent |
 | `join-accept-dead` | Preview 200, then accept 404 (the link died in between) |
+| `notifications-inbox` | 134 notifications (40 unread) of mixed types and dates; list, counter and bulk marking page, sort and filter in memory like the API |
+| `notifications-empty` | No notifications |
+| `notifications-error` | Every `/notifications` call (list, counter, mark, stream) answers 500 |
+| `notifications-live` | The stream sends `ready`, then a notification every 4 s (`tweak` `notificationLiveEveryMs` to change it): toast with action, badge grows |
+| `notifications-stream-down` | The stream answers 503: status `polling`, the counter is polled every minute |
 
 - **In tests:** `src/mocks/vitest-setup.ts` starts one `setupServer` and serves
   `family-warsaw` before each test. Pick another with `useScenario('no-plan')` (from
@@ -274,6 +279,15 @@ start on a tap; stop releases the mic first, then tells the server; closing the 
 `keepalive` hang-up (`api/voice.ts`). Captions come from the data-channel events (`lib/voice-events.ts`,
 keyed by item id, so a late user transcript keeps its place). A call and a text turn exclude each other.
 No microphone or no WebRTC leaves the text field.
+The call shows what it does from the data-channel events (`lib/voice-events.ts`: listening, hearing,
+thinking, saving a field, building the plan, speaking; a finished tool refreshes the panel at once).
+In the open mode the mic track is muted from the end of the host's speech until the assistant has
+finished (`micMayBeOpen`), with "Mów mimo to"; in the hold-to-talk mode (`tt.voice.mode` in
+localStorage) server voice detection is turned off with `session.update`, the track is live only
+while the button is held (pointer, touch, Space), release sends `input_audio_buffer.commit` and
+`response.create`, and only the square ends the call. Ending shows "filling in the details" while
+the server extracts them from the transcript. The offer carries `locale`. A 409 reads
+`SessionRead.running`: a call elsewhere offers `voice/release` ("Zakończ tamtą rozmowę").
 
 ## Data flow for a feature (example: trips)
 

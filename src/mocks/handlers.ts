@@ -1,5 +1,6 @@
 import { delay, HttpResponse, http, type RequestHandler } from 'msw'
 import type { Schemas } from '@/api/client'
+import type { Veto } from '@/api/queries/vetoes'
 import {
   centsToDecimal,
   compareDecimals,
@@ -17,6 +18,8 @@ import {
   location,
   MOCK_DEMO_TOKEN,
   MOCK_USER_SUB,
+  notification as makeNotification,
+  type Notification,
   type Photo,
   PIXEL_PNG_BASE64,
   type Plan,
@@ -36,6 +39,7 @@ import {
 } from './fixtures'
 import { interviewHandlers } from './interview'
 import { permissionHandlers } from './permissions'
+import { buildPlan, type PlanInputs, planInputKey } from './plan-builder'
 import { planProgressHandler, runPlanStages } from './plan-progress'
 import { proposalHandlers } from './proposals'
 import { createWorld, type ScenarioName, type World } from './scenarios'
@@ -214,6 +218,96 @@ function changeAccount(
   return new HttpResponse(null, { status: 204 })
 }
 
+/** The filters shared by the list and by bulk marking, like the API reads them. */
+function matchesNotificationFilter(item: Notification, filter: Schemas['NotificationFilter']) {
+  const { read, type, trip_id, created_from, created_to } = filter
+  return (
+    (read == null || (item.read_at !== null) === read) &&
+    (!type || type.length === 0 || type.includes(item.type)) &&
+    (!trip_id || item.trip_id === trip_id) &&
+    (!created_from || Date.parse(item.created_at) >= Date.parse(created_from)) &&
+    // The end of the range is exclusive.
+    (!created_to || Date.parse(item.created_at) < Date.parse(created_to))
+  )
+}
+
+/** GET /notifications like the API: filters, sort and the page come from the query string. */
+function listNotifications(all: Notification[], params: URLSearchParams) {
+  const read = params.get('read')
+  const filter: Schemas['NotificationFilter'] = {
+    read: read === null ? null : read === 'true',
+    type: params.getAll('type'),
+    trip_id: params.get('trip_id'),
+    created_from: params.get('created_from'),
+    created_to: params.get('created_to'),
+  }
+  const matching = all.filter((item) => matchesNotificationFilter(item, filter))
+  const sign = params.get('dir') === 'asc' ? 1 : -1
+  const byType = params.get('sort') === 'type'
+  // By type, then by date, both in the requested direction; the id is the last key.
+  matching.sort(
+    (a, b) =>
+      (byType ? sign * a.type.localeCompare(b.type) : 0) ||
+      sign * a.created_at.localeCompare(b.created_at) ||
+      a.id.localeCompare(b.id),
+  )
+  const size = Math.min(100, Math.max(1, Number(params.get('size')) || 20))
+  const page = Math.max(1, Number(params.get('page')) || 1)
+  return HttpResponse.json({
+    items: matching.slice((page - 1) * size, page * size),
+    total: matching.length,
+    page,
+    size,
+    pages: Math.ceil(matching.length / size),
+  })
+}
+
+/** The stream like the API sends it: `ready` first, `notification` with the id as SSE id. */
+function notificationStream(world: World, signal: AbortSignal) {
+  const encoder = new TextEncoder()
+  let timer: ReturnType<typeof setInterval> | undefined
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      const send = (event: string, data: unknown, id?: string) =>
+        controller.enqueue(
+          encoder.encode(
+            `${id ? `id: ${id}\n` : ''}event: ${event}\ndata: ${JSON.stringify(data)}\n\n`,
+          ),
+        )
+      send('ready', { unread: world.notifications.filter((n) => n.read_at === null).length })
+      if (world.notificationStream === 'live') {
+        timer = setInterval(() => {
+          const live = makeNotification({
+            created_at: new Date().toISOString(),
+            type: 'proposal_waiting',
+            params: { proposal_name: 'Muzeum zamiast parku' },
+            actions: [
+              { code: 'approve_proposal', params: {} },
+              { code: 'open_plan', params: {} },
+            ],
+          })
+          world.notifications = [live, ...world.notifications]
+          send('notification', live, live.id)
+        }, world.notificationLiveEveryMs)
+      }
+      signal.addEventListener('abort', () => {
+        clearInterval(timer)
+        try {
+          controller.close()
+        } catch {
+          // Already closed.
+        }
+      })
+    },
+    cancel() {
+      clearInterval(timer)
+    },
+  })
+  return new HttpResponse(stream, {
+    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+  })
+}
+
 function brokenHandlers(behaviour: 'server-error' | 'offline', latency: () => Promise<void>) {
   return [
     http.all(`${API}/*`, async () => {
@@ -278,6 +372,57 @@ function normalHandlers(
     http.get(`${API}/trips`, async ({ request }) => {
       await latency()
       return listTrips(world.trips, new URL(request.url).searchParams)
+    }),
+
+    http.get(`${API}/notifications`, async ({ request }) => {
+      await latency()
+      if (world.notificationsFail) return failure(500)
+      return listNotifications(world.notifications, new URL(request.url).searchParams)
+    }),
+
+    // Server-Sent Events: `ready`, then (scenario "notifications-live") a notification every few seconds.
+    http.get(`${API}/notifications/stream`, ({ request }) => {
+      if (world.notificationsFail || world.notificationStream === 'down') {
+        return HttpResponse.json({ detail: 'Service Unavailable' }, { status: 503 })
+      }
+      return notificationStream(world, request.signal)
+    }),
+
+    http.get(`${API}/notifications/unread-count`, async () => {
+      await latency()
+      if (world.notificationsFail) return failure(500)
+      return HttpResponse.json({
+        count: world.notifications.filter((n) => n.read_at === null).length,
+      })
+    }),
+
+    http.get(`${API}/notifications/:id`, async ({ params }) => {
+      await latency()
+      if (world.notificationsFail) return failure(500)
+      const found = world.notifications.find((item) => item.id === params.id)
+      return found ? HttpResponse.json(found) : notFound('Notification not found')
+    }),
+
+    // Exactly one of `ids` and `filters`; `filters: {}` is everything. Idempotent, like the API.
+    http.post(`${API}/notifications/mark`, async ({ request }) => {
+      await latency()
+      if (world.notificationsFail) return failure(500)
+      const body = (await request.json()) as Schemas['NotificationMark']
+      if ((body.ids == null) === (body.filters == null)) {
+        return HttpResponse.json({ detail: 'Send ids or filters, not both' }, { status: 422 })
+      }
+      const ids = new Set(body.ids ?? [])
+      const now = new Date().toISOString()
+      let updated = 0
+      world.notifications = world.notifications.map((item) => {
+        const selected = body.ids
+          ? ids.has(item.id)
+          : matchesNotificationFilter(item, body.filters ?? {})
+        if (!selected || (item.read_at !== null) === body.read) return item
+        updated += 1
+        return { ...item, read_at: body.read ? now : null }
+      })
+      return HttpResponse.json({ updated })
     }),
 
     http.get(`${API}/places/cities/search`, async ({ request }) => {
@@ -602,11 +747,29 @@ function normalHandlers(
         const profile = world.profiles.find((p) => p.id === params.profileId)
         if (!profile) return notFound('Profile not found')
         if (!canWrite(params.tripId) && !isMe(world, profile.id)) return forbidden()
-        const place = world.places.find((p) => p.id === params.placeId)
+        const catalog = world.places.find((p) => p.id === params.placeId)
+        // A place of the plan is not always in the city catalog of the mock.
+        const planned = world.plan?.days
+          .flatMap((day) => day.items)
+          .find((stop) => stop.place_id === params.placeId)
+        const place = catalog ?? (planned && { id: planned.place_id, name: planned.name })
         if (!place) return notFound('Place not found')
         if (world.preferencesSaveFails)
           return HttpResponse.json({ detail: 'Internal Server Error' }, { status: 500 })
         const body = (await request.json()) as Schemas['RatingUpdate']
+        world.ratings = world.ratings.filter(
+          (rating) => !(rating.profile_id === profile.id && rating.place_id === place.id),
+        )
+        if (body.value !== 'neutral')
+          world.ratings.push({
+            trip_id: String(params.tripId),
+            profile_id: profile.id,
+            place_id: place.id,
+            value: body.value,
+            reason_code: body.reason_code ?? null,
+            updated_by_sub: MOCK_USER_SUB,
+            updated_at: new Date().toISOString(),
+          })
         const current = storedPreferences(world, profile.id)
         current.example_places = current.example_places.filter((e) => e.place_id !== place.id)
         if (body.value !== 'neutral')
@@ -1015,16 +1178,90 @@ function normalHandlers(
         : notFound('No plan yet')
     }),
 
-    // "Policz plan": the first call creates the plan (201), later calls with the same input
-    // return the existing version (200), like the real API.
+    // "Policz plan": the first call creates the plan (201). Later calls with the same inputs
+    // (alpha, weights, vetoes) return the existing version (200); other inputs build a new one.
     http.post(`${API}/trips/:tripId/plans`, async ({ params }) => {
+      await latency()
+      const found = findTrip(params.tripId)
+      if (!found) return notFound('Trip not found')
+      if (!canWrite(params.tripId)) return forbidden()
+      const tripId = String(params.tripId)
+      if (!world.plan || world.plan.trip_id !== tripId) {
+        await runPlanStages(streamGapMs > 0 ? PLAN_STAGE_MS : 0)
+        const created: Plan = plan(tripId)
+        world.plan = created
+        return HttpResponse.json(created, { status: 201 })
+      }
+      if (world.recomputeFails)
+        return HttpResponse.json({ detail: 'Internal Server Error' }, { status: 500 })
+      const inputs: PlanInputs = {
+        alpha: found.fairness_alpha,
+        weights: Object.fromEntries(world.profiles.map((p) => [p.id, p.weight])),
+        vetoed: world.vetoes.map((veto) => veto.place_id),
+      }
+      if (planInputKey(inputs) === planInputKey(world.planInputs))
+        return HttpResponse.json(world.plan)
+      world.planInputs = inputs
+      await runPlanStages(streamGapMs > 0 ? PLAN_STAGE_MS : 0)
+      world.plan = buildPlan(tripId, world.profiles, inputs, world.plan.version + 1)
+      return HttpResponse.json(world.plan, { status: 201 })
+    }),
+
+    // Weights: a preset or a list, like the API (max/min at most 3, "dzien_babci" needs a person).
+    http.put(`${API}/trips/:tripId/profiles/weights`, async ({ params, request }) => {
       await latency()
       if (!findTrip(params.tripId)) return notFound('Trip not found')
       if (!canWrite(params.tripId)) return forbidden()
-      if (world.plan?.trip_id === params.tripId) return HttpResponse.json(world.plan)
-      await runPlanStages(streamGapMs > 0 ? PLAN_STAGE_MS : 0)
-      const created: Plan = plan(String(params.tripId ?? TRIP_ID))
-      world.plan = created
+      const body = (await request.json()) as Schemas['WeightsUpdate']
+      const next = new Map(world.profiles.map((p) => [p.id, p.weight]))
+      if (body.preset === 'po_rowno') for (const id of next.keys()) next.set(id, 1)
+      else if (body.preset === 'pod_dzieci')
+        for (const p of world.profiles)
+          next.set(p.id, p.age_group === 'toddler' || p.age_group === 'child' ? 2 : 1)
+      else if (body.preset === 'dzien_babci') {
+        if (!body.focus_profile_id)
+          return HttpResponse.json({ detail: 'focus_profile_id is required' }, { status: 422 })
+        for (const id of next.keys()) next.set(id, id === body.focus_profile_id ? 2 : 1)
+      } else for (const item of body.weights ?? []) next.set(item.profile_id, item.weight)
+      const values = [...next.values()]
+      if (Math.max(...values) / Math.min(...values) > 3)
+        return HttpResponse.json({ detail: 'max/min must be at most 3' }, { status: 422 })
+      world.profiles = world.profiles.map((p) => ({ ...p, weight: next.get(p.id) ?? p.weight }))
+      return HttpResponse.json(world.profiles)
+    }),
+
+    http.get(`${API}/trips/:tripId/ratings`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      return HttpResponse.json(world.ratings)
+    }),
+
+    http.get(`${API}/trips/:tripId/vetoes`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      return HttpResponse.json(world.vetoes)
+    }),
+
+    // A veto: your own profile, or any profile as co-host or higher (then on_behalf is true).
+    http.post(`${API}/trips/:tripId/vetoes`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const body = (await request.json()) as Schemas['VetoCreate']
+      const profile = world.profiles.find((p) => p.id === body.profile_id)
+      if (!profile) return notFound('Profile not found')
+      if (!canWrite(params.tripId) && !isMe(world, profile.id)) return forbidden()
+      const created: Veto = {
+        id: `9e0a7c10-5b2d-4a3e-8f61-${String(world.vetoes.length + 1).padStart(12, '0')}`,
+        trip_id: String(params.tripId),
+        profile_id: profile.id,
+        place_id: body.place_id,
+        created_by_sub: MOCK_USER_SUB,
+        on_behalf: !isMe(world, profile.id),
+        created_at: new Date().toISOString(),
+        revoked_at: null,
+        revoked_by_sub: null,
+      }
+      world.vetoes.push(created)
       return HttpResponse.json(created, { status: 201 })
     }),
   ]

@@ -16,6 +16,7 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as GlosRouteImport } from './routes/glos'
 import { Route as JoinRouteImport } from './routes/join'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as PrywatnoscRouteImport } from './routes/prywatnosc'
 import { Route as TripsRouteImport } from './routes/trips'
 import { Route as AdminPermissionsRouteImport } from './routes/admin.permissions'
@@ -57,6 +58,11 @@ const JoinRoute = JoinRouteImport.update({
   path: '/join',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrywatnoscRoute = PrywatnoscRouteImport.update({
   id: '/prywatnosc',
   path: '/prywatnosc',
@@ -91,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/demo': typeof DemoRoute
   '/glos': typeof GlosRoute
   '/join': typeof JoinRoute
+  '/notifications': typeof NotificationsRoute
   '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
   '/admin/permissions': typeof AdminPermissionsRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/demo': typeof DemoRoute
   '/glos': typeof GlosRoute
   '/join': typeof JoinRoute
+  '/notifications': typeof NotificationsRoute
   '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
   '/admin/permissions': typeof AdminPermissionsRoute
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/demo': typeof DemoRoute
   '/glos': typeof GlosRoute
   '/join': typeof JoinRoute
+  '/notifications': typeof NotificationsRoute
   '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
   '/admin/permissions': typeof AdminPermissionsRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/glos'
     | '/join'
+    | '/notifications'
     | '/prywatnosc'
     | '/trips'
     | '/admin/permissions'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/glos'
     | '/join'
+    | '/notifications'
     | '/prywatnosc'
     | '/trips'
     | '/admin/permissions'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/glos'
     | '/join'
+    | '/notifications'
     | '/prywatnosc'
     | '/trips'
     | '/admin/permissions'
@@ -179,6 +191,7 @@ export interface RootRouteChildren {
   DemoRoute: typeof DemoRoute
   GlosRoute: typeof GlosRoute
   JoinRoute: typeof JoinRoute
+  NotificationsRoute: typeof NotificationsRoute
   PrywatnoscRoute: typeof PrywatnoscRoute
   TripsRoute: typeof TripsRoute
   AdminPermissionsRoute: typeof AdminPermissionsRoute
@@ -237,6 +250,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JoinRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/prywatnosc': {
       id: '/prywatnosc'
       path: '/prywatnosc'
@@ -283,6 +303,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoRoute: DemoRoute,
   GlosRoute: GlosRoute,
   JoinRoute: JoinRoute,
+  NotificationsRoute: NotificationsRoute,
   PrywatnoscRoute: PrywatnoscRoute,
   TripsRoute: TripsRoute,
   AdminPermissionsRoute: AdminPermissionsRoute,

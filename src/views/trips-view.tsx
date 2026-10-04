@@ -9,9 +9,11 @@ import {
 } from '@keyline-icons/react'
 import { getRouteApi } from '@tanstack/react-router'
 import { useState } from 'react'
+import type { Trip } from '@/api/queries/trips'
 import { PaginationBar } from '@/components/shared/pagination-bar'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
 import { StatusMessage } from '@/components/shared/status-message'
+import { DeleteTripDialog } from '@/components/trips/delete-trip-dialog'
 import { TripForm } from '@/components/trips/trip-form'
 import { TripsTable, TripsTableSkeleton } from '@/components/trips/trips-table'
 import { TripsToolbar } from '@/components/trips/trips-toolbar'
@@ -21,6 +23,7 @@ import { useCities } from '@/hooks/use-cities'
 import { useCitySearch } from '@/hooks/use-city-search'
 import { useCreateVoiceTrip } from '@/hooks/use-create-voice-trip'
 import { useDebouncedInput } from '@/hooks/use-debounced-input'
+import { useDeleteTrip } from '@/hooks/use-delete-trip'
 import { useHelpTopic } from '@/hooks/use-help-topic'
 import { useClampPage, useListSearch } from '@/hooks/use-list-search'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
@@ -53,6 +56,8 @@ export function TripsView() {
   const setCreateTripOpen = useUiStore((state) => state.setCreateTripOpen)
   const { cities } = useCities(session.status)
   const createTrip = useSaveTrip(null, cities)
+  const [doomed, setDoomed] = useState<Trip | null>(null)
+  const remove = useDeleteTrip(() => setDoomed(null))
   const [voiceOpen, setVoiceOpen] = useState(false)
   const voiceTrip = useCreateVoiceTrip(() => setVoiceOpen(false))
 
@@ -202,7 +207,16 @@ export function TripsView() {
           className={isPlaceholder ? 'opacity-60 transition-opacity' : undefined}
           data-tour={TOUR.tripsList}
         >
-          <TripsTable trips={trips} sort={search.sort} dir={search.dir} onSortChange={setSort} />
+          <TripsTable
+            trips={trips}
+            sort={search.sort}
+            dir={search.dir}
+            onSortChange={setSort}
+            onDelete={(trip) => {
+              remove.reset()
+              setDoomed(trip)
+            }}
+          />
         </div>
       )}
 
@@ -219,6 +233,15 @@ export function TripsView() {
           />
         </div>
       )}
+
+      <DeleteTripDialog
+        tripName={doomed?.name ?? null}
+        isDesktop={isDesktop}
+        pending={remove.isPending}
+        failed={remove.isError}
+        onConfirm={() => doomed && remove.mutate({ params: { path: { trip_id: doomed.id } } })}
+        onCancel={() => setDoomed(null)}
+      />
 
       <ResponsiveModal
         open={voiceOpen}

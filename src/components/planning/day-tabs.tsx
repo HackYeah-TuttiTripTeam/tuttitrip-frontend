@@ -10,10 +10,12 @@ interface DayTabsProps {
   value: number
   onValueChange: (index: number) => void
   renderDay: (day: PlanDay) => ReactNode
+  /** Under the day's heading: the day's cost. */
+  renderDayMeta?: (day: PlanDay) => ReactNode
 }
 
 /** Days as a scrollable segmented switch; the panel under it is the plan of the chosen day. */
-export function DayTabs({ days, value, onValueChange, renderDay }: DayTabsProps) {
+export function DayTabs({ days, value, onValueChange, renderDay, renderDayMeta }: DayTabsProps) {
   return (
     <Tabs
       value={String(value)}
@@ -39,6 +41,7 @@ export function DayTabs({ days, value, onValueChange, renderDay }: DayTabsProps)
               ? m.plan_day_dated({ n: day.index, date: formatDateRange(day.date, null) ?? '' })
               : m.plan_day_n({ n: day.index })}
           </h2>
+          {renderDayMeta?.(day)}
           {renderDay(day)}
         </TabsContent>
       ))}

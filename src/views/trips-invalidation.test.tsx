@@ -33,7 +33,9 @@ describe('trips list invalidation', () => {
   it('invalidates every cached page after a create', async () => {
     const { wrapper, invalidated } = setup()
     const { result } = renderHook(() => useCreateTrip(), { wrapper })
-    await act(() => result.current.mutateAsync({ body: { name: 'Gdańsk' } }))
+    await act(() =>
+      result.current.mutateAsync({ body: { name: 'Gdańsk', propose_cheaper_alternatives: null } }),
+    )
     await waitFor(() => expect(invalidated()).toEqual([true, true]))
   })
 

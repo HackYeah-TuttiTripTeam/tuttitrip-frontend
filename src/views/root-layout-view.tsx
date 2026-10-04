@@ -6,6 +6,7 @@ import { BootScreen } from '@/components/shared/boot-screen'
 import { DemoBanner } from '@/components/shared/demo-banner'
 import { OfflineBanner } from '@/components/shared/offline-banner'
 import { PublicShell } from '@/components/shared/public-shell'
+import { Toaster } from '@/components/ui/sonner'
 import { useAdminAccess } from '@/hooks/use-admin-access'
 import { useApiAuthBridge } from '@/hooks/use-api-auth-bridge'
 import { useCleanServerHead } from '@/hooks/use-clean-server-head'
@@ -13,6 +14,10 @@ import { useDemoStatus } from '@/hooks/use-demo-session'
 import { useHomeRedirect } from '@/hooks/use-home-redirect'
 import { useLocale } from '@/hooks/use-locale'
 import { useMe } from '@/hooks/use-me'
+import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
+import { useNotificationMenu } from '@/hooks/use-notification-menu'
+import { useNotificationStream } from '@/hooks/use-notification-stream'
+import { useNotificationToasts } from '@/hooks/use-notification-toasts'
 import { useOnline } from '@/hooks/use-online'
 import { useSession } from '@/hooks/use-session'
 import { useTheme } from '@/hooks/use-theme'
@@ -52,6 +57,10 @@ export function RootLayoutView() {
   const helpOpen = useHelpStore((state) => state.open)
   const setHelpOpen = useHelpStore((state) => state.setOpen)
   const navigate = useNavigate()
+  const isDesktop = useMediaQuery(DESKTOP_QUERY)
+  const notifications = useNotificationMenu(session.status, isDesktop)
+  const showToast = useNotificationToasts()
+  useNotificationStream(session.status, showToast)
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   // Read once: a session stored while the page is open is Auth0's business, not a reason to blink.
   const [storedSession] = useState(hasStoredSession)
@@ -106,6 +115,7 @@ export function RootLayoutView() {
           theme={{ theme, resolved, onChange: setTheme }}
           envLabel={envLabel}
           banner={banner}
+          notifications={notifications}
           onHelp={helpTopic ? () => setHelpOpen(true) : null}
           onCreateTrip={() => {
             // Creating a trip needs an account; ask guests to sign in first.
@@ -117,6 +127,14 @@ export function RootLayoutView() {
           <Outlet />
         </AppShell>
       )}
+      <Toaster
+        theme={resolved}
+        position={isDesktop ? 'top-right' : 'top-center'}
+        offset={{ top: 64 }}
+        mobileOffset={{ top: 'calc(env(safe-area-inset-top) + 64px)' }}
+        visibleToasts={3}
+        closeButton
+      />
       <GuidedTour topic={helpTopic} open={helpOpen} onOpenChange={setHelpOpen} />
       <Suspense>
         <Devtools />

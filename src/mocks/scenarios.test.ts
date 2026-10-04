@@ -26,7 +26,7 @@ describe('family-warsaw', () => {
   it('has a family of five with a grandmother and two children', async () => {
     const { data } = await fetchClient.GET('/api/v1/trips/{trip_id}/profiles', path)
     expect(data?.map((p) => p.age_group)).toEqual(['adult', 'adult', 'senior', 'child', 'toddler'])
-    expect(data?.find((p) => p.id === PROFILE_IDS.babcia)?.weight).toBe(1.5)
+    expect(data?.find((p) => p.id === PROFILE_IDS.babcia)?.weight).toBe(1)
   })
 
   it('marks the comfort fields the host changed, and only those', async () => {
@@ -66,7 +66,9 @@ describe('family-warsaw', () => {
   })
 
   it('creates a trip and lists it first', async () => {
-    const created = await fetchClient.POST('/api/v1/trips', { body: { name: 'Gdańsk' } })
+    const created = await fetchClient.POST('/api/v1/trips', {
+      body: { name: 'Gdańsk', propose_cheaper_alternatives: null },
+    })
     expect(created.data?.name).toBe('Gdańsk')
     const list = await fetchClient.GET('/api/v1/trips')
     expect(list.data?.items[0]?.name).toBe('Gdańsk')

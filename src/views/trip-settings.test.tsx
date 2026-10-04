@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { TRIP_ID } from '@/mocks/fixtures'
 import { server, useScenario } from '@/mocks/node'
@@ -59,6 +59,25 @@ describe('who can edit and delete', () => {
     await openSettings()
     expect(screen.getByRole('button', { name: m.trip_settings_save() })).toBeTruthy()
     expect(screen.queryByRole('button', { name: m.trip_delete_open() })).toBeNull()
+  })
+
+  it('shows a member neither settings nor delete', async () => {
+    useScenario('member-readonly')
+    renderApp(`/trips/${TRIP_ID}`)
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.queryByRole('button', { name: m.trip_delete_open() })).toBeNull()
+  })
+
+  it('shows the host delete right next to settings, not inside them', async () => {
+    renderApp(`/trips/${TRIP_ID}`)
+    const settings = await screen.findByRole('button', { name: m.trip_settings_open() })
+    const remove = screen.getByRole('button', { name: m.trip_delete_open() })
+    expect(remove.parentElement).toBe(settings.parentElement)
+    fireEvent.click(settings)
+    await screen.findByRole('dialog')
+    expect(
+      within(screen.getByRole('dialog')).queryByRole('button', { name: m.trip_delete_open() }),
+    ).toBeNull()
   })
 })
 
@@ -170,16 +189,20 @@ describe('creating', () => {
 })
 
 describe('deleting', () => {
-  const confirm = async () => {
-    fireEvent.click(screen.getByRole('button', { name: m.trip_delete_open() }))
-    fireEvent.click(await screen.findByRole('button', { name: m.trip_delete_confirm() }))
+  const openDelete = async () => {
+    const app = renderApp(`/trips/${TRIP_ID}`)
+    fireEvent.click(await screen.findByRole('button', { name: m.trip_delete_open() }))
+    await screen.findByRole('dialog')
+    return app
   }
+  const confirm = async () =>
+    fireEvent.click(await screen.findByRole('button', { name: m.trip_delete_confirm() }))
 
   it('asks first, then leaves for the list, which no longer has the trip', async () => {
     const calls = recordCalls()
-    const { router } = await openSettings()
-    fireEvent.click(screen.getByRole('button', { name: m.trip_delete_open() }))
-    expect(await screen.findByText(m.trip_delete_title())).toBeTruthy()
+    const { router } = await openDelete()
+    expect(screen.getByText(m.trip_delete_title())).toBeTruthy()
+    expect(screen.getByText(m.trip_delete_body({ name: 'Warszawa z rodziną' }))).toBeTruthy()
     expect(writes(calls)).toHaveLength(0)
     fireEvent.click(screen.getByRole('button', { name: m.trip_delete_confirm() }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/trips'))
@@ -189,7 +212,7 @@ describe('deleting', () => {
 
   it('does not refetch the deleted trip, so no "not found" flashes', async () => {
     const calls = recordCalls()
-    const { router } = await openSettings()
+    const { router } = await openDelete()
     await confirm()
     await waitFor(() => expect(router.state.location.pathname).toBe('/trips'))
     await new Promise((resolve) => setTimeout(resolve, 100))
@@ -203,9 +226,18 @@ describe('deleting', () => {
         w.failures.delete = 403
       },
     })
-    const { router } = await openSettings()
+    const { router } = await openDelete()
     await confirm()
     expect(await screen.findByText(m.trip_delete_failed())).toBeTruthy()
+    expect(router.state.location.pathname).toBe(`/trips/${TRIP_ID}`)
+  })
+
+  it('cancels without sending anything', async () => {
+    const calls = recordCalls()
+    const { router } = await openDelete()
+    fireEvent.click(screen.getByRole('button', { name: m.action_cancel() }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(writes(calls)).toHaveLength(0)
     expect(router.state.location.pathname).toBe(`/trips/${TRIP_ID}`)
   })
 })
