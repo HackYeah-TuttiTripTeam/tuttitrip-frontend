@@ -10,11 +10,8 @@ import { useCleanServerHead } from '@/hooks/use-clean-server-head'
 import { useDemoStatus } from '@/hooks/use-demo-session'
 import { useHomeRedirect } from '@/hooks/use-home-redirect'
 import { useLocale } from '@/hooks/use-locale'
-<<<<<<< HEAD
-import { useOnline } from '@/hooks/use-online'
-=======
 import { useMe } from '@/hooks/use-me'
->>>>>>> 3aba72c (feat(admin): Panel uprawnień: role, uprawnienia do funkcji, użytkownicy i audyt)
+import { useOnline } from '@/hooks/use-online'
 import { useSession } from '@/hooks/use-session'
 import { useTheme } from '@/hooks/use-theme'
 import { appEnv } from '@/lib/env'
