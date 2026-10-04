@@ -49,7 +49,7 @@ export function PlanPrintout({ plan, trip }: PlanPrintoutProps) {
         />
         <h1 className="font-semibold text-3xl leading-9">{trip.name}</h1>
         {facts && <p className="text-base">{facts}</p>}
-        <PlanSummary plan={plan} />
+        <PlanSummary plan={plan} hints={false} />
       </header>
 
       <div className="print:[&>section+section]:break-before-page">

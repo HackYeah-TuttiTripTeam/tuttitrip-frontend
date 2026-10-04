@@ -1,4 +1,5 @@
 import { Pen } from '@keyline-icons/react'
+import { HelpHint } from '@/components/shared/help-hint'
 import { Button } from '@/components/ui/button'
 import { formatNumber, formatTime, lowerCase } from '@/lib/format'
 import {
@@ -65,7 +66,12 @@ export function PersonRow({ person, onEdit, onOpen }: PersonRowProps) {
           <span className="text-muted-foreground text-sm">
             {m.people_age({ age: profile.age })}, {GROUP_LABELS[profile.age_group]()}
           </span>
-          {tag && <span className="text-muted-foreground text-sm">{tag}</span>}
+          {tag && (
+            <span className="inline-flex items-center gap-1 text-muted-foreground text-sm">
+              {tag}
+              <HelpHint id={role ? 'role' : 'status'} />
+            </span>
+          )}
         </p>
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
           <dt className="text-muted-foreground">{m.people_walk_label()}</dt>
@@ -83,7 +89,10 @@ export function PersonRow({ person, onEdit, onOpen }: PersonRowProps) {
           <dd>{m.people_stairs_value({ value: formatNumber(profile.stairs_sensitivity, 2) })}</dd>
           <dt className="text-muted-foreground">{m.people_queue_label()}</dt>
           <dd>{m.people_queue_value({ minutes: profile.queue_patience_min })}</dd>
-          <dt className="text-muted-foreground">{m.people_floor_label()}</dt>
+          <dt className="flex items-center gap-1 text-muted-foreground">
+            {m.people_floor_label()}
+            <HelpHint id="floor" />
+          </dt>
           <dd>{m.people_floor_value({ value: formatNumber(profile.floor, 0) })}</dd>
         </dl>
         {/* Dashed = an estimate from the age; solid = the host's own correction. */}
