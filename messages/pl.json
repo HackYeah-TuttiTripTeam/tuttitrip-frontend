@@ -616,5 +616,12 @@
   "demo_missing_body": "Wejście do wersji demo działa tylko z pełnego linku od zespołu. Otwórz go jeszcze raz.",
   "demo_back_home": "Wróć na stronę główną",
   "demo_rate_limited_title": "Za dużo prób",
-  "demo_rate_limited_body": "Za dużo prób, odczekaj minutę i otwórz link ponownie."
+  "demo_rate_limited_body": "Za dużo prób, odczekaj minutę i otwórz link ponownie.",
+  "list_range": "{from} do {to} z {total}",
+  "list_page_of": "Strona {page} z {pages}",
+  "list_pagination_label": "Strony listy",
+  "list_previous": "Poprzednia strona",
+  "list_next": "Następna strona",
+  "list_go_to_page": "Strona {page}",
+  "list_per_page": "Na stronie"
 }

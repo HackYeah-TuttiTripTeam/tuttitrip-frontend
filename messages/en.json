@@ -606,5 +606,12 @@
   "demo_missing_body": "The demo only opens from the full link from the team. Open it again.",
   "demo_back_home": "Back to the home page",
   "demo_rate_limited_title": "Too many attempts",
-  "demo_rate_limited_body": "Too many attempts, wait a minute and open the link again."
+  "demo_rate_limited_body": "Too many attempts, wait a minute and open the link again.",
+  "list_range": "{from} to {to} of {total}",
+  "list_page_of": "Page {page} of {pages}",
+  "list_pagination_label": "List pages",
+  "list_previous": "Previous page",
+  "list_next": "Next page",
+  "list_go_to_page": "Page {page}",
+  "list_per_page": "Per page"
 }
