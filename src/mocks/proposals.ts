@@ -2,6 +2,7 @@ import { HttpResponse, http } from 'msw'
 import type { Schemas } from '@/api/client'
 import { MISSING_CITY_DETAIL } from '@/lib/constants'
 import { type Member, type Plan, PROFILE_IDS, plan, TRIP_ID, type Trip } from './fixtures'
+import { runPlanStages } from './plan-progress'
 
 type Proposal = Schemas['ProposalRead']
 type Answer = Schemas['ResponseRead']
@@ -116,6 +117,8 @@ interface Env {
   latency: () => Promise<void>
   findTrip: (id: unknown) => Trip | undefined
   canWrite: (id: unknown) => boolean
+  /** Time the mock spends on each stage of a plan build; 0 answers at once. */
+  stageMs: number
 }
 
 const notFound = (detail: string) => HttpResponse.json({ detail }, { status: 404 })
@@ -123,7 +126,7 @@ const forbidden = () =>
   HttpResponse.json({ detail: 'Brak uprawnienia do tej operacji' }, { status: 403 })
 
 /** Proposals, the calendar file and the draft plan of the interview, as the API answers them. */
-export function proposalHandlers({ api, world, latency, findTrip, canWrite }: Env) {
+export function proposalHandlers({ api, world, latency, findTrip, canWrite, stageMs }: Env) {
   return [
     http.get(`${api}/trips/:tripId/proposals/current`, async ({ params }) => {
       await latency()
@@ -203,6 +206,7 @@ export function proposalHandlers({ api, world, latency, findTrip, canWrite }: En
       if (!found.city_slug && !found.destination) {
         return HttpResponse.json({ detail: MISSING_CITY_DETAIL }, { status: 422 })
       }
+      await runPlanStages(stageMs)
       const version = (world.plan?.version ?? 0) + 1
       const created = plan(found.id, {
         id: crypto.randomUUID(),

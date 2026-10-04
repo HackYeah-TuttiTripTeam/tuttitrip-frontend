@@ -42,12 +42,15 @@ import { planningHandlers } from './handlers.planning'
 import { interviewHandlers } from './interview'
 import { permissionHandlers } from './permissions'
 import { buildPlan, type PlanInputs, planInputKey } from './plan-builder'
+import { planProgressHandler, runPlanStages } from './plan-progress'
 import { proposalHandlers } from './proposals'
 import { createWorld, type ScenarioName, type World } from './scenarios'
 
 const API = '*/api/v1'
 /** Pause between the events of a streamed answer in the browser, so the typing is visible. */
 const STREAM_GAP_MS = 60
+/** With a delay (dev:mock) a plan build lingers on each stage for this long. */
+const PLAN_STAGE_MS = 450
 
 const notFound = (detail: string) => HttpResponse.json({ detail }, { status: 404 })
 const NO_STORE = { 'Cache-Control': 'no-store' }
@@ -336,7 +339,15 @@ function normalHandlers(
       findTrip,
       canWrite,
     }),
-    ...proposalHandlers({ api: API, world, latency, findTrip, canWrite }),
+    ...proposalHandlers({
+      api: API,
+      world,
+      latency,
+      findTrip,
+      canWrite,
+      stageMs: streamGapMs > 0 ? PLAN_STAGE_MS : 0,
+    }),
+    planProgressHandler(API),
     // The jury's one-link entry. Like the real API: no-store, and 404 for every bad or disabled token.
     http.post(`${API}/auth/demo`, async ({ request }) => {
       await latency()
@@ -1178,6 +1189,7 @@ function normalHandlers(
       if (!canWrite(params.tripId)) return forbidden()
       const tripId = String(params.tripId)
       if (!world.plan || world.plan.trip_id !== tripId) {
+        await runPlanStages(streamGapMs > 0 ? PLAN_STAGE_MS : 0)
         const created: Plan = plan(tripId)
         world.plan = created
         return HttpResponse.json(created, { status: 201 })
@@ -1192,6 +1204,7 @@ function normalHandlers(
       if (planInputKey(inputs) === planInputKey(world.planInputs))
         return HttpResponse.json(world.plan)
       world.planInputs = inputs
+      await runPlanStages(streamGapMs > 0 ? PLAN_STAGE_MS : 0)
       world.plan = buildPlan(tripId, world.profiles, inputs, world.plan.version + 1)
       return HttpResponse.json(world.plan, { status: 201 })
     }),

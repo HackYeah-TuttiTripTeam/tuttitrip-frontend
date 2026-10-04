@@ -17,6 +17,7 @@ import { DayTabs } from '@/components/planning/day-tabs'
 import { DraftBanner } from '@/components/planning/draft-banner'
 import { PlanHashLabel } from '@/components/planning/plan-hash-label'
 import { PlanPrintout } from '@/components/planning/plan-printout'
+import { PlanProgress } from '@/components/planning/plan-progress'
 import { PlanSummary } from '@/components/planning/plan-summary'
 import { VerdictChip } from '@/components/planning/verdict-chip'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
@@ -29,6 +30,7 @@ import { useFairness } from '@/hooks/use-fairness'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
 import { usePlaceFeedback } from '@/hooks/use-place-feedback'
 import { usePlan } from '@/hooks/use-plan'
+import { usePlanProgress } from '@/hooks/use-plan-progress'
 import { usePrinting } from '@/hooks/use-printing'
 import { useProfiles } from '@/hooks/use-profiles'
 import { useSession } from '@/hooks/use-session'
@@ -57,6 +59,7 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
   const { plan, isPending, isRecalculating, hasNoPlan, forbidden, problem, refetch } =
     usePlan(tripId)
   const creation = useCreatePlan(tripId)
+  const progress = usePlanProgress(tripId, creation.isPending || isRecalculating)
   const session = useSession()
   const { people } = useProfiles(tripId, session.status)
   const feedback = usePlaceFeedback(tripId)
@@ -136,6 +139,7 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
                   {creation.isPending ? m.plan_computing() : m.plan_compute()}
                 </Button>
               )}
+              {(creation.isPending || isRecalculating) && <PlanProgress progress={progress} />}
               {failure}
             </div>
           }
@@ -214,6 +218,7 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
           >
             {recalculating && m.plan_recomputing_status()}
           </div>
+          {recalculating && <PlanProgress progress={progress} />}
           {plan.params.draft && <DraftBanner assumptions={assumptions} />}
           <TripPlanProposal tripId={tripId} canManage={canBuild} plan={plan} />
           <div data-tour={TOUR.planSummary}>
