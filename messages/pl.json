@@ -20,42 +20,28 @@
   "trips_title": "Wyjazdy",
   "trips_tagline": "Plany, które układacie razem.",
   "trips_count": [
-    [
-      [
-        "declarations",
-        [
-          "input count",
-          "local countPlural = count: plural"
-        ]
-      ],
-      [
-        "selectors",
-        [
-          "countPlural"
-        ]
-      ],
-      [
-        "match",
-        [
-          [
-            "countPlural=one",
-            "{count} wyjazd"
-          ],
-          [
-            "countPlural=few",
-            "{count} wyjazdy"
-          ],
-          [
-            "countPlural=many",
-            "{count} wyjazdów"
-          ],
-          [
-            "countPlural=*",
-            "{count} wyjazdu"
-          ]
-        ]
-      ]
-    ]
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} wyjazd",
+        "countPlural=few": "{count} wyjazdy",
+        "countPlural=many": "{count} wyjazdów",
+        "countPlural=*": "{count} wyjazdu"
+      }
+    }
+  ],
+  "trips_count_filtered": [
+    {
+      "declarations": ["input count", "input total", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} wyjazd z {total}",
+        "countPlural=few": "{count} wyjazdy z {total}",
+        "countPlural=many": "{count} wyjazdów z {total}",
+        "countPlural=*": "{count} wyjazdu z {total}"
+      }
+    }
   ],
   "trips_login_failed_title": "Logowanie nie powiodło się",
   "action_retry": "Spróbuj ponownie",
@@ -197,82 +183,30 @@
   "plan_print_footer": "Plan z TuttiTrip, wersja {n}",
   "plan_total": "Koszt planu dla całej grupy: {amount}",
   "plan_lodging": [
-    [
-      [
-        "declarations",
-        [
-          "input count",
-          "local countPlural = count: plural"
-        ]
-      ],
-      [
-        "selectors",
-        [
-          "countPlural"
-        ]
-      ],
-      [
-        "match",
-        [
-          [
-            "countPlural=one",
-            "Nocleg: {name}, {count} noc. {cost}"
-          ],
-          [
-            "countPlural=few",
-            "Nocleg: {name}, {count} noce. {cost}"
-          ],
-          [
-            "countPlural=many",
-            "Nocleg: {name}, {count} nocy. {cost}"
-          ],
-          [
-            "countPlural=*",
-            "Nocleg: {name}, {count} nocy. {cost}"
-          ]
-        ]
-      ]
-    ]
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Nocleg: {name}, {count} noc. {cost}",
+        "countPlural=few": "Nocleg: {name}, {count} noce. {cost}",
+        "countPlural=many": "Nocleg: {name}, {count} nocy. {cost}",
+        "countPlural=*": "Nocleg: {name}, {count} nocy. {cost}"
+      }
+    }
   ],
   "plan_lodging_cost": "{amount} za wszystkie noce",
   "plan_lodging_cost_none": "Cena noclegu: brak danych",
   "people_count": [
-    [
-      [
-        "declarations",
-        [
-          "input count",
-          "local countPlural = count: plural"
-        ]
-      ],
-      [
-        "selectors",
-        [
-          "countPlural"
-        ]
-      ],
-      [
-        "match",
-        [
-          [
-            "countPlural=one",
-            "{count} osoba"
-          ],
-          [
-            "countPlural=few",
-            "{count} osoby"
-          ],
-          [
-            "countPlural=many",
-            "{count} osób"
-          ],
-          [
-            "countPlural=*",
-            "{count} osoby"
-          ]
-        ]
-      ]
-    ]
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} osoba",
+        "countPlural=few": "{count} osoby",
+        "countPlural=many": "{count} osób",
+        "countPlural=*": "{count} osoby"
+      }
+    }
   ],
   "people_add": "Dodaj osobę",
   "people_empty_title": "Nikogo tu jeszcze nie ma",
@@ -281,42 +215,16 @@
   "people_load_failed_title": "Nie udało się wczytać osób",
   "people_list_label": "Osoby na wyjeździe",
   "people_age": [
-    [
-      [
-        "declarations",
-        [
-          "input age",
-          "local agePlural = age: plural"
-        ]
-      ],
-      [
-        "selectors",
-        [
-          "agePlural"
-        ]
-      ],
-      [
-        "match",
-        [
-          [
-            "agePlural=one",
-            "{age} rok"
-          ],
-          [
-            "agePlural=few",
-            "{age} lata"
-          ],
-          [
-            "agePlural=many",
-            "{age} lat"
-          ],
-          [
-            "agePlural=*",
-            "{age} lata"
-          ]
-        ]
-      ]
-    ]
+    {
+      "declarations": ["input age", "local agePlural = age: plural"],
+      "selectors": ["agePlural"],
+      "match": {
+        "agePlural=one": "{age} rok",
+        "agePlural=few": "{age} lata",
+        "agePlural=many": "{age} lat",
+        "agePlural=*": "{age} lata"
+      }
+    }
   ],
   "people_group_toddler": "Maluch",
   "people_group_child": "Dziecko",
@@ -796,42 +704,16 @@
   "prefs_pool_more": "Dodaj punkt: {domain}",
   "prefs_pool_less": "Zabierz punkt: {domain}",
   "prefs_pool_remaining": [
-    [
-      [
-        "declarations",
-        [
-          "input count",
-          "local countPlural = count: plural"
-        ]
-      ],
-      [
-        "selectors",
-        [
-          "countPlural"
-        ]
-      ],
-      [
-        "match",
-        [
-          [
-            "countPlural=one",
-            "Została {count} kropka do rozdania"
-          ],
-          [
-            "countPlural=few",
-            "Zostały {count} kropki do rozdania"
-          ],
-          [
-            "countPlural=many",
-            "Zostało {count} kropek do rozdania"
-          ],
-          [
-            "countPlural=*",
-            "Zostało {count} kropek do rozdania"
-          ]
-        ]
-      ]
-    ]
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Została {count} kropka do rozdania",
+        "countPlural=few": "Zostały {count} kropki do rozdania",
+        "countPlural=many": "Zostało {count} kropek do rozdania",
+        "countPlural=*": "Zostało {count} kropek do rozdania"
+      }
+    }
   ],
   "prefs_pool_complete": "Wszystkie kropki rozdane.",
   "prefs_pool_need_all": "Rozdaj wszystkie kropki, żeby zapisać.",
