@@ -5,6 +5,8 @@ import { Composer } from '@/components/interview/composer'
 import { FirstSentenceInput } from '@/components/interview/first-sentence-input'
 import { InterviewCard } from '@/components/interview/interview-card'
 import { KnowledgePanel } from '@/components/interview/knowledge-panel'
+import { LiveCaptions } from '@/components/interview/live-captions'
+import { VoiceButton } from '@/components/interview/voice-button'
 import { EditPersonForm } from '@/components/profiles/person-form'
 import { ResponsiveModal } from '@/components/shared/responsive-modal'
 import { StatusMessage } from '@/components/shared/status-message'
@@ -19,9 +21,12 @@ import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
 import { useProfileActions } from '@/hooks/use-profile-actions'
 import { useSaveTrip } from '@/hooks/use-save-trip'
 import { useSession } from '@/hooks/use-session'
+import { useVoiceCall, type VoiceProblem } from '@/hooks/use-voice-call'
 import { collectedCount } from '@/lib/interview'
+import { VOICE_KNOWLEDGE_POLL_MS } from '@/lib/interview-constants'
 import { prefersReducedMotion } from '@/lib/motion'
 import { tripToFormValues } from '@/lib/trip-form'
+import { visibleCaptions } from '@/lib/voice-events'
 import { m } from '@/paraglide/messages'
 
 const ERROR_TEXT: Record<InterviewError, () => string> = {
@@ -30,7 +35,20 @@ const ERROR_TEXT: Record<InterviewError, () => string> = {
   busy: m.interview_error_busy,
   session: m.interview_error_session,
   offline: m.interview_error_offline,
+  spend_limit: m.interview_error_spend_limit,
+  timeout: m.interview_error_timeout,
+  unavailable: m.interview_error_unavailable,
   failed: m.interview_error_failed,
+}
+
+const VOICE_PROBLEM_TEXT: Record<VoiceProblem, () => string> = {
+  unsupported: m.interview_voice_problem_unsupported,
+  denied: m.interview_voice_problem_denied,
+  busy: m.interview_voice_problem_busy,
+  budget: m.interview_voice_problem_budget,
+  unavailable: m.interview_voice_problem_unavailable,
+  auth: m.interview_voice_problem_auth,
+  failed: m.interview_voice_problem_failed,
 }
 
 type Editing = { kind: 'trip' } | { kind: 'person'; id: string } | null
@@ -68,8 +86,20 @@ function InterviewWorkspace({
 }) {
   const session = useSession()
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
-  const knowledge = useKnowledge(tripId, session.status)
   const history = useInterviewSession(tripId, session.status)
+  const refreshKnowledge = useRef<() => unknown>(() => undefined)
+  const voice = useVoiceCall({
+    tripId,
+    startSession: history.startSession,
+    onEnded: () => void refreshKnowledge.current(),
+  })
+  // While the call runs the panel asks the API, because the tools save data without a snapshot.
+  const knowledge = useKnowledge(
+    tripId,
+    session.status,
+    voice.active ? VOICE_KNOWLEDGE_POLL_MS : undefined,
+  )
+  refreshKnowledge.current = knowledge.refresh
   const interview = useInterview({
     tripId,
     threadId: history.threadId,
@@ -116,7 +146,7 @@ function InterviewWorkspace({
     )
   }
 
-  const started = lines.length > 0 || interview.running
+  const started = lines.length > 0 || interview.running || voice.captions.length > 0
   const collected = collectedCount(knowledge.knowledge)
   const closeEditing = () => setEditing(null)
   const editedProfile =
@@ -168,8 +198,42 @@ function InterviewWorkspace({
             working={interview.running && interview.view.tools.some((tool) => !tool.done)}
           />
         ) : (
-          <FirstSentenceInput disabled={interview.running} onSubmit={interview.send} />
+          <FirstSentenceInput
+            disabled={interview.running || voice.active}
+            onSubmit={interview.send}
+          />
         )}
+
+        <section className="flex flex-col gap-3">
+          <VoiceButton
+            status={voice.status}
+            speaking={voice.speaking}
+            disabled={interview.running}
+            onStart={() => void voice.start()}
+            onStop={() => void voice.stop()}
+          />
+          {voice.problem && (
+            <div
+              role="alert"
+              className="flex flex-col items-start gap-3 rounded-lg border border-destructive/40 p-4 text-sm"
+            >
+              <p>{VOICE_PROBLEM_TEXT[voice.problem]()}</p>
+              {voice.problem === 'auth' && (
+                <Button className="h-11" onClick={session.login}>
+                  {m.interview_login_again()}
+                </Button>
+              )}
+            </div>
+          )}
+          {(voice.active || voice.captions.length > 0) && (
+            <LiveCaptions captions={visibleCaptions(voice.captions)} showNotice />
+          )}
+          {voice.status === 'ended' && !voice.problem && (
+            <p role="status" className="text-muted-foreground text-sm">
+              {m.interview_voice_ended()}
+            </p>
+          )}
+        </section>
 
         {interview.error && (
           <div
@@ -204,7 +268,10 @@ function InterviewWorkspace({
 
         {started && (
           <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 -mx-4 border-t bg-background px-4 py-3 md:bottom-0 md:mx-0 md:border-t-0 md:px-0">
-            <Composer disabled={interview.running} onSend={(text) => void interview.send(text)}>
+            <Composer
+              disabled={interview.running || voice.active}
+              onSend={(text) => void interview.send(text)}
+            >
               {panelButton}
             </Composer>
           </div>

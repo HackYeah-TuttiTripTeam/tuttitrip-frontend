@@ -1849,6 +1849,107 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/interview/agui": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Turn
+         * @description Run one turn of the text interview and stream it as AG-UI events (SSE).
+         *
+         *     Body: AG-UI `RunAgentInput` with `threadId` = the session id from
+         *     `POST .../sessions`. Only the text of the **last user message** is used:
+         *     the server keeps the history, the tools and the state, and ignores the
+         *     client's `state`, `tools`, `resume` and earlier messages. The answer to a
+         *     card is that text too. Events: `RUN_STARTED`, `TEXT_MESSAGE_*`,
+         *     `TOOL_CALL_*`, `STATE_SNAPSHOT` (`InterviewState`) after every tool that
+         *     changes the panel or the card, and `RUN_FINISHED` or `RUN_ERROR` (Polish
+         *     `message`, `code`: `spend_limit`, `timeout`, `unavailable`, `error`). One
+         *     turn per session at a time.
+         *
+         *     Args:
+         *         request: The AG-UI request.
+         *         membership: The caller's membership (co-host or above).
+         *         session: Database session (history is read before the stream starts).
+         *
+         *     Returns:
+         *         The SSE stream.
+         *
+         *     Wymagane uprawnienie: `interview:WRITE`.
+         */
+        post: operations["run_turn_api_v1_trips__trip_id__interview_agui_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/interview/voice/offer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Voice Offer
+         * @description Start a voice interview: relay the browser's WebRTC offer.
+         *
+         *     The browser sends audio straight to OpenAI; the server attaches a sideband
+         *     that runs the interview tools with the caller's membership. The answer is
+         *     returned once the sideband is attached. The conversation is stored in the
+         *     interview session when it ends (hang-up, time limit). The panel is not
+         *     pushed during a call: re-read `GET .../knowledge`.
+         *
+         *     Args:
+         *         body: The SDP offer.
+         *         membership: The caller's membership (co-host or above).
+         *
+         *     Returns:
+         *         The SDP answer and the call id.
+         *
+         *     Wymagane uprawnienie: `interview:WRITE`.
+         */
+        post: operations["voice_offer_api_v1_trips__trip_id__interview_voice_offer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/interview/voice/{call_id}/hangup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Voice Hangup
+         * @description End a voice interview and store its transcript in the session.
+         *
+         *     Args:
+         *         call_id: The id from the offer's answer.
+         *         membership: The caller's membership (co-host or above).
+         *
+         *     Wymagane uprawnienie: `interview:WRITE`.
+         */
+        post: operations["voice_hangup_api_v1_trips__trip_id__interview_voice__call_id__hangup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/planning/jobs": {
         parameters: {
             query?: never;
@@ -2620,6 +2721,12 @@ export interface components {
          */
         BudgetZone: "below_b_from" | "up_to_b_to" | "in_margin";
         /**
+         * CardKind
+         * @description UI card the web client renders for a question (the cards of plan.md).
+         * @enum {string}
+         */
+        CardKind: "family_builder" | "slider" | "requirement_toggles" | "swipe" | "dot_pool" | "budget_range" | "choice" | "confirm";
+        /**
          * CheckinRead
          * @description One check-in as the trip's members see it.
          */
@@ -3306,6 +3413,19 @@ export interface components {
              */
             message_count: number;
             messages: components["schemas"]["Page_DisplayMessage_"];
+        };
+        /**
+         * InterviewState
+         * @description The AG-UI shared state, sent as ``STATE_SNAPSHOT`` after the tools.
+         *
+         *     Built by the server on every turn. The ``state`` of a client request is
+         *     ignored.
+         */
+        InterviewState: {
+            /** @description The "What we already know" panel. */
+            knowledge?: components["schemas"]["KnowledgeRead"] | null;
+            /** @description The card to render. */
+            card?: components["schemas"]["ShownCard"] | null;
         };
         /**
          * InvitationAccept
@@ -5216,6 +5336,12 @@ export interface components {
             detail: components["schemas"]["ProviderManagedDetail"];
         };
         /**
+         * QuestionField
+         * @description What a question is about; finer than ``KnowledgeField``.
+         * @enum {string}
+         */
+        QuestionField: "destination" | "dates" | "people" | "budget" | "pace" | "importance" | "requirements" | "interests" | "diet";
+        /**
          * RatingRead
          * @description A stored rating.
          */
@@ -5597,6 +5723,23 @@ export interface components {
              * @description Empty for `equal`, percent for `percent` (all must sum to exactly 100), weight for `weights`.
              */
             value?: number | string | null;
+        };
+        /**
+         * ShownCard
+         * @description The card the assistant put on screen (``show_card`` of the AG-UI state).
+         *
+         *     The host's answer is not a tool result: the client sends it as the text of
+         *     the next user message (a JSON object is fine; the assistant reads it).
+         */
+        ShownCard: {
+            kind: components["schemas"]["CardKind"];
+            /** Question */
+            question: string;
+            field?: components["schemas"]["QuestionField"] | null;
+            /** Person Id */
+            person_id?: string | null;
+            /** Options */
+            options?: string[];
         };
         /**
          * SortDir
@@ -6026,6 +6169,33 @@ export interface components {
             revoked_at: string | null;
             /** Revoked By Sub */
             revoked_by_sub: string | null;
+        };
+        /**
+         * VoiceAnswer
+         * @description The provider's answer; the server's sideband is already attached.
+         */
+        VoiceAnswer: {
+            /**
+             * Sdp
+             * @description SDP answer: set it as the remote description.
+             */
+            sdp: string;
+            /**
+             * Call Id
+             * @description Use it to hang up.
+             */
+            call_id: string;
+        };
+        /**
+         * VoiceOffer
+         * @description The browser's WebRTC offer.
+         */
+        VoiceOffer: {
+            /**
+             * Sdp
+             * @description SDP offer.
+             */
+            sdp: string;
         };
         /**
          * VoteLinkCreate
@@ -10562,6 +10732,184 @@ export interface operations {
             };
             /** @description Brak uprawnienia `places.catalog:READ` */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_turn_api_v1_trips__trip_id__interview_agui_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description AG-UI 1.0 events (SSE) of one turn. The schema is the `snapshot` of `STATE_SNAPSHOT`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["InterviewState"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `interview:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such session on this trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A turn is running, or the history is unreadable. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a RunAgentInput, bad threadId, or no user text. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    voice_offer_api_v1_trips__trip_id__interview_voice_offer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceOffer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceAnswer"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `interview:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A call or a text turn is running. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Voice time used up. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The voice service refused, or the assistant did not join. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    voice_hangup_api_v1_trips__trip_id__interview_voice__call_id__hangup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                call_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `interview:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such call on this trip. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

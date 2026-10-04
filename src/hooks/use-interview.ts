@@ -12,7 +12,32 @@ import {
 } from '@/lib/interview'
 
 /** Why the last run failed; the view picks the words and the action for each. */
-export type InterviewError = 'auth' | 'forbidden' | 'busy' | 'session' | 'offline' | 'failed'
+export type InterviewError =
+  | 'auth'
+  | 'forbidden'
+  | 'busy'
+  | 'session'
+  | 'offline'
+  | 'spend_limit'
+  | 'timeout'
+  | 'unavailable'
+  | 'failed'
+
+/** A RUN_ERROR of the stream: the server's Polish message and its stable `code`. */
+export class RunStreamError extends Error {
+  readonly code: string | null
+  constructor(message: string, code: string | null) {
+    super(message)
+    this.name = 'RunStreamError'
+    this.code = code
+  }
+}
+
+const STREAM_CODES: Record<string, InterviewError> = {
+  spend_limit: 'spend_limit',
+  timeout: 'timeout',
+  unavailable: 'unavailable',
+}
 
 const AUTH0_LOGIN_ERRORS = ['login_required', 'consent_required', 'missing_refresh_token']
 
@@ -25,6 +50,7 @@ const isAuth0LoginError = (error: unknown) =>
   AUTH0_LOGIN_ERRORS.includes(error.error)
 
 export function classifyRunError(error: unknown): InterviewError {
+  if (error instanceof RunStreamError) return (error.code && STREAM_CODES[error.code]) || 'failed'
   if (isAuth0LoginError(error)) return 'auth'
   if (error instanceof ApiError) {
     if (error.status === 401) return 'auth'
@@ -79,7 +105,7 @@ export function useInterview({
   const idRef = useRef(threadId)
   if (threadId) idRef.current = threadId
   /** A RUN_ERROR event: the run can end without the promise rejecting. */
-  const runErrorRef = useRef<string | null>(null)
+  const runErrorRef = useRef<RunStreamError | null>(null)
   const callbacks = useRef({ onKnowledge, onRunEnd })
   callbacks.current = { onKnowledge, onRunEnd }
 
@@ -115,7 +141,7 @@ export function useInterview({
           if (parsed.knowledge) callbacks.current.onKnowledge(parsed.knowledge)
         },
         onRunErrorEvent: ({ event }) => {
-          runErrorRef.current = event.message
+          runErrorRef.current = new RunStreamError(event.message, event.code ?? null)
         },
         onEvent: ({ event }) => {
           setView((previous) => reduceStreamEvent(previous, event))
@@ -141,7 +167,7 @@ export function useInterview({
     agent.setMessages([{ id: user.id, role: 'user', content: user.text }])
     try {
       await agent.runAgent()
-      if (runErrorRef.current !== null) throw new Error(runErrorRef.current)
+      if (runErrorRef.current !== null) throw runErrorRef.current
       const answer = assistantLines(agent)
       setSaid((previous) => [...previous, ...answer])
       setFailed(null)

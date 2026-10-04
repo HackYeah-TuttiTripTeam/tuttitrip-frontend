@@ -9,12 +9,14 @@ import type { SessionStatus } from './use-session'
  * an edit made anywhere shows here); a STATE_SNAPSHOT from the stream only makes the panel
  * quicker, and the panel refetches when the run ends.
  */
-export function useKnowledge(tripId: string, sessionStatus: SessionStatus) {
+export function useKnowledge(tripId: string, sessionStatus: SessionStatus, pollMs?: number) {
   const queryClient = useQueryClient()
   const options = knowledgeQueryOptions(tripId)
   const query = useQuery({
     ...options,
     enabled: sessionStatus === 'authenticated' || sessionStatus === 'disabled',
+    // During a voice call the tools save data the stream does not announce.
+    refetchInterval: pollMs,
   })
 
   const applySnapshot = useCallback(

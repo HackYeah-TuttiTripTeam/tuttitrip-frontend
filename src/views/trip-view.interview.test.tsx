@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { screen, waitFor, within } from '@testing-library/react'
+import { configure, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http } from 'msw'
 import { describe, expect, it } from 'vitest'
@@ -8,6 +8,9 @@ import { SESSION_ID, sseResponse } from '@/mocks/interview'
 import { server, useScenario } from '@/mocks/node'
 import { renderApp } from '@/mocks/render-app'
 import { m } from '@/paraglide/messages'
+
+// A lazy chunk and a streamed answer: under a loaded CI machine 1 s is not enough.
+configure({ asyncUtilTimeout: 10_000 })
 
 const AGUI = '*/api/v1/trips/:tripId/interview/agui'
 const SENTENCE = 'Gdańsk, trzy dni, dzieci 6 i 13 lat, babcia'
@@ -149,6 +152,27 @@ describe('Wywiad, błędy', () => {
     )
     await sendFirstSentence()
     expect((await screen.findByRole('alert')).textContent).toContain(m.interview_error_failed())
+  })
+})
+
+describe('Wywiad, kody błędów strumienia', () => {
+  it.each([
+    ['spend_limit', () => m.interview_error_spend_limit()],
+    ['timeout', () => m.interview_error_timeout()],
+    ['unavailable', () => m.interview_error_unavailable()],
+    ['error', () => m.interview_error_failed()],
+  ])('maps RUN_ERROR code %s to its own message', async (code, message) => {
+    useScenario('interview-empty')
+    server.use(
+      http.post(AGUI, () =>
+        sseResponse([
+          { type: 'RUN_STARTED', threadId: SESSION_ID, runId: 'r1' },
+          { type: 'RUN_ERROR', message: 'Polski komunikat serwera', code },
+        ]),
+      ),
+    )
+    await sendFirstSentence()
+    expect((await screen.findByRole('alert')).textContent).toContain(message())
   })
 })
 

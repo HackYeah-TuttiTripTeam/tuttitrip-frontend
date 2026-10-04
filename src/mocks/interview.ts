@@ -40,6 +40,11 @@ export interface InterviewWorld {
   turn: number
   /** A run answers with this status instead of a stream (401 expired session, 409 run going). */
   runStatus?: number
+  /** The voice offer answers with this status instead of an SDP answer (409, 429, 503). */
+  voiceOfferStatus?: number
+  /** Calls the server holds, and the ones that were hung up (the test reads both). */
+  calls: string[]
+  hangups: string[]
   /** The stream is cut after this many events, like a dropped connection. */
   cutAfter?: number
 }
@@ -50,6 +55,8 @@ export const emptyInterviewWorld = (): InterviewWorld => ({
   written: {},
   script: defaultScript(),
   turn: 0,
+  calls: [],
+  hangups: [],
 })
 
 export const resumedMessages = (count: number): Message[] =>
@@ -322,6 +329,36 @@ export function interviewHandlers({
       const found = guard(params.tripId)
       if (found instanceof HttpResponse) return found
       return HttpResponse.json(knowledgeOf(world, found))
+    }),
+
+    http.post(`${api}/trips/:tripId/interview/voice/offer`, async ({ params }) => {
+      await latency()
+      const found = guard(params.tripId)
+      if (found instanceof HttpResponse) return found
+      if (!world.interview.started) {
+        return HttpResponse.json(
+          { detail: 'The trip has no open interview session' },
+          { status: 404 },
+        )
+      }
+      if (world.interview.voiceOfferStatus) {
+        return HttpResponse.json({ detail: 'mock' }, { status: world.interview.voiceOfferStatus })
+      }
+      const callId = `call_${world.interview.calls.length + 1}`
+      world.interview.calls.push(callId)
+      return HttpResponse.json({ sdp: 'v=0\r\nmock-answer', call_id: callId })
+    }),
+
+    http.post(`${api}/trips/:tripId/interview/voice/:callId/hangup`, async ({ params }) => {
+      await latency()
+      const found = guard(params.tripId)
+      if (found instanceof HttpResponse) return found
+      const callId = String(params.callId)
+      if (!world.interview.calls.includes(callId)) {
+        return HttpResponse.json({ detail: 'No such call' }, { status: 404 })
+      }
+      world.interview.hangups.push(callId)
+      return new HttpResponse(null, { status: 204 })
     }),
 
     http.post(`${api}/trips/:tripId/interview/agui`, async ({ params, request }) => {

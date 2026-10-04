@@ -264,6 +264,16 @@ is the truth; the panel refetches after every run and edits go through the trips
 `api/interview-events.ts` folds all 31 AG-UI 1.0 events (8 families) into the run view; RAW and
 CUSTOM land in `unhandled` (logged in dev). Mock: scenarios `interview-empty` and
 `interview-resumed`, `sseResponse()` in `src/mocks/interview.ts` for tests that script a stream.
+A RUN_ERROR carries `code` (`spend_limit`, `timeout`, `unavailable`, `error`), each with its own
+message; 409 means a text turn or a voice call is already running.
+
+Voice (`hooks/use-voice-call.ts`, `components/interview/voice-button.tsx`, `live-captions.tsx`):
+WebRTC straight to the provider, our API only answers the SDP offer
+(`POST …/interview/voice/offer`) and hangs up (`…/{call_id}/hangup`). The microphone and the audio
+start on a tap; stop releases the mic first, then tells the server; closing the page sends a
+`keepalive` hang-up (`api/voice.ts`). Captions come from the data-channel events (`lib/voice-events.ts`,
+keyed by item id, so a late user transcript keeps its place). A call and a text turn exclude each other.
+No microphone or no WebRTC leaves the text field.
 
 ## Data flow for a feature (example: trips)
 

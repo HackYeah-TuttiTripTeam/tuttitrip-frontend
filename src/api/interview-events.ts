@@ -66,6 +66,8 @@ export interface RunView {
   status: 'idle' | 'running' | 'finished' | 'failed'
   /** Message of RUN_ERROR, if the run failed that way. */
   failure: string | null
+  /** `code` of RUN_ERROR (`spend_limit`, `timeout`, `unavailable`, `error`), if the server sent one. */
+  failureCode: string | null
   steps: { name: string; done: boolean }[]
   tools: ToolCallView[]
   /** Reasoning text of the current run, shown folded as "The assistant thinks". */
@@ -92,6 +94,7 @@ const emptySeen = (): Record<EventFamily, number> => ({
 export const EMPTY_RUN_VIEW: RunView = {
   status: 'idle',
   failure: null,
+  failureCode: null,
   steps: [],
   tools: [],
   reasoning: '',
@@ -126,7 +129,13 @@ export function reduceRunEvent(view: RunView, event: Event): RunView {
     case EventType.RUN_FINISHED:
       return { ...next, status: 'finished', thinking: false }
     case EventType.RUN_ERROR:
-      return { ...next, status: 'failed', failure: event.message, thinking: false }
+      return {
+        ...next,
+        status: 'failed',
+        failure: event.message,
+        failureCode: event.code ?? null,
+        thinking: false,
+      }
     case EventType.STEP_STARTED:
       return { ...next, steps: [...next.steps, { name: event.stepName, done: false }] }
     case EventType.STEP_FINISHED:

@@ -84,7 +84,7 @@ const RECORDED_RUN: { type: EventType; [key: string]: unknown }[] = [
 
 const FAILED_RUN: { type: EventType; [key: string]: unknown }[] = [
   { type: EventType.RUN_STARTED, threadId: thread, runId: 'r2' },
-  { type: EventType.RUN_ERROR, message: 'Budżet wyczerpany' },
+  { type: EventType.RUN_ERROR, message: 'Budżet wyczerpany', code: 'spend_limit' },
 ]
 
 function renderInterview() {
@@ -151,7 +151,8 @@ describe('useInterview, a recorded stream with every AG-UI 1.0 event', () => {
     await act(() => result.current.send('Cześć'))
     expect(result.current.view.status).toBe('failed')
     expect(result.current.view.failure).toBe('Budżet wyczerpany')
-    expect(result.current.error).toBe('failed')
+    expect(result.current.view.failureCode).toBe('spend_limit')
+    expect(result.current.error).toBe('spend_limit')
     expect(result.current.canRetry).toBe(true)
   })
 

@@ -1,10 +1,8 @@
 import type { InterviewCard as Card } from '@/lib/interview'
-import { m } from '@/paraglide/messages'
 import { CardBudgetRange } from './card-budget-range'
 import { CardChoice } from './card-choice'
 import { CardDotPool } from './card-dot-pool'
 import { CardFamily } from './card-family'
-import { CardFrame } from './card-frame'
 import { CardSlider } from './card-slider'
 import { CardSwipe } from './card-swipe'
 import { CardToggles } from './card-toggles'
@@ -35,11 +33,5 @@ export function InterviewCard({ card, disabled, onAnswer }: InterviewCardProps) 
       return <CardFamily {...props} />
     case 'dot_pool':
       return <CardDotPool {...props} />
-    case 'text':
-      return (
-        <CardFrame question={card.question}>
-          <p className="text-muted-foreground text-sm">{m.interview_card_unknown()}</p>
-        </CardFrame>
-      )
   }
 }

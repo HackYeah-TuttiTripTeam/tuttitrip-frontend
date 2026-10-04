@@ -46,3 +46,12 @@ export const AGUI_PATH = 'interview/agui'
 
 /** Ctrl or Cmd with this key sends the sentence from the first-sentence field. */
 export const SEND_SHORTCUT_KEY = 'Enter'
+
+/** Label of the WebRTC data channel the provider sends its events on. */
+export const VOICE_DATA_CHANNEL = 'oai-events'
+
+/** While a voice call runs the panel asks the API for the data the tools saved this often (ms). */
+export const VOICE_KNOWLEDGE_POLL_MS = 4000
+
+/** Path (after `/api/v1/trips/{id}/`) of the voice endpoints. */
+export const VOICE_PATH = 'interview/voice'

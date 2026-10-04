@@ -8,7 +8,6 @@ export const CARD_KINDS = [
   'confirm',
   'slider',
   'dot_pool',
-  'text',
   'family_builder',
   'requirement_toggles',
   'swipe',
@@ -22,6 +21,10 @@ export interface InterviewCard {
   kind: CardKind
   question: string
   options: string[]
+  /** What the question is about (`QuestionField`), when the server says. */
+  field?: Schemas['QuestionField']
+  /** The person the question is about, for cards that answer for one person. */
+  personId?: string
 }
 
 /** The AG-UI shared state as the client reads it. */
@@ -49,7 +52,9 @@ function parseCard(raw: unknown): InterviewCard | null {
   const options = Array.isArray(raw.options)
     ? raw.options.filter((option): option is string => typeof option === 'string')
     : []
-  return { kind: raw.kind, question: raw.question, options }
+  const field = typeof raw.field === 'string' ? (raw.field as Schemas['QuestionField']) : undefined
+  const personId = typeof raw.person_id === 'string' ? raw.person_id : undefined
+  return { kind: raw.kind, question: raw.question, options, field, personId }
 }
 
 /** The snapshot is a KnowledgeRead, either under `knowledge` or as the whole state. */
