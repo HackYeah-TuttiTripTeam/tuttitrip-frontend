@@ -76,7 +76,7 @@ describe('budget consent window', () => {
     await user.click(await screen.findByRole('button', { name: m.consent_reject() }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(await screen.findByText(/1\s580\szł/)).toBeTruthy()
-    expect(screen.queryByRole('status', { name: '' })?.textContent ?? '').not.toContain('90')
+    expect(screen.queryByText(/czeka na Twoją zgodę/)).toBeNull()
     expect(screen.queryByRole('button', { name: m.consent_banner_open() })).toBeNull()
   })
 
