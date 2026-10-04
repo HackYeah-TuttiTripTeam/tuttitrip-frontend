@@ -4,6 +4,7 @@ import { ApiError } from '@/api/errors'
 import { hangupOnPageClose } from '@/api/voice'
 import { VOICE_DATA_CHANNEL } from '@/lib/interview-constants'
 import { applyRealtimeEvent, EMPTY_VOICE_VIEW, type VoiceView } from '@/lib/voice-events'
+import { getLocale } from '@/paraglide/runtime'
 
 /** Developer-facing: the API answered 2xx without a body. */
 const EMPTY_ANSWER = 'empty-voice-answer'
@@ -139,7 +140,7 @@ export function useVoiceCall({ tripId, startSession, onEnded }: UseVoiceCallOpti
       await connection.setLocalDescription(offer)
       const { data } = await fetchClient.POST('/api/v1/trips/{trip_id}/interview/voice/offer', {
         params: { path: { trip_id: tripId } },
-        body: { sdp: offer.sdp ?? '' },
+        body: { sdp: offer.sdp ?? '', locale: getLocale() },
       })
       if (!data) throw new TypeError(EMPTY_ANSWER)
       const token = await currentAccessToken().catch(() => undefined)
