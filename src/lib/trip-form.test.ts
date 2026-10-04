@@ -40,6 +40,7 @@ const trip = (over: Partial<Trip> = {}): Trip => ({
   my_status: 'confirmed',
   kind: 'trip',
   propose_cheaper_alternatives: true,
+  is_sample: false,
   ...over,
 })
 
