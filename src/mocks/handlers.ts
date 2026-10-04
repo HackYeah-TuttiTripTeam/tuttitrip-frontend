@@ -1,6 +1,5 @@
 import { delay, HttpResponse, http, type RequestHandler } from 'msw'
 import type { Schemas } from '@/api/client'
-import { searchCities } from './city-search'
 import {
   centsToDecimal,
   compareDecimals,
@@ -8,6 +7,7 @@ import {
   sumDecimals,
   toCents,
 } from '@/lib/money'
+import { searchCities } from './city-search'
 import {
   checkin,
   type Expense,
