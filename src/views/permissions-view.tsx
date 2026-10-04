@@ -2,6 +2,7 @@ import { CloudOff, KeyRound, Plus, SearchX, ShieldCheck, TriangleAlert } from '@
 import { getRouteApi, Link } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import { ApiError } from '@/api/errors'
+import { AUDIT_LIMIT } from '@/api/queries/permissions'
 import { AuditList } from '@/components/permissions/audit-list'
 import { DeleteRoleConfirm } from '@/components/permissions/delete-role-confirm'
 import { PermissionsToolbar } from '@/components/permissions/permissions-toolbar'
@@ -28,7 +29,7 @@ import {
   useUserPermissions,
 } from '@/hooks/use-permissions'
 import { useSession } from '@/hooks/use-session'
-import { detailMessage, flattenFeatures } from '@/lib/permissions'
+import { detailMessage, flattenFeatures, isLockedRole } from '@/lib/permissions'
 import {
   PERMISSION_TABS,
   type PermissionTab,
@@ -85,7 +86,7 @@ export function PermissionsView() {
   const allRoles = useRoleNames({ enabled: allowed && open !== null })
   const tree = useFeatureTree({ enabled: allowed && open !== null })
   const rows = useMemo(() => (tree.data ? flattenFeatures(tree.data) : []), [tree.data])
-  const openedUser = useUserPermissions(open?.kind === 'user' ? open.id : null)
+  const openedUser = useUserPermissions(open?.kind === 'user' && allowed ? open.id : null)
 
   const list = search.tab === 'roles' ? roles : search.tab === 'users' ? users : audit
   useClampPage(search.page, list.isPending || list.problem ? undefined : list.pages, setPage)
@@ -227,7 +228,16 @@ export function PermissionsView() {
               {search.tab === 'users' && (
                 <UsersList subs={users.items} onOpen={(sub) => setOpen(`user:${sub}`)} />
               )}
-              {search.tab === 'audit' && <AuditList entries={audit.items} />}
+              {search.tab === 'audit' && (
+                <>
+                  {audit.total >= AUDIT_LIMIT && (
+                    <p className="text-muted-foreground text-sm">
+                      {m.perm_audit_limit({ count: AUDIT_LIMIT })}
+                    </p>
+                  )}
+                  <AuditList entries={audit.items} />
+                </>
+              )}
               <PaginationBar
                 page={Math.min(search.page, Math.max(list.pages, 1))}
                 pages={list.pages}
@@ -243,7 +253,9 @@ export function PermissionsView() {
 
       <ResponsiveModal
         open={
-          open?.kind === 'role' && !confirmingDelete && (open.id === '' || editedRole !== undefined)
+          open?.kind === 'role' &&
+          !confirmingDelete &&
+          (open.id === '' ? !readOnly : editedRole !== undefined)
         }
         onOpenChange={(next) => !next && closeModal()}
         isDesktop={isDesktop}
@@ -252,7 +264,7 @@ export function PermissionsView() {
         }
         description={
           editedRole
-            ? editedRole.name === 'superadmin'
+            ? isLockedRole(editedRole.name)
               ? m.perm_role_description_locked()
               : m.perm_role_description_edit()
             : m.perm_role_description_new()

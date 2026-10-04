@@ -819,5 +819,6 @@
   "perm_audit_target": "About: {target}",
   "perm_audit_role": "Role: {role}",
   "perm_error_forbidden": "You cannot do that.",
-  "perm_error_generic": "Could not save the change. Try again."
+  "perm_error_generic": "Could not save the change. Try again.",
+  "perm_audit_limit": "Showing the latest {count} changes (API limit)."
 }

@@ -3,7 +3,7 @@ import { configure, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { fetchClient } from '@/api/client'
-import { useScenario } from '@/mocks/node'
+import { server, useScenario } from '@/mocks/node'
 import { renderApp } from '@/mocks/render-app'
 import { m } from '@/paraglide/messages'
 
@@ -122,5 +122,21 @@ describe('permissions panel', { timeout: 30_000 }, () => {
     renderApp('/admin/permissions?tab=audit')
     const items = await screen.findAllByText(/^(user\.role\.assign|role\.create)$/)
     expect(items.map((item) => item.textContent)).toEqual(['user.role.assign', 'role.create'])
+  })
+
+  it('does not open the new-role form in read-only mode, even from the URL', async () => {
+    useScenario('admin-readonly')
+    renderApp('/admin/permissions?open=role%3A')
+    expect(await roleButton('user')).toBeTruthy()
+    expect(screen.queryByLabelText(m.perm_role_name_label())).toBeNull()
+    expect(screen.queryByRole('button', { name: m.perm_role_create() })).toBeNull()
+  })
+
+  it('never asks for admin data when the account is not an admin', async () => {
+    const asked: string[] = []
+    server.events.on('request:start', ({ request }) => asked.push(new URL(request.url).pathname))
+    renderApp('/admin/permissions?tab=users&open=user%3Aauth0%7Cx')
+    expect(await screen.findByText(m.perm_no_access_title())).toBeTruthy()
+    expect(asked.filter((path) => path.includes('/admin/'))).toEqual([])
   })
 })

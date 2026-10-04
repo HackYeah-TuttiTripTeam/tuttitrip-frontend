@@ -831,5 +831,6 @@
   "perm_audit_target": "Dotyczy: {target}",
   "perm_audit_role": "Rola: {role}",
   "perm_error_forbidden": "Nie możesz tego zrobić.",
-  "perm_error_generic": "Nie udało się zapisać zmiany. Spróbuj ponownie."
+  "perm_error_generic": "Nie udało się zapisać zmiany. Spróbuj ponownie.",
+  "perm_audit_limit": "Pokazuję {count} ostatnich zmian (limit API)."
 }

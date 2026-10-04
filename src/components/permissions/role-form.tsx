@@ -56,9 +56,10 @@ export function RoleForm({
   return (
     <form
       noValidate
-      onSubmit={form.handleSubmit((values) =>
-        onSave(values.name, values.description, mapToGrants(grants)),
-      )}
+      onSubmit={form.handleSubmit((values) => {
+        if (frozen) return
+        onSave(values.name, values.description, mapToGrants(grants))
+      })}
       className="flex flex-col gap-5 pb-[calc(1rem+env(safe-area-inset-bottom))]"
     >
       <FieldGroup className="gap-4">
@@ -70,6 +71,7 @@ export function RoleForm({
               autoComplete="off"
               autoCapitalize="none"
               spellCheck={false}
+              disabled={frozen}
               aria-invalid={Boolean(errors.name)}
               className="h-11 font-mono md:h-9"
               {...form.register('name')}
