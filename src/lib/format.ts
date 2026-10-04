@@ -170,3 +170,26 @@ export function budgetSummary(trip: BudgetFields): string | null {
     scope: byDay ? m.trip_budget_scope_day_short() : m.trip_budget_scope_total_short(),
   })
 }
+
+const relativeFormat = memoByLocale(
+  (tag) => new Intl.RelativeTimeFormat(tag, { numeric: 'auto', style: 'short' }),
+)
+const RELATIVE_STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['second', 60],
+  ['minute', 60],
+  ['hour', 24],
+  ['day', 7],
+  ['week', 4.345],
+  ['month', 12],
+  ['year', Number.POSITIVE_INFINITY],
+]
+
+/** "5 min temu" / "5 min ago": the largest unit that fits; `now` is injectable for tests. */
+export function formatRelative(iso: string, now: number = Date.now()): string {
+  let value = (new Date(iso).getTime() - now) / 1000
+  for (const [unit, size] of RELATIVE_STEPS) {
+    if (Math.abs(value) < size) return relativeFormat().format(Math.round(value), unit)
+    value /= size
+  }
+  return formatDate(iso)
+}

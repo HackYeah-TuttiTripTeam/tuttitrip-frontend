@@ -45,6 +45,8 @@ function recordRequests() {
   server.events.on('request:start', async ({ request }) => {
     const { pathname } = new URL(request.url)
     if (!pathname.startsWith('/api/v1/')) return
+    // The bell of a signed-in user polls on its own; the join flow is what these tests watch.
+    if (pathname.startsWith('/api/v1/notifications')) return
     seen.push({
       method: request.method,
       path: pathname,

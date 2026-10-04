@@ -10,7 +10,9 @@ import {
   type Invitation,
   invitation,
   type Member,
+  type Notification,
   needsApprovalBudget,
+  notifications,
   outing,
   type Plan,
   PROFILE_IDS,
@@ -40,6 +42,11 @@ export const scenarioNames = [
   'join-claim-taken',
   'join-named',
   'join-named-taken',
+  'notifications-inbox',
+  'notifications-empty',
+  'notifications-error',
+  'notifications-live',
+  'notifications-stream-down',
 ] as const
 
 export type ScenarioName = (typeof scenarioNames)[number]
@@ -81,6 +88,14 @@ export interface World {
   plan: Plan | null
   /** Invitations of the main trip, newest first (the host's list). */
   invitations: Invitation[]
+  /** The signed-in user's notifications, newest first; marking changes them in place. */
+  notifications: Notification[]
+  /** The live stream: `quiet` opens and stays silent, `live` adds a notification every few seconds, `down` answers 503. */
+  notificationStream: 'quiet' | 'live' | 'down'
+  /** How often the `live` stream adds a notification. */
+  notificationLiveEveryMs: number
+  /** Every /notifications call answers 500 (the rest of the API works). */
+  notificationsFail: boolean
   /** Whether POST /auth/demo accepts the invitation token (false: switched off, answers 404). */
   demoEnabled: boolean
   /** POST /auth/demo answers 429: too many attempts from this address. */
@@ -136,6 +151,10 @@ export function createWorld(name: ScenarioName): World {
     preferencesSaveFails: false,
     plan: plan(main.id),
     invitations: [invitation()],
+    notifications: notifications(6, 3),
+    notificationsFail: false,
+    notificationStream: 'quiet',
+    notificationLiveEveryMs: 4_000,
     demoEnabled: true,
     demoRateLimited: false,
     join: {
@@ -210,5 +229,15 @@ export function createWorld(name: ScenarioName): World {
           namedFor: PROFILE_IDS.zosia,
         },
       }
+    case 'notifications-inbox':
+      return { ...base, notifications: notifications(134, 40) }
+    case 'notifications-empty':
+      return { ...base, notifications: [] }
+    case 'notifications-error':
+      return { ...base, notificationsFail: true }
+    case 'notifications-live':
+      return { ...base, notificationStream: 'live' }
+    case 'notifications-stream-down':
+      return { ...base, notificationStream: 'down' }
   }
 }

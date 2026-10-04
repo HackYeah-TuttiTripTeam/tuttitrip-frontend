@@ -32,6 +32,13 @@ if (typeof window !== 'undefined' && !globalThis.ResizeObserver) {
   }
 }
 
+// vaul (the phone drawers) captures the pointer on press; jsdom has no pointer capture.
+if (typeof Element !== 'undefined') {
+  Element.prototype.setPointerCapture ??= () => undefined
+  Element.prototype.releasePointerCapture ??= () => undefined
+  Element.prototype.hasPointerCapture ??= () => false
+}
+
 // The router scrolls to the top on navigation; jsdom only prints "not implemented".
 if (typeof window !== 'undefined') window.scrollTo = () => undefined
 

@@ -1,7 +1,9 @@
 import { Map as MapIcon, Plus } from '@keyline-icons/react'
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
+import { NotificationMenu } from '@/components/notifications/notification-menu'
 import { Button } from '@/components/ui/button'
+import type { NotificationMenuProps } from '@/lib/notification-menu'
 import { m } from '@/paraglide/messages'
 import { AccountMenu, type AccountState } from './account-menu'
 import { BrandLogo } from './brand-mark'
@@ -17,6 +19,8 @@ interface AppShellProps {
   /** Deployment name; shown as a badge everywhere except production. */
   envLabel: string | null
   onCreateTrip: () => void
+  /** The bell with its panel; null when nobody is signed in. */
+  notifications: NotificationMenuProps | null
   /** Notice above the header bar, e.g. the demo account banner. */
   banner?: ReactNode
   children: ReactNode
@@ -32,6 +36,7 @@ export function AppShell({
   theme,
   envLabel,
   onCreateTrip,
+  notifications,
   banner,
   children,
 }: AppShellProps) {
@@ -67,9 +72,18 @@ export function AppShell({
             >
               {m.nav_trips()}
             </Link>
+            {notifications && (
+              <Link
+                to="/notifications"
+                className="ml-6 flex h-full items-center border-transparent border-b-2 text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:underline [&.active]:border-primary [&.active]:text-foreground"
+              >
+                {m.nav_notifications()}
+              </Link>
+            )}
           </nav>
 
           <div className="ml-auto flex items-center gap-1 md:gap-3">
+            {notifications && <NotificationMenu {...notifications} />}
             <LanguageMenu language={language} />
             <div className={account.status === 'authenticated' ? 'hidden md:block' : undefined}>
               <ThemeToggle state={theme} />

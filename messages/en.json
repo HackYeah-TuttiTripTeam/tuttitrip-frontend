@@ -730,5 +730,137 @@
   "trips_filter_city": "City",
   "trips_filter_city_all": "All cities",
   "trips_filter_start_from": "Starts from",
-  "trips_filter_start_to": "Starts until"
+  "trips_filter_start_to": "Starts until",
+  "nav_notifications": "Notifications",
+  "notif_title": "Notifications",
+  "notif_drawer_description": "The latest notifications and a link to the full history.",
+  "notif_bell_label": "Notifications",
+  "notif_bell_label_unread": "Notifications, unread: {count}",
+  "notif_unread": "Unread",
+  "notif_mark_all_read": "Mark all as read",
+  "notif_see_more": "See more",
+  "notif_load_failed": "Could not load notifications.",
+  "notif_load_failed_title": "Could not load notifications",
+  "notif_empty_title": "You have no notifications yet",
+  "notif_empty_body": "When someone joins a trip or a plan waits for your decision, you will see it here.",
+  "notif_unknown_title": "New notification",
+  "notif_member_joined_title": "New person on the trip",
+  "notif_member_joined_body": "New member: {name}",
+  "notif_member_joined_body_anon": "Someone joined the trip.",
+  "notif_veto_added_title": "New veto",
+  "notif_veto_added_body": "Veto on the place: {place}",
+  "notif_veto_added_body_person": "Veto on the place: {place} (person: {person})",
+  "notif_veto_added_body_anon": "Someone vetoed a place in the plan.",
+  "notif_proposal_waiting_title": "A proposal waits for a decision",
+  "notif_proposal_waiting_body": "Proposal: {name}",
+  "notif_proposal_waiting_body_anon": "A change proposal waits for your decision.",
+  "notif_budget_waiting_title": "Budget waits for approval",
+  "notif_budget_waiting_body": "Amount to approve: {amount}",
+  "notif_budget_waiting_body_anon": "The plan exceeds the budget and waits for your approval.",
+  "notif_plan_ready_title": "The plan is ready",
+  "notif_plan_ready_body": "You can review it and send your comments.",
+  "notif_type_member_joined": "New person",
+  "notif_type_veto_added": "Veto",
+  "notif_type_proposal_waiting": "Proposal",
+  "notif_type_budget_approval_waiting": "Budget",
+  "notif_type_plan_ready": "Plan ready",
+  "notif_type_other": "Other",
+  "notif_action_open_trip": "Open trip",
+  "notif_action_open_people": "See people",
+  "notif_action_open_plan": "See plan",
+  "notif_page_title": "Notifications",
+  "notif_page_tagline": "The history of what happened on your trips.",
+  "notif_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} notification",
+        "countPlural=*": "{count} notifications"
+      }
+    }
+  ],
+  "notif_login_required_title": "Sign in to see your notifications",
+  "notif_login_required_body": "Notifications belong to your account.",
+  "notif_no_match_title": "No notifications match these filters",
+  "notif_no_match_body": "Change the filters or clear them to see the whole history.",
+  "notif_filters_clear": "Clear filters",
+  "notif_filter_read_label": "Read state",
+  "notif_filter_all": "All",
+  "notif_filter_unread": "Unread",
+  "notif_filter_read": "Read",
+  "notif_filter_type_all": "All types",
+  "notif_filter_type_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} type",
+        "countPlural=*": "{count} types"
+      }
+    }
+  ],
+  "notif_filter_trip": "Trip",
+  "notif_filter_trip_all": "All trips",
+  "notif_filter_from": "From",
+  "notif_filter_to": "To",
+  "notif_sort_by": "Sort by",
+  "notif_sort_ascending": "Sorted ascending, switch to descending",
+  "notif_sort_descending": "Sorted descending, switch to ascending",
+  "notif_column_content": "Notification",
+  "notif_column_type": "Type",
+  "notif_column_trip": "Trip",
+  "notif_column_date": "Date",
+  "notif_select_page": "Select all notifications on this page",
+  "notif_select_row": "Select notification: {title}",
+  "notif_selected_page": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} notification selected on this page.",
+        "countPlural=*": "{count} notifications selected on this page."
+      }
+    }
+  ],
+  "notif_selected_all_matching": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} matching notification selected.",
+        "countPlural=*": "All {count} matching notifications selected."
+      }
+    }
+  ],
+  "notif_select_all_matching": "Select all {total} matching",
+  "notif_mark_read": "Mark as read",
+  "notif_mark_unread": "Mark as unread",
+  "notif_clear_selection": "Clear selection",
+  "notif_marked_read": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} notification marked as read",
+        "countPlural=*": "{count} notifications marked as read"
+      }
+    }
+  ],
+  "notif_marked_unread": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} notification marked as unread",
+        "countPlural=*": "{count} notifications marked as unread"
+      }
+    }
+  ],
+  "notif_mark_failed": "Could not mark the notifications. Try again.",
+  "notif_toast_details": "Details",
+  "notif_dialog_trip": "Trip: {trip}",
+  "notif_dialog_type": "Type: {type}",
+  "notif_dialog_missing_title": "Notification not found",
+  "notif_dialog_missing_body": "It may have been removed or be older than the latest hundred. Look for it in the list."
 }
