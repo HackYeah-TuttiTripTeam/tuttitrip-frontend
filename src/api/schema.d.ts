@@ -2207,35 +2207,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/trips/{trip_id}/interview/voice/release": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Voice Release
-         * @description End the voice call of this trip's interview, wherever it runs.
-         *
-         *     For a call left on another device or by a tab that never hung up. The
-         *     transcript is stored and the session is free when this returns. Does
-         *     nothing when no call runs; a text turn is left to finish.
-         *
-         *     Args:
-         *         membership: The caller's membership (co-host or above).
-         *
-         *     Wymagane uprawnienie: `interview:WRITE`.
-         */
-        post: operations["voice_release_api_v1_trips__trip_id__interview_voice_release_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/trips/{trip_id}/interview/agui": {
         parameters: {
             query?: never;
@@ -2333,6 +2304,35 @@ export interface paths {
          *     Wymagane uprawnienie: `interview:WRITE`.
          */
         post: operations["voice_hangup_api_v1_trips__trip_id__interview_voice__call_id__hangup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/interview/voice/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Voice Release
+         * @description End the voice call of this trip's interview, wherever it runs.
+         *
+         *     For a call left on another device or by a tab that never hung up. The
+         *     transcript is stored and the session is free when this returns. Does
+         *     nothing when no call runs; a text turn is left to finish.
+         *
+         *     Args:
+         *         membership: The caller's membership (co-host or above).
+         *
+         *     Wymagane uprawnienie: `interview:WRITE`.
+         */
+        post: operations["voice_release_api_v1_trips__trip_id__interview_voice_release_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2530,6 +2530,50 @@ export interface paths {
         get: operations["get_plan_calendar_api_v1_trips__trip_id__plans__plan_id__calendar_ics_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/budget/days": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Budget of every day, what was spent and what is left
+         * @description For each day of the trip: the budget `from`/`to` (the trip's own day range, else the trip budget divided by the days), `B_max` with the trip's margin, the group's expenses that count against it (food, transport, activities and uncategorised ones; shopping, lodging and other are `outside_plan`) and what is left. A day is `over_budget` above `B_do`. `proposal` is the stored cheaper plan for the days after the last overrun, if one was made. The days are bounded by the trip's length, so they are not paginated.
+         *
+         *     Wymagane uprawnienie: `planning.plans:READ`.
+         */
+        get: operations["get_budget_days_api_v1_trips__trip_id__budget_days_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/budget/proposal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Propose cheaper days after an overrun
+         * @description When a day went over its budget and the trip's setting `propose_cheaper_alternatives` is on, plans the days after the last overrun with the budget that is left (B_od and B_do minus everything spent) by the same solver and goal as any plan, and stores the result as an alternative of the latest plan version (read it with `GET /trips/{trip_id}/plans/{plan_id}`). It changes the plan only when the host approves. A proposal that needs going over `B_do` goes through the consent of E6 (`needs_approval`, `kappa`). The same expenses and data return the same proposal with 200; with nothing to propose the answer is 200 and `skipped` says why.
+         *
+         *     Wymagane uprawnienie: `planning.plans:WRITE`.
+         */
+        post: operations["propose_cheaper_days_api_v1_trips__trip_id__budget_proposal_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4122,6 +4166,24 @@ export interface components {
             gain_points: number | null;
         };
         /**
+         * BudgetDaysRead
+         * @description The budget of every day of the trip and the proposal, if there is one.
+         */
+        BudgetDaysRead: {
+            /** Currency */
+            currency: string;
+            /** Propose Cheaper Alternatives */
+            propose_cheaper_alternatives: boolean;
+            /**
+             * Total Spent
+             * @description Counted expenses of the whole trip.
+             */
+            total_spent: string;
+            /** Days */
+            days: components["schemas"]["DayBudgetRead"][];
+            proposal?: components["schemas"]["BudgetProposalRead"] | null;
+        };
+        /**
          * BudgetDecisionCreate
          * @description The host's decision.
          *
@@ -4137,6 +4199,87 @@ export interface components {
          * @enum {string}
          */
         BudgetOutcome: "approved" | "rejected";
+        /**
+         * BudgetProposalRead
+         * @description A cheaper plan for the days after an overrun, waiting for the host.
+         *
+         *     Stored as an alternative of the latest plan version (``GET
+         *     /trips/{trip_id}/plans/{plan_id}`` returns it with its days and fairness
+         *     ledger); it replaces nothing until the host approves.
+         */
+        BudgetProposalRead: {
+            /**
+             * Plan Id
+             * Format: uuid
+             */
+            plan_id: string;
+            /**
+             * Version
+             * @description The plan version it is an alternative of.
+             */
+            version: number;
+            /**
+             * From Day
+             * @description First day the proposal replaces.
+             */
+            from_day: number;
+            /**
+             * From Date
+             * Format: date
+             */
+            from_date: string;
+            /**
+             * Overrun Days
+             * @description Days that went over B_do.
+             */
+            overrun_days: number[];
+            /**
+             * Budget To
+             * @description B_do left for the rest after the spending.
+             */
+            budget_to: string;
+            /**
+             * Cost
+             * @description Cost of the proposed days.
+             */
+            cost: string;
+            /**
+             * Previous Cost
+             * @description Cost of the same days in the plan.
+             */
+            previous_cost: string;
+            /**
+             * Cost Delta
+             * @description cost - previous_cost; negative: cheaper.
+             */
+            cost_delta: string;
+            /**
+             * Min R
+             * @description min r of the proposed days.
+             */
+            min_r: number;
+            /**
+             * Previous Min R
+             * @description min r of the same days in the plan; null if it no longer fits.
+             */
+            previous_min_r?: number | null;
+            /**
+             * Min R Delta
+             * @description min_r - previous.
+             */
+            min_r_delta?: number | null;
+            /**
+             * Needs Approval
+             * @description The proposal needs going over B_do: it goes through E6 (kappa).
+             */
+            needs_approval: boolean;
+            /**
+             * Kappa
+             * @description Price per point (E6); set iff needs_approval.
+             */
+            kappa?: string | null;
+            approval_status: components["schemas"]["ApprovalStatus"];
+        };
         /**
          * BudgetZone
          * @description Where the plan cost falls against the budget (E2 cost, E6).
@@ -4204,6 +4347,43 @@ export interface components {
          * @enum {string}
          */
         CityLang: "pl" | "en";
+        /**
+         * CityRead
+         * @description A city the planner covers.
+         */
+        CityRead: {
+            /** Slug */
+            slug: string;
+            /** Name */
+            name: string;
+            /**
+             * Country
+             * @description ISO 3166-1 alpha-2.
+             */
+            country: string;
+            /**
+             * Timezone
+             * @description IANA zone; opening hours are in this time.
+             */
+            timezone: string;
+            /**
+             * Currency
+             * @description ISO 4217.
+             */
+            currency: string;
+            /** Center Lat */
+            center_lat: number;
+            /** Center Lon */
+            center_lon: number;
+            /** Bbox South */
+            bbox_south: number;
+            /** Bbox West */
+            bbox_west: number;
+            /** Bbox North */
+            bbox_north: number;
+            /** Bbox East */
+            bbox_east: number;
+        };
         /**
          * CitySource
          * @description Where a suggestion comes from.
@@ -4274,43 +4454,6 @@ export interface components {
              * @description False when the geocoder was down, slow or over its request budget: only catalog cities are listed.
              */
             geocoder_available: boolean;
-        };
-        /**
-         * CityRead
-         * @description A city the planner covers.
-         */
-        CityRead: {
-            /** Slug */
-            slug: string;
-            /** Name */
-            name: string;
-            /**
-             * Country
-             * @description ISO 3166-1 alpha-2.
-             */
-            country: string;
-            /**
-             * Timezone
-             * @description IANA zone; opening hours are in this time.
-             */
-            timezone: string;
-            /**
-             * Currency
-             * @description ISO 4217.
-             */
-            currency: string;
-            /** Center Lat */
-            center_lat: number;
-            /** Center Lon */
-            center_lon: number;
-            /** Bbox South */
-            bbox_south: number;
-            /** Bbox West */
-            bbox_west: number;
-            /** Bbox North */
-            bbox_north: number;
-            /** Bbox East */
-            bbox_east: number;
         };
         /**
          * ClaimableProfile
@@ -4407,6 +4550,67 @@ export interface components {
          * @enum {string}
          */
         Currency: "PLN" | "EUR" | "GBP";
+        /**
+         * DayBudgetRead
+         * @description One day against its budget.
+         */
+        DayBudgetRead: {
+            /**
+             * Index
+             * @description 1-based day number.
+             */
+            index: number;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * Budget From
+             * @description B_od of the day.
+             */
+            budget_from: string;
+            /**
+             * Budget To
+             * @description B_do of the day.
+             */
+            budget_to: string;
+            /**
+             * Budget Max
+             * @description B_max of the day: B_do + the trip's margin.
+             */
+            budget_max: string;
+            /**
+             * Spent
+             * @description Expenses of the day that count: food, transport, activities and uncategorised ones.
+             */
+            spent: string;
+            /**
+             * Outside Plan
+             * @description Shopping, lodging and other expenses; they do not take the budget.
+             */
+            outside_plan: string;
+            /**
+             * Remaining
+             * @description B_do - spent; negative when over.
+             */
+            remaining: string;
+            /**
+             * Remaining Max
+             * @description B_max - spent; negative when over.
+             */
+            remaining_max: string;
+            /**
+             * Over Budget
+             * @description spent > B_do.
+             */
+            over_budget: boolean;
+            /**
+             * Over Max
+             * @description spent > B_max.
+             */
+            over_max: boolean;
+        };
         /**
          * DecisionEffects
          * @description What a decision costs: the plan with it minus the plan without it.
@@ -7403,6 +7607,11 @@ export interface components {
              * @description Solver name and version.
              */
             solver: string;
+            /**
+             * Status
+             * @description Status of the solver that has one (CP-SAT: OPTIMAL, FEASIBLE, or UNKNOWN when the local search took over); null for the local search.
+             */
+            status?: string | null;
             /** Steps */
             steps: number;
             /** Solo Runs */
@@ -7760,6 +7969,20 @@ export interface components {
          */
         ProposalDecision: "approve" | "reject" | "comment";
         /**
+         * ProposalOutcome
+         * @description Result of asking for a proposal.
+         */
+        ProposalOutcome: {
+            /**
+             * Created
+             * @description False: it existed already (same data).
+             */
+            created: boolean;
+            /** @description Why there is no proposal; null with one. */
+            skipped?: components["schemas"]["ProposalSkip"] | null;
+            proposal?: components["schemas"]["BudgetProposalRead"] | null;
+        };
+        /**
          * ProposalRead
          * @description A proposal with the status, the counts and the answers.
          */
@@ -7797,6 +8020,12 @@ export interface components {
             /** Profiles Without Account */
             profiles_without_account: components["schemas"]["ProfileWithoutAccount"][];
         };
+        /**
+         * ProposalSkip
+         * @description Why no proposal was made; the UI writes the text (PL/EN).
+         * @enum {string}
+         */
+        ProposalSkip: "disabled" | "no_overrun" | "no_days_left" | "no_saving";
         /**
          * ProposalStatus
          * @description The proposal as a whole.
@@ -8546,6 +8775,12 @@ export interface components {
              * @description Group goal alpha of E5 (0-3); 1 balances fairness and total utility.
              */
             fairness_alpha?: number | null;
+            /**
+             * Propose Cheaper Alternatives
+             * @description Propose cheaper days when a day goes over its budget (backend#89); on by default.
+             * @default true
+             */
+            propose_cheaper_alternatives: boolean | null;
         };
         /**
          * TripErrorCode
@@ -8611,6 +8846,12 @@ export interface components {
              * @description Group goal alpha of E5 (0-3); 1 balances fairness and total utility.
              */
             fairness_alpha: number;
+            /**
+             * Propose Cheaper Alternatives
+             * @description Propose cheaper days when a day goes over its budget (backend#89); on by default.
+             * @default true
+             */
+            propose_cheaper_alternatives: boolean;
             /** @description The caller's role on this trip. */
             my_role: components["schemas"]["TripRole"];
             /** @description Whether the caller confirmed they are going (`confirmed`). */
@@ -8682,6 +8923,11 @@ export interface components {
              * @description Group goal alpha of E5 (0-3); 1 balances fairness and total utility.
              */
             fairness_alpha?: number | null;
+            /**
+             * Propose Cheaper Alternatives
+             * @description Propose cheaper days when a day goes over its budget (backend#89); on by default.
+             */
+            propose_cheaper_alternatives?: boolean | null;
         };
         /**
          * TripValidationError
@@ -13301,6 +13547,56 @@ export interface operations {
             };
         };
     };
+    voice_release_api_v1_trips__trip_id__interview_voice_release_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `interview:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The trip has no interview. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     build_draft_plan_api_v1_trips__trip_id__interview_draft_plan_post: {
         parameters: {
             query?: never;
@@ -13665,6 +13961,115 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    get_budget_days_api_v1_trips__trip_id__budget_days_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetDaysRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The trip has no dates or no budget. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    propose_cheaper_days_api_v1_trips__trip_id__budget_proposal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Existing, or nothing to propose. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalOutcome"];
+                };
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalOutcome"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No plan yet, trip not found or caller not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No dates or budget, or the plan is outdated. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -15996,56 +16401,6 @@ export interface operations {
             };
             /** @description Brak uprawnienia `notifications:READ` */
             403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    voice_release_api_v1_trips__trip_id__interview_voice_release_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                trip_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Brak tokenu albo zły token */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Brak uprawnienia `interview:WRITE` */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description The trip has no interview. */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };
