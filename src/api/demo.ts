@@ -49,16 +49,27 @@ async function findDemoTripId(): Promise<string | undefined> {
   }
 }
 
-let inflight: Promise<string | undefined> | null = null
+let entered: { promise: Promise<string | undefined>; settled: boolean } | null = null
 
 /**
- * Exchanges the captured invitation token for a session and finds the demo trip. React's
- * StrictMode runs effects twice; the second call shares the first one's request.
- * A failed exchange leaves any existing session as it was.
+ * Exchanges the captured invitation token for a session and finds the demo trip. The page can
+ * run its effect more than once (StrictMode, a remount when the session changes the shell):
+ * every call while the session is being made, or after it was made, shares one request. A failed
+ * exchange is forgotten, and so is a finished session that has since ended.
  */
 export function enterDemo(): Promise<string | undefined> {
-  inflight ??= run().finally(() => {
-    inflight = null
-  })
-  return inflight
+  if (entered?.settled && getDemoStatus() !== 'active') entered = null
+  if (!entered) {
+    const current = { promise: run(), settled: false }
+    entered = current
+    current.promise.then(
+      () => {
+        current.settled = true
+      },
+      () => {
+        if (entered === current) entered = null
+      },
+    )
+  }
+  return entered.promise
 }
