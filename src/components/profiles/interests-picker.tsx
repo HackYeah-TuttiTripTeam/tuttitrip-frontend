@@ -9,7 +9,7 @@ import { ChipGroup, type ChipOption } from './chip-group'
  * Every interest tag the API knows, in the order shown. The same tags sit on places, so the
  * planner matches them. A new value in the contract fails `tsc` here until it has a label.
  */
-const INTEREST_LABELS: Record<InterestTag, () => string> = {
+export const INTEREST_LABELS: Record<InterestTag, () => string> = {
   history: m.prefs_interest_history,
   architecture: m.prefs_interest_architecture,
   art: m.prefs_interest_art,

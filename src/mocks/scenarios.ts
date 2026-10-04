@@ -1,4 +1,5 @@
 import type { Schemas } from '@/api/client'
+import type { Rating, Veto } from '@/api/queries/vetoes'
 import type { VotePlace } from '@/api/vote-contract'
 import type { CitySearchMode } from './city-search'
 import {
@@ -45,6 +46,7 @@ import {
 } from './fixtures'
 import { emptyInterviewWorld, emptyTrip, type InterviewWorld, resumedMessages } from './interview'
 import { adminMe, createPermissionsWorld, type PermissionsWorld } from './permissions'
+import { buildPlan, neutralInputs, type PlanInputs } from './plan-builder'
 import { answer, type ProposalState, sentProposal, staleProposal } from './proposals'
 
 export const scenarioNames = [
@@ -54,6 +56,9 @@ export const scenarioNames = [
   'no-plan',
   'others-share-location',
   'member-readonly',
+  'solo',
+  'floors-missed',
+  'recompute-error',
   'no-expenses',
   'many-expenses',
   'settlement-closed',
@@ -151,6 +156,14 @@ export interface World {
   settlementClosed: boolean
   /** The latest plan of the main trip; null until "Policz plan" creates one. */
   plan: Plan | null
+  /** The inputs the current plan was built from; a POST with the same inputs returns it again. */
+  planInputs: PlanInputs
+  /** Vetoes in force on the main trip, with their authors. */
+  vetoes: Veto[]
+  /** Ratings of the main trip's places, by every profile. */
+  ratings: Rating[]
+  /** POST /plans fails with 500 once there is a plan: a veto or a slider saves, the plan stays old. */
+  recomputeFails: boolean
   /** Check-ins (where everyone stays) of the main trip. */
   checkins: Checkin[]
   /** Photos of the main trip, in upload order (the handler sorts them). */
@@ -266,6 +279,10 @@ export function createWorld(name: ScenarioName): World {
     expenses: familyExpenses(),
     settlementClosed: false,
     plan: plan(main.id),
+    planInputs: neutralInputs(familyProfiles(), main.fairness_alpha),
+    vetoes: [],
+    ratings: [],
+    recomputeFails: false,
     checkins: familyCheckins(),
     photos: galleryPhotos(),
     locations: [],
@@ -323,6 +340,33 @@ export function createWorld(name: ScenarioName): World {
         trips: [trip({ my_role: 'member' }), outing({ my_role: 'member' })],
         members: familyMembers('member'),
       }
+    case 'solo': {
+      const alone = familyProfiles().slice(0, 1)
+      return {
+        ...base,
+        profiles: alone,
+        members: familyMembers().slice(0, 1),
+        planInputs: neutralInputs(alone, main.fairness_alpha),
+        plan: buildPlan(main.id, alone, neutralInputs(alone, main.fairness_alpha), 1),
+      }
+    }
+    case 'floors-missed':
+      return {
+        ...base,
+        plan: plan(main.id, {
+          floors_missed: [
+            { kind: 'floor', profile_id: PROFILE_IDS.babcia, shortfall: 6 },
+            { kind: 'own_place_day', profile_id: PROFILE_IDS.antek, shortfall: 1, day: 2 },
+          ],
+          violation: 0.35,
+          conflicts: [
+            { reason_code: 'floor_unreachable', profile_ids: [PROFILE_IDS.babcia] },
+            { reason_code: 'unknown_price', profile_ids: [] },
+          ],
+        }),
+      }
+    case 'recompute-error':
+      return { ...base, recomputeFails: true }
     case 'no-expenses':
       return { ...base, expenses: [] }
     case 'settlement-closed':
