@@ -5,6 +5,7 @@ import { clearDemoSession } from '@/lib/demo-session'
 import { authConfig, isDev } from '@/lib/env'
 import { m } from '@/paraglide/messages'
 import { useDemoStatus } from './use-demo-session'
+import { stopSharingBeforeLogout } from './use-locations'
 
 export type SessionStatus = 'disabled' | 'loading' | 'anonymous' | 'authenticated'
 
@@ -66,10 +67,13 @@ export function useSession(): Session {
       login: () => leaveDemo(),
       signup: () => leaveDemo({ authorizationParams: { screen_hint: 'signup' } }),
       logout: () => {
-        clearDemoSession()
-        // The next visitor of this tab must not see the jury's cached data.
-        queryClient.clear()
-        void navigate({ to: '/', replace: true })
+        // Location sharing ends with the session, while the token still works.
+        void stopSharingBeforeLogout().finally(() => {
+          clearDemoSession()
+          // The next visitor of this tab must not see the jury's cached data.
+          queryClient.clear()
+          void navigate({ to: '/', replace: true })
+        })
       },
     }
   }
@@ -107,7 +111,10 @@ export function useSession(): Session {
       })
     },
     logout: () => {
-      void auth0.logout({ logoutParams: { returnTo: window.location.origin } })
+      // Location sharing ends with the session, while the token still works.
+      void stopSharingBeforeLogout().finally(() => {
+        void auth0.logout({ logoutParams: { returnTo: window.location.origin } })
+      })
     },
   }
 }

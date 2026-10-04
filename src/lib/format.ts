@@ -147,6 +147,18 @@ export function formatDecimal(amount: string, currency = 'PLN'): string {
   }).format(amount as `${number}`)
 }
 
+/** A plain decimal string ("6.67") in the locale's notation, no float in between: "6,67" / "6.67". */
+export function formatDecimalNumber(value: string, maximumFractionDigits = 4): string {
+  return new Intl.NumberFormat(INTL_TAG[getLocale()], { maximumFractionDigits }).format(
+    value as `${number}`,
+  )
+}
+
+/** Money with a currency, or a plain two-decimal number when the API has no currency to name. */
+export function formatAmount(amount: string, currency: string | null): string {
+  return currency ? formatDecimal(amount, currency) : formatDecimalNumber(amount, 2)
+}
+
 interface BudgetFields {
   currency: string | null
   budget_total_min: string | null
@@ -192,4 +204,18 @@ export function formatRelative(iso: string, now: number = Date.now()): string {
     value /= size
   }
   return formatDate(iso)
+}
+
+const MS_PER_MINUTE = 60_000
+const MINUTES_PER_HOUR = 60
+const HOURS_PER_DAY = 24
+
+/** "5 min temu" / "5 min. ago": how long ago a position or an entry was updated. */
+export function formatAgo(iso: string, now: number = Date.now()): string {
+  const minutes = Math.round((new Date(iso).getTime() - now) / MS_PER_MINUTE)
+  const format = relativeFormat()
+  if (Math.abs(minutes) < MINUTES_PER_HOUR) return format.format(minutes, 'minute')
+  const hours = Math.round(minutes / MINUTES_PER_HOUR)
+  if (Math.abs(hours) < HOURS_PER_DAY) return format.format(hours, 'hour')
+  return format.format(Math.round(hours / HOURS_PER_DAY), 'day')
 }
