@@ -18,6 +18,20 @@ export function isProductionBuild(appEnv: string | undefined): boolean {
   return appEnv?.trim() === 'main'
 }
 
+const escapeAttr = (value: string) => value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
+
+/**
+ * Puts the descriptions into index.html: the Polish one in the meta tag (HTML-escaped), both in
+ * the inline language script as JSON (`<` escaped so a text can never close the script).
+ * Function replacers: the texts are data, `$&` in them must not be a pattern.
+ */
+export function injectDescriptions(html: string, texts: { pl: string; en: string }): string {
+  const json = JSON.stringify(texts).replaceAll('<', '\\u003c')
+  return html
+    .replaceAll('__DESCRIPTIONS__', () => json)
+    .replaceAll('%DESCRIPTION_PL%', () => escapeAttr(texts.pl))
+}
+
 /** Static files copied from public/ that the production service worker precaches. */
 export const includeAssets = [
   'favicon.ico',
@@ -39,7 +53,7 @@ export function workboxOptions(production: boolean): Workbox {
     // Outside production nothing is precached or cached at runtime, so the browser's own
     // HTTP cache (revalidated, see headersFile) is the only cache.
     // index.html is never precached; hashed assets and icons are in production.
-    globPatterns: production ? ['**/*.{js,css,svg,png,ico,webmanifest}'] : [],
+    globPatterns: production ? ['**/*.{js,css,svg,png,ico}'] : [],
     // Share images are for crawlers only; no need to precache them.
     globIgnores: ['og/*.png'],
     runtimeCaching: production
@@ -91,8 +105,6 @@ export function headersFile(production: boolean): string {
 /sw.js
   Cache-Control: no-cache
 /index.html
-  Cache-Control: no-cache
-/manifest.webmanifest
   Cache-Control: no-cache
 /sw-activate.js
   Cache-Control: no-cache
