@@ -558,7 +558,9 @@ export function createWorld(name: ScenarioName): World {
     case 'proposal-draft':
       return {
         ...base,
-        plan: plan(main.id, { params: { alpha: 1, weight_preset: 'default', draft: true } }),
+        plan: plan(main.id, {
+          params: { alpha: 1, weight_preset: 'default', draft: true, parameters_version: 1 },
+        }),
       }
     case 'join-named':
       return {

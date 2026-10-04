@@ -721,6 +721,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/demo/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset the demo account to its sample trips
+         * @description Deletes the trips the demo account owns and creates the sample set again, with the computed plans and the pasted chatbot plan and offer. Atomic and idempotent: the same data gives the same `plan_hash`. Only trips with the demo account's own `sub` are touched.
+         *
+         *     Wymagane uprawnienie: `admin.demo:WRITE`.
+         */
+        post: operations["admin_reset_demo_api_v1_admin_demo_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips": {
         parameters: {
             query?: never;
@@ -741,10 +763,15 @@ export interface paths {
          *     the trips still ahead (or without dates). `status=pending` finds the trips
          *     the caller was added to and has not confirmed yet.
          *
+         *     The first call of a new account also creates its sample trip ("Przykład: ...",
+         *     `is_sample`), in Polish or English by `Accept-Language`; it comes back in this
+         *     very list, the host can delete it and it is never created twice.
+         *
          *     Args:
          *         query: Paging, sort and filters.
          *         user: The authenticated caller.
          *         session: Database session.
+         *         accept_language: Language of the sample trip for a new account.
          *
          *     Returns:
          *         The page of trips.
@@ -2481,7 +2508,7 @@ export interface paths {
         put?: never;
         /**
          * Generate a plan with the fairness measure
-         * @description Runs the algorithm of `docs/algorytm.md` (one solo run per person, then the group plan) and stores a new version. The same input (trip, people, preferences, ratings, vetoes, catalog, `alpha`, preset) returns the latest version with 200 and the same `plan_hash`; an input that went back to an older state gets a new version. Any member may ask (a member's veto triggers the recompute): the input is read with a host-level view, so the result does not depend on who asks. `explain` is limited to the caller's own cards below the co-host role, because the effort of a person depends on their health limits; the ledger (`u`, `r`, domains) is visible to all. The examples show the response shape.
+         * @description Runs the algorithm of `docs/algorytm.md` (one solo run per person, then the group plan) and stores a new version. The same input (trip, people, preferences, ratings, vetoes, catalog, `alpha`, preset) returns the latest version with 200 and the same `plan_hash`; an input that went back to an older state gets a new version. Any member may ask (a member's veto triggers the recompute): the input is read with a host-level view, so the result does not depend on who asks. `explain` is limited to the caller's own cards below the co-host role, because the effort of a person depends on their health limits; the ledger (`u`, `r`, domains) is visible to all. A new version asks the worker for the justifications of the verdicts; they carry a template until the model text is ready. A city without places answers 409 `catalog_missing` with the job that fetches candidates. The examples show the response shape.
          *
          *     Wymagane uprawnienie: `planning.plans:WRITE`.
          */
@@ -2549,8 +2576,10 @@ export interface paths {
          *
          *     Args:
          *         session: Database session.
+         *         queue: Job queue (justifications).
          *         membership: The caller's membership of ``{trip_id}``.
          *         plan_id: Version id.
+         *         locale: Language of the justifications.
          *
          *     Returns:
          *         The version.
@@ -2657,6 +2686,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/plans/{plan_id}/google/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Save the approved plan in a separate Google Calendar
+         * @description Creates the calendar "TuttiTrip: <trip>" in the caller's Google account (scope `calendar.app.created`) with one event per stop. Saving again updates the same events instead of duplicating them. Every member may save to their own Google account.
+         *
+         *     Wymagane uprawnienie: `planning.plans:WRITE`.
+         */
+        post: operations["save_calendar_api_v1_trips__trip_id__plans__plan_id__google_calendar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/plans/{plan_id}/google/drive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export the approved plan to Google Drive
+         * @description Uploads the plan day by day as a Google Doc to the caller's Drive (scope `drive.file`, so the app sees only this file). Exporting again replaces the content of the same document. The response carries the link.
+         *
+         *     Wymagane uprawnienie: `planning.plans:WRITE`.
+         */
+        post: operations["export_drive_api_v1_trips__trip_id__plans__plan_id__google_drive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/plans/{plan_id}/anyway": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The "anyway" suggestions of a plan version
+         * @description At most one suggestion per day: an iconic place or a unique experience that fits the group less, with the cost of adding it (change of `min r`, cost and time) and a justification. The justification is a template until the model's text is written (`justification_pending`); the same data gives the same suggestion. A rejected suggestion is not listed. Accepting is the existing `must` override on the place.
+         *
+         *     Wymagane uprawnienie: `planning.plans:READ`.
+         */
+        get: operations["get_anyway_api_v1_trips__trip_id__plans__plan_id__anyway_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/plans/{plan_id}/anyway/{place_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject the suggestion of a day
+         * @description The host does not want the place. It does not come back on that day in this or any later version of the plan. Only the host decides.
+         *
+         *     Wymagane uprawnienie: `planning.plans:WRITE`.
+         */
+        post: operations["reject_anyway_api_v1_trips__trip_id__plans__plan_id__anyway__place_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/overrides/preview": {
         parameters: {
             query?: never;
@@ -2749,6 +2866,56 @@ export interface paths {
          *     Wymagane uprawnienie: `planning.plans:READ`.
          */
         get: operations["list_decisions_api_v1_trips__trip_id__decisions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/planning/parameters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Parameters in force
+         * @description The newest version of the algorithm parameters (section 6 of `docs/algorytm.md`); version 0 is the built-in default. `alpha` is the default slider of new trips.
+         *
+         *     Wymagane uprawnienie: `admin.planning_weights:READ`.
+         */
+        get: operations["get_parameters_api_v1_admin_planning_parameters_get"];
+        put?: never;
+        /**
+         * Store a new version of the parameters
+         * @description The whole set (omitted fields take the default), checked against the ranges of the specification: a value outside gets 422. New plans use the new version and record its number; stored plans are not recomputed.
+         *
+         *     Wymagane uprawnienie: `admin.planning_weights:WRITE`.
+         */
+        post: operations["create_parameters_api_v1_admin_planning_parameters_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/planning/parameters/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * History of parameter versions
+         * @description Paged, newest first by default.
+         *
+         *     Wymagane uprawnienie: `admin.planning_weights:READ`.
+         */
+        get: operations["list_versions_api_v1_admin_planning_parameters_versions_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2947,6 +3114,94 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/linter/plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lint a version of our plan
+         * @description Synchronous, no worker: the stored version goes through every rule. `count` is the number of violations, each rule appears with its count (zeros too). The solver's plan of the demo family has 0.
+         *
+         *     Wymagane uprawnienie: `planning.linter:READ`.
+         */
+        post: operations["lint_plan_api_v1_trips__trip_id__linter_plans__plan_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/linter/pastes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a plan pasted from another tool
+         * @description Stores the text, then queues the worker's parse. 202 with the `paste_id` to poll. A missing worker answers 503 and the text stays stored.
+         *
+         *     Wymagane uprawnienie: `planning.linter:WRITE`.
+         */
+        post: operations["create_paste_api_v1_trips__trip_id__linter_pastes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/linter/pastes/{paste_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Report of a pasted plan
+         * @description `pending` while the worker parses; then `done` with the number of violations, every rule with its count and the items that were not recognised, or `failed` with the worker's `error_code`. The report is stored at the first read after the job and stays the same until a pick.
+         *
+         *     Wymagane uprawnienie: `planning.linter:READ`.
+         */
+        get: operations["get_paste_api_v1_trips__trip_id__linter_pastes__paste_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/linter/pastes/{paste_id}/items/{index}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Pick the catalog place of an unsure item
+         * @description The host chooses one of the item's `candidates`; the report is recomputed with that place checked by every rule.
+         *
+         *     Wymagane uprawnienie: `planning.linter:WRITE`.
+         */
+        patch: operations["pick_item_api_v1_trips__trip_id__linter_pastes__paste_id__items__index__patch"];
         trace?: never;
     };
     "/api/v1/trips/{trip_id}/accommodation/requirements": {
@@ -3854,6 +4109,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/trips/{trip_id}/places/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fetch candidate places for the trip's city
+         * @description Asks the worker to fetch places of the trip's city from OpenStreetMap into the catalog. 202 with the job to poll; asking again for the same city returns the same job. A city that already has places (the demo cities) answers 200 with `state: ready` and starts nothing. 422 when the trip has no city; 503 while the worker is missing. Candidates have few hours and prices, so their plan items stay unverified.
+         *
+         *     Wymagane uprawnienie: `places.candidates:WRITE`.
+         */
+        post: operations["request_candidates_api_v1_trips__trip_id__places_candidates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/places/candidates/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * State of the candidate fetch and size of the city's catalog
+         * @description Catalog size and, with `job_id`, the state of the job.
+         *
+         *     Args:
+         *         membership: The caller's membership of ``{trip_id}``.
+         *         session: Database session.
+         *         queue: Job queue.
+         *         job_id: The job to report on.
+         *
+         *     Returns:
+         *         The status.
+         *
+         *     Raises:
+         *         HTTPException: 422 for a job of another city, 503 when the queue is down.
+         *
+         *     Wymagane uprawnienie: `places.catalog:READ`.
+         */
+        get: operations["candidates_status_api_v1_trips__trip_id__places_candidates_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/places/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import a Google Maps list (Takeout CSV)
+         * @description Multipart form: `file` is the CSV of a saved list from Google Takeout (`Saved/<list>.csv`, at most 500 places and 1 MB), `profile_id` is the person whose list it is. Titles are matched to the catalog of the trip's city by name; matched places become `want` for that person (a vote they already cast stays). Unmatched places come back with a reason. No Google Places data is used.
+         *
+         *     Wymagane uprawnienie: `profiles.feedback:WRITE`.
+         */
+        post: operations["import_takeout_api_v1_trips__trip_id__places_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4034,11 +4367,268 @@ export interface components {
          */
         AgeGroup: "toddler" | "child" | "teen" | "adult" | "senior";
         /**
+         * AlgorithmParams
+         * @description Section 6 of the specification: defaults and allowed ranges.
+         */
+        AlgorithmParams: {
+            /**
+             * Alpha
+             * @description Fairness slider: 0 utility, 1 Nash, 3 almost egalitarian (E5).
+             * @default 1
+             */
+            alpha: number;
+            /**
+             * Kappa Attractions
+             * @description Daily saturation of attractions (E2).
+             * @default 0.6
+             */
+            kappa_attractions: number;
+            /**
+             * Kappa Food
+             * @description Daily saturation of food (E2).
+             * @default 1.2
+             */
+            kappa_food: number;
+            /**
+             * Tau Ref Min
+             * @description Reference visit time of an attraction, min (E2).
+             * @default 90
+             */
+            tau_ref_min: number;
+            /**
+             * Epsilon
+             * @description Stability of the geometric mean (E1).
+             * @default 0.01
+             */
+            epsilon: number;
+            /**
+             * Lambda Floor
+             * @description Added to every pool share before ``Z`` normalises it (E1).
+             * @default 0.1
+             */
+            lambda_floor: number;
+            /**
+             * @description ``rho``: weight of an explicit vote against the interest profile (E1).
+             * @default 0.7
+             */
+            vote_weight: components["schemas"]["Unit"];
+            /**
+             * Unverified Markup
+             * @description ``delta``: markup of an unverified price (E6).
+             * @default 0.15
+             */
+            unverified_markup: number;
+            /**
+             * @description ``rho_unc``: points for an unconfirmed lodging requirement (E2).
+             * @default 0.4
+             */
+            uncertain_requirement: components["schemas"]["Unit"];
+            /**
+             * Strong Preference
+             * @description ``theta``: pool share that makes a preference strong (E5).
+             * @default 0.4
+             */
+            strong_preference: number;
+            /**
+             * Smoothing
+             * @description ``s``: smoothing in ``r_i`` (E4).
+             * @default 10
+             */
+            smoothing: number;
+            /**
+             * @description The floor is at most this share of the person's own maximum (E4).
+             * @default 0.6
+             */
+            floor_share: components["schemas"]["Unit"];
+            /**
+             * Violation Penalty
+             * @description Penalty of a missed floor, own place or tag minimum (E5).
+             * @default 1000
+             */
+            violation_penalty: number;
+            /**
+             * Cost Comfort
+             * @description ``q_cost`` at ``B_do`` (E2).
+             * @default 60
+             */
+            cost_comfort: number;
+            /**
+             * Good Reason Points
+             * @description Gain of a strongly-preferring person that justifies exceeding the budget (E6).
+             * @default 8
+             */
+            good_reason_points: number;
+            /**
+             * @description Rise of ``min r`` that justifies exceeding the budget (E6).
+             * @default 0.05
+             */
+            good_reason_min_r: components["schemas"]["Unit"];
+            /**
+             * @description Welfare gain over the cheaper plan required for approval (E6).
+             * @default 0.03
+             */
+            good_reason_welfare: components["schemas"]["Unit"];
+            /**
+             * @description E6: the cheaper alternative costs at most ``c - margin * B_do`` (5%).
+             * @default 0.05
+             */
+            cheaper_margin: components["schemas"]["Unit"];
+            /**
+             * Verdict Fits
+             * @description Extension, outside v1.0: ``V_p`` from which a place "fits" (backend#51).
+             * @default 0.1
+             */
+            verdict_fits: number;
+            /**
+             * Verdict Iconic
+             * @description Extension, outside v1.0: lowest ``V_p`` of "iconic, but not yours".
+             * @default -0.3
+             */
+            verdict_iconic: number;
+            /**
+             * Max Exceptional Nights
+             * @description Extension, outside v1.0 (backend#71): nights that may use another base.
+             * @default 0
+             */
+            max_exceptional_nights: number;
+            /**
+             * @description Extension, outside v1.0 (backend#74): ``u_ip`` factor outdoors in rain.
+             * @default 0.3
+             */
+            rain_outdoor_factor: components["schemas"]["Unit"];
+            /**
+             * @description Extension: ``u_ip * (outdoor_factor + indoor_weight * [indoor])`` in rain.
+             * @default 0.7
+             */
+            rain_indoor_weight: components["schemas"]["Unit"];
+            /**
+             * Replan Change Penalty
+             * @description Extension: ``J_replan`` loses this much per place added or removed.
+             * @default 0.2
+             */
+            replan_change_penalty: number;
+            /**
+             * Replan Shift Penalty
+             * @description Extension: ``J_replan`` loses this much per minute a kept visit moves.
+             * @default 0.001
+             */
+            replan_shift_penalty: number;
+            /**
+             * @description ``m_ip`` from which a place counts as the person's own (E5).
+             * @default 0.6
+             */
+            own_place_match: components["schemas"]["Unit"];
+            /**
+             * Stairs Limit
+             * @description E0: a place is rejected at ``stairs_p * sensitivity_i`` from here.
+             * @default 0.9
+             */
+            stairs_limit: number;
+            /**
+             * Segment Factor
+             * @description E0: a place is rejected when ``d_p > factor * s_i``.
+             * @default 1.5
+             */
+            segment_factor: number;
+            /**
+             * @description E1: ``m_ip`` when there is neither an interest profile nor a vote.
+             * @default 0.5
+             */
+            no_data_match: components["schemas"]["Unit"];
+        };
+        /**
          * Amenity
          * @description Lodging amenity checked against the requirements contract.
          * @enum {string}
          */
         Amenity: "pool" | "kitchen" | "parking" | "family_room" | "wifi" | "air_conditioning" | "breakfast" | "pets_allowed" | "elevator" | "wheelchair_accessible" | "washing_machine" | "balcony" | "crib" | "playground";
+        /**
+         * AnywayEffects
+         * @description What adding the place costs: the plan with it minus the plan without it.
+         */
+        AnywayEffects: {
+            /**
+             * D Min R
+             * @description Change of min r.
+             */
+            d_min_r: number;
+            /**
+             * D Cost
+             * @description Change of c(P), in the trip currency.
+             */
+            d_cost: string;
+            /**
+             * D Minutes
+             * @description Change of the active minutes of the plan.
+             */
+            d_minutes: number;
+        };
+        /**
+         * AnywayRead
+         * @description The suggestions of one plan version.
+         */
+        AnywayRead: {
+            /**
+             * Plan Id
+             * Format: uuid
+             */
+            plan_id: string;
+            /**
+             * Suggestions
+             * @description At most one per day; rejected ones are left out.
+             */
+            suggestions: components["schemas"]["AnywaySuggestion"][];
+            /**
+             * Justification Pending
+             * @description True while the model's text is still being written; until then `justification` is the template.
+             */
+            justification_pending: boolean;
+        };
+        /**
+         * AnywayStatus
+         * @description Where a suggestion stands.
+         * @enum {string}
+         */
+        AnywayStatus: "proposed" | "accepted";
+        /**
+         * AnywaySuggestion
+         * @description The "anyway" suggestion of a day: an iconic or unique place that fits less.
+         *
+         *     At most one per day. ``justification`` is the template built from the numbers
+         *     until the model's text (``write_justifications``) arrives.
+         */
+        AnywaySuggestion: {
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Day
+             * @description 1-based day the place lands on.
+             */
+            day: number;
+            /**
+             * V P
+             * @description Weighted opinion V_p of the group.
+             */
+            v_p: number;
+            effects: components["schemas"]["AnywayEffects"];
+            /** Justification */
+            justification: string;
+            /**
+             * Justification Source
+             * @enum {string}
+             */
+            justification_source: "template" | "model";
+            /**
+             * @description `accepted` once the host made the place a `must` override.
+             * @default proposed
+             */
+            status: components["schemas"]["AnywayStatus"];
+        };
         /**
          * ApprovalStatus
          * @description State of the organizer's approval of going over ``B_do``.
@@ -4113,6 +4703,20 @@ export interface components {
              * @description In the trip's currency, to the cent.
              */
             amount: string;
+        };
+        /** Body_import_takeout_api_v1_trips__trip_id__places_import_post */
+        Body_import_takeout_api_v1_trips__trip_id__places_import_post: {
+            /**
+             * File
+             * @description The Takeout CSV.
+             */
+            file: string;
+            /**
+             * Profile Id
+             * Format: uuid
+             * @description Whose list it is.
+             */
+            profile_id: string;
         };
         /** Body_upload_photo_api_v1_trips__trip_id__photos_post */
         Body_upload_photo_api_v1_trips__trip_id__photos_post: {
@@ -4363,6 +4967,83 @@ export interface components {
          * @enum {string}
          */
         BudgetZone: "below_b_from" | "up_to_b_to" | "in_margin";
+        /**
+         * CalendarExportRead
+         * @description Result of saving a plan in the user's Google Calendar.
+         */
+        CalendarExportRead: {
+            /**
+             * Plan Id
+             * Format: uuid
+             */
+            plan_id: string;
+            /**
+             * Calendar Id
+             * @description Id of the secondary calendar.
+             */
+            calendar_id: string;
+            /**
+             * Calendar Url
+             * @description Google Calendar, where it is listed.
+             */
+            calendar_url: string;
+            /**
+             * Events
+             * @description Events in the calendar after the save.
+             */
+            events: number;
+            /**
+             * Removed
+             * @description Events of an older version that this save removed.
+             */
+            removed: number;
+            /**
+             * Created
+             * @description False when an earlier calendar was updated.
+             */
+            created: boolean;
+        };
+        /**
+         * CandidatesRequest
+         * @description Optional name for a city the catalog does not know yet.
+         */
+        CandidatesRequest: {
+            /**
+             * City Query
+             * @description City name for the geocoder, e.g. `Gdańsk, Polska`. Needed only for a city that was never fetched; it must give the trip's `city_slug` (lowercase, no diacritics, `-` between words). Omitted: the slug's words.
+             */
+            city_query?: string | null;
+        };
+        /**
+         * CandidatesState
+         * @description Where the catalog of the trip's city stands.
+         * @enum {string}
+         */
+        CandidatesState: "ready" | "running" | "failed" | "empty";
+        /**
+         * CandidatesStatus
+         * @description The catalog of the trip's city and the state of its fetch.
+         */
+        CandidatesStatus: {
+            /** City Slug */
+            city_slug: string;
+            /**
+             * Place Count
+             * @description Places in the catalog of the city.
+             */
+            place_count: number;
+            /** @description `ready`: the city has places (the demo cities never need a job). `running`: the job is queued or running. `failed`: it ended with `error_code`. `empty`: no places and no job. */
+            state: components["schemas"]["CandidatesState"];
+            /** Job Id */
+            job_id?: string | null;
+            /**
+             * Error Code
+             * @description Worker code: `city_not_found`, `rate_limited`...
+             */
+            error_code?: string | null;
+            /** Error */
+            error?: string | null;
+        };
         /**
          * CardKind
          * @description UI card the web client renders for a question (the cards of plan.md).
@@ -4759,6 +5440,24 @@ export interface components {
          */
         DecisionSort: "created_at";
         /**
+         * DemoResetResult
+         * @description What the internal reset did.
+         */
+        DemoResetResult: {
+            /**
+             * Status
+             * @description `disabled` when the demo is switched off: nothing was touched.
+             * @enum {string}
+             */
+            status: "reset" | "disabled";
+            /**
+             * Trips
+             * @description Trips created for the demo account.
+             * @default 0
+             */
+            trips: number;
+        };
+        /**
          * DemoSession
          * @description Auth0 tokens of the demo account.
          */
@@ -4906,6 +5605,29 @@ export interface components {
              * @description What was assumed, so the host can correct it.
              */
             assumptions: components["schemas"]["Assumption"][];
+        };
+        /**
+         * DriveExportRead
+         * @description Result of exporting a plan to the user's Google Drive.
+         */
+        DriveExportRead: {
+            /**
+             * Plan Id
+             * Format: uuid
+             */
+            plan_id: string;
+            /** File Id */
+            file_id: string;
+            /**
+             * Web View Link
+             * @description Link that opens the document.
+             */
+            web_view_link: string;
+            /**
+             * Created
+             * @description False when an earlier document was updated.
+             */
+            created: boolean;
         };
         /**
          * ExamplePlace
@@ -5283,7 +6005,7 @@ export interface components {
          * @description A node of the feature tree. The value is its dotted code.
          * @enum {string}
          */
-        Feature: "*" | "accounts" | "accounts.profile" | "admin" | "admin.permissions" | "admin.users" | "admin.planning_weights" | "trips" | "trips.core" | "trips.members" | "trips.invitations" | "trips.vote_links" | "profiles" | "profiles.core" | "profiles.preferences" | "profiles.feedback" | "interview" | "planning" | "planning.proposals" | "planning.plans" | "planning.fairness" | "planning.linter" | "accommodation" | "search" | "expenses" | "expenses.core" | "expenses.settlement" | "jobs" | "places" | "places.catalog" | "mcp" | "notifications";
+        Feature: "*" | "accounts" | "accounts.profile" | "admin" | "admin.permissions" | "admin.users" | "admin.planning_weights" | "admin.demo" | "trips" | "trips.core" | "trips.members" | "trips.invitations" | "trips.vote_links" | "profiles" | "profiles.core" | "profiles.preferences" | "profiles.feedback" | "interview" | "planning" | "planning.proposals" | "planning.plans" | "planning.fairness" | "planning.linter" | "accommodation" | "search" | "expenses" | "expenses.core" | "expenses.settlement" | "jobs" | "places" | "places.catalog" | "places.candidates" | "mcp" | "notifications";
         /**
          * FeatureGrant
          * @description ``level`` on ``feature`` and everything below it.
@@ -5392,6 +6114,39 @@ export interface components {
          * @enum {string}
          */
         FloorMissKind: "floor" | "own_place_day" | "tag_minimum";
+        /**
+         * GoogleErrorBody
+         * @description 409 body: the user has to (re)connect Google.
+         */
+        GoogleErrorBody: {
+            detail: components["schemas"]["GoogleErrorDetail"];
+        };
+        /**
+         * GoogleErrorDetail
+         * @description What the user must do before Google can be used; clients map by ``code``.
+         */
+        GoogleErrorDetail: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "google.not_connected" | "google.scope_missing" | "google.token_expired";
+            /**
+             * Message
+             * @description For developers; clients map by code.
+             */
+            message: string;
+            /**
+             * Required Scope
+             * @description Google scope the sign-in with Google has to ask for.
+             */
+            required_scope: string;
+            /**
+             * Fallback Url
+             * @description Path of the .ics file of the same plan, usable without Google.
+             */
+            fallback_url: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -5665,6 +6420,18 @@ export interface components {
              * @description Token read from the `#t=` fragment of the link.
              */
             token: string;
+        };
+        /**
+         * ItemPick
+         * @description The host's choice for an item the worker was unsure about.
+         */
+        ItemPick: {
+            /**
+             * Place Id
+             * Format: uuid
+             * @description One of the item's `candidates` (or its `suggested_place_id`).
+             */
+            place_id: string;
         };
         /**
          * JobAccepted
@@ -6053,6 +6820,22 @@ export interface components {
         MarkResult: {
             /** Updated */
             updated: number;
+        };
+        /**
+         * MatchCandidate
+         * @description A catalog place proposed for a pasted item (pure code ranks them).
+         */
+        MatchCandidate: {
+            /** Place Id */
+            place_id: string;
+            /** Name */
+            name: string;
+            /** Address */
+            address?: string | null;
+            /** Category */
+            category?: string | null;
+            /** Score */
+            score: number;
         };
         /**
          * MeResponse
@@ -6775,6 +7558,25 @@ export interface components {
              */
             pages: number;
         };
+        /** Page[ParametersRead] */
+        Page_ParametersRead_: {
+            /** Items */
+            items: components["schemas"]["ParametersRead"][];
+            /**
+             * Total
+             * @description Rows matching the filters.
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /**
+             * Pages
+             * @description Pages in total; 0 when empty.
+             */
+            pages: number;
+        };
         /** Page[PaymentRead] */
         Page_PaymentRead_: {
             /** Items */
@@ -6890,6 +7692,38 @@ export interface components {
             pages: number;
         };
         /**
+         * ParametersCreate
+         * @description A new version: the whole set (omitted fields take the default), plus a note.
+         *
+         *     The ranges are those of ``AlgorithmParams`` (section 6 of docs/algorytm.md).
+         */
+        ParametersCreate: {
+            values?: components["schemas"]["AlgorithmParams"];
+            /** Note */
+            note?: string | null;
+        };
+        /**
+         * ParametersRead
+         * @description A stored version of the parameters.
+         */
+        ParametersRead: {
+            /**
+             * Version
+             * @description 0 is the built-in default (no row).
+             */
+            version: number;
+            values: components["schemas"]["AlgorithmParams"];
+            /** Note */
+            note?: string | null;
+            /**
+             * Created By Sub
+             * @description The administrator; null for version 0.
+             */
+            created_by_sub?: string | null;
+            /** Created At */
+            created_at?: string | null;
+        };
+        /**
          * ParticipantRead
          * @description A participant with their entered share and the amount they owe.
          */
@@ -6910,6 +7744,121 @@ export interface components {
              */
             amount: string;
         };
+        /**
+         * PasteAccepted
+         * @description The text is stored and the parse is queued.
+         */
+        PasteAccepted: {
+            /** Workflow Id */
+            workflow_id: string;
+            /**
+             * Paste Id
+             * Format: uuid
+             * @description Poll `GET .../linter/pastes/{paste_id}`.
+             */
+            paste_id: string;
+        };
+        /**
+         * PasteCheckRead
+         * @description The check of a pasted plan: state, items and, when done, the report.
+         */
+        PasteCheckRead: {
+            /**
+             * Paste Id
+             * Format: uuid
+             */
+            paste_id: string;
+            /**
+             * Trip Id
+             * Format: uuid
+             */
+            trip_id: string;
+            state: components["schemas"]["PasteState"];
+            /** Job Id */
+            job_id: string;
+            /**
+             * Error Code
+             * @description Worker code on failure.
+             */
+            error_code?: string | null;
+            /**
+             * Violations
+             * @description Violations of all rules (`report.count`); null until done.
+             */
+            violations: number | null;
+            /** @description Every rule with its count, also zeros; null until done. */
+            report: components["schemas"]["LintReport"] | null;
+            /** Items */
+            items?: components["schemas"]["PasteItemRead"][];
+            /**
+             * Unread
+             * @description Text the parser could not turn into items.
+             */
+            unread?: components["schemas"]["UnreadItem"][];
+        };
+        /**
+         * PasteCreate
+         * @description A plan pasted from another tool (stored as typed, deleted with the trip).
+         */
+        PasteCreate: {
+            /** Text */
+            text: string;
+            /**
+             * Provider
+             * @default openrouter
+             * @enum {string}
+             */
+            provider: "openrouter" | "local";
+        };
+        /**
+         * PasteItemRead
+         * @description One item read from the pasted text and the catalog place it was matched to.
+         */
+        PasteItemRead: {
+            /** Index */
+            index: number;
+            /**
+             * Day
+             * @description Day number in the text; null when absent.
+             */
+            day: number | null;
+            /** Place Name */
+            place_name: string;
+            /**
+             * Quote
+             * @description The verbatim words of the pasted text.
+             */
+            quote: string;
+            /**
+             * Status
+             * @description `matched` also after the host picked a candidate (`chosen_by_host`). Anything else counts as an unknown place in the report.
+             * @enum {string}
+             */
+            status: "matched" | "needs_confirmation" | "unrecognized";
+            /**
+             * Place Id
+             * @description The place the rules were applied to; null when none.
+             */
+            place_id: string | null;
+            /**
+             * Suggested Place Id
+             * @description The worker's unconfirmed pick of a `needs_confirmation` item.
+             */
+            suggested_place_id?: string | null;
+            /**
+             * Chosen By Host
+             * @default false
+             */
+            chosen_by_host: boolean;
+            /** Candidates */
+            candidates?: components["schemas"]["MatchCandidate"][];
+        };
+        /**
+         * PasteState
+         * @description Where the check of a pasted plan stands.
+         * @enum {string}
+         */
+        PasteState: "pending" | "done" | "failed";
         /**
          * PaymentCreate
          * @description POST payload: a transfer (or a part of it) that has been paid.
@@ -7307,6 +8256,16 @@ export interface components {
              */
             typical_visit_min: number;
             /**
+             * Description
+             * @description Short text from the worker's web research.
+             */
+            description?: string | null;
+            /**
+             * Child Friendly
+             * @description Null when unknown; from the web research.
+             */
+            child_friendly?: boolean | null;
+            /**
              * Segment Km
              * @description Walking segment at the place (d_p), km.
              */
@@ -7323,9 +8282,9 @@ export interface components {
             queue_min: number;
             /**
              * Stairs
-             * @description Stairs burden, 0 to 1.
+             * @description Stairs burden, 0 to 1. Null when unknown (not the same as 0).
              */
-            stairs: number;
+            stairs: number | null;
             /** Wheelchair */
             wheelchair: boolean | null;
             /**
@@ -7335,6 +8294,12 @@ export interface components {
             indoor: boolean | null;
             /** Iconic */
             iconic: boolean;
+            /**
+             * Unique Experience
+             * @description A one-off experience of the place (not a landmark); like `iconic`, it makes the place a candidate for the daily "anyway" suggestion.
+             * @default false
+             */
+            unique_experience: boolean;
             cuisine: components["schemas"]["Cuisine"] | null;
             /** Diet Tags */
             diet_tags: components["schemas"]["DietTag"][];
@@ -7462,6 +8427,27 @@ export interface components {
             approval_status: components["schemas"]["ApprovalStatus"];
         };
         /**
+         * PlanCatalogMissing
+         * @description 409: the trip's city has no places in the catalog, so no plan is computed.
+         */
+        PlanCatalogMissing: {
+            /**
+             * Code
+             * @default catalog_missing
+             * @constant
+             */
+            code: "catalog_missing";
+            /** Message */
+            message: string;
+            /** City Slug */
+            city_slug: string;
+            /**
+             * Job Id
+             * @description The fetch of candidates for the city, started or found; poll `GET /trips/{id}/places/candidates/status?job_id=...`. Null when no worker could take it (ask `POST /trips/{id}/places/candidates`).
+             */
+            job_id?: string | null;
+        };
+        /**
          * PlanConflict
          * @description A conflict between people or constraints; always with a reason code.
          */
@@ -7497,6 +8483,13 @@ export interface components {
              * @default default
              */
             weight_preset: components["schemas"]["WeightPreset"];
+            /**
+             * Locale
+             * @description Language of the verdict justifications the worker writes for this version (read them with the same `locale`).
+             * @default pl
+             * @enum {string}
+             */
+            locale: "pl" | "en";
         };
         /**
          * PlanDay
@@ -7668,6 +8661,12 @@ export interface components {
              * @default false
              */
             draft: boolean;
+            /**
+             * Parameters Version
+             * @description Version of the admin parameters (0: the built-in defaults).
+             * @default 0
+             */
+            parameters_version: number;
         };
         /**
          * PlanProgressRead
@@ -7771,6 +8770,11 @@ export interface components {
              */
             upgrades?: components["schemas"]["PlanUpgrade"][];
             telemetry: components["schemas"]["PlanTelemetry"];
+            /**
+             * Anyway
+             * @description At most one "anyway" suggestion per day (an iconic or unique place that fits the group less) with its cost. The host rejects it or makes it a `must`; rejected ones are not listed.
+             */
+            anyway?: components["schemas"]["AnywaySuggestion"][];
         };
         /**
          * PlanStep
@@ -7980,10 +8984,16 @@ export interface components {
             /** Substitute Place Id */
             substitute_place_id?: string | null;
             /**
-             * Explanation
-             * @description Written later by a model.
+             * Justification
+             * @description Why this verdict, one or two sentences in the requested `locale`. A template from the verdict data until the worker's model text is ready.
              */
-            explanation?: string | null;
+            justification: string;
+            /**
+             * Justification Source
+             * @description `template`: written by code. `model`: written by the worker.
+             * @enum {string}
+             */
+            justification_source: "template" | "model";
         };
         /**
          * Platform
@@ -9073,6 +10083,83 @@ export interface components {
             cost?: string | null;
         };
         /**
+         * TakeoutImportRead
+         * @description Result of an import: what matched and what did not.
+         */
+        TakeoutImportRead: {
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** City Slug */
+            city_slug: string;
+            /**
+             * Total
+             * @description Saved places in the file.
+             */
+            total: number;
+            /**
+             * Liked
+             * @description Places now rated `want` by the person.
+             */
+            liked: number;
+            /**
+             * Kept
+             * @description Matched places the person had already rated, unchanged.
+             */
+            kept: number;
+            /** Matched */
+            matched: components["schemas"]["TakeoutMatched"][];
+            /** Unmatched */
+            unmatched: components["schemas"]["TakeoutUnmatched"][];
+        };
+        /**
+         * TakeoutMatched
+         * @description A saved place found in the catalog.
+         */
+        TakeoutMatched: {
+            /**
+             * Line
+             * @description Line of the file (the header is line 1).
+             */
+            line: number;
+            /** Title */
+            title: string;
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            /** Place Name */
+            place_name: string;
+            /**
+             * Liked
+             * @description False when the person had already rated the place (kept).
+             */
+            liked: boolean;
+        };
+        /**
+         * TakeoutSkipReason
+         * @description Why a saved place was not imported; the client writes the text.
+         * @enum {string}
+         */
+        TakeoutSkipReason: "missing_title" | "duplicate" | "not_in_catalog" | "ambiguous";
+        /**
+         * TakeoutUnmatched
+         * @description A saved place that was not imported, with the reason.
+         */
+        TakeoutUnmatched: {
+            /**
+             * Line
+             * @description Line of the file (the header is line 1).
+             */
+            line: number;
+            /** Title */
+            title: string;
+            reason: components["schemas"]["TakeoutSkipReason"];
+        };
+        /**
          * TicketCategory
          * @description Who a ticket price is for.
          * @enum {string}
@@ -9333,7 +10420,7 @@ export interface components {
              * @description The sample trip a new account gets (named `Przykład: ...`); the host can delete it like any trip.
              * @default false
              */
-            is_sample?: boolean;
+            is_sample: boolean;
             /**
              * Kind
              * @description ``outing`` for a single day without a stay, otherwise ``trip``.
@@ -9458,6 +10545,7 @@ export interface components {
          * @enum {string}
          */
         UnconfirmedReason: "no_mention" | "low_confidence" | "not_assessed" | "conflicting" | "no_link" | "not_checked" | "pending" | "check_failed" | "no_offer";
+        Unit: number;
         /**
          * UnreadCount
          * @description How many notifications the caller has not read.
@@ -9465,6 +10553,19 @@ export interface components {
         UnreadCount: {
             /** Count */
             count: number;
+        };
+        /**
+         * UnreadItem
+         * @description Text the parser could not turn into a valid item (no verbatim quote).
+         */
+        UnreadItem: {
+            /** Quote */
+            quote: string;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "quote_not_in_text" | "invalid_item";
         };
         /**
          * UpgradeKind
@@ -11059,6 +12160,47 @@ export interface operations {
             };
         };
     };
+    admin_reset_demo_api_v1_admin_demo_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoResetResult"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.demo:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Auth0 did not give a token for the demo account. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     list_trips_api_v1_trips_get: {
         parameters: {
             query?: {
@@ -11086,7 +12228,9 @@ export interface operations {
                 dir?: components["schemas"]["SortDir"];
                 sort?: components["schemas"]["TripSort"];
             };
-            header?: never;
+            header?: {
+                "accept-language"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -14403,7 +15547,10 @@ export interface operations {
     };
     get_latest_plan_api_v1_trips__trip_id__plans_latest_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Language of the verdict justifications. */
+                locale?: "pl" | "en";
+            };
             header?: never;
             path: {
                 trip_id: string;
@@ -14455,7 +15602,10 @@ export interface operations {
     };
     get_plan_api_v1_trips__trip_id__plans__plan_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Language of the verdict justifications. */
+                locale?: "pl" | "en";
+            };
             header?: never;
             path: {
                 plan_id: string;
@@ -14732,6 +15882,251 @@ export interface operations {
             };
         };
     };
+    save_calendar_api_v1_trips__trip_id__plans__plan_id__google_calendar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarExportRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan, trip not found or caller not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The plan is not approved (`plan.not_approved`), or Google has to be connected first (`google.not_connected`, `google.scope_missing`, `google.token_expired`): sign in with Google again asking for `required_scope`. `fallback_url` is the `.ics` file of the plan. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Google or Auth0 could not be reached (`google.unavailable`). */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    export_drive_api_v1_trips__trip_id__plans__plan_id__google_drive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriveExportRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan, trip not found or caller not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The plan is not approved (`plan.not_approved`), or Google has to be connected first (`google.not_connected`, `google.scope_missing`, `google.token_expired`): sign in with Google again asking for `required_scope`. `fallback_url` is the `.ics` file of the plan. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Google or Auth0 could not be reached (`google.unavailable`). */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_anyway_api_v1_trips__trip_id__plans__plan_id__anyway_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnywayRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan, suggestion, trip not found or caller not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_anyway_api_v1_trips__trip_id__plans__plan_id__anyway__place_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                place_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnywayRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.plans:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Plan, suggestion, trip not found or caller not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     preview_override_api_v1_trips__trip_id__overrides_preview_post: {
         parameters: {
             query?: never;
@@ -14931,6 +16326,136 @@ export interface operations {
                 content?: never;
             };
             /** @description Brak uprawnienia `planning.plans:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_parameters_api_v1_admin_planning_parameters_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParametersRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.planning_weights:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    create_parameters_api_v1_admin_planning_parameters_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParametersCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParametersRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.planning_weights:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_versions_api_v1_admin_planning_parameters_versions_get: {
+        parameters: {
+            query?: {
+                /** @description Page number, from 1. */
+                page?: number;
+                /** @description Items per page (max 100). */
+                size?: number;
+                dir?: components["schemas"]["SortDir"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ParametersRead_"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.planning_weights:READ` */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -15410,6 +16935,263 @@ export interface operations {
             };
             /** @description Empty text or longer than 20 000 characters. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    lint_plan_api_v1_trips__trip_id__linter_plans__plan_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LintReport"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.linter:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip or check not found, or the caller is not on the trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The trip's city has no places in the catalog. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The trip lacks dates, a city or people. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    create_paste_api_v1_trips__trip_id__linter_pastes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasteAccepted"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.linter:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip or check not found, or the caller is not on the trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Empty or too long text, or the trip has no city/dates. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The worker or the job queue is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_paste_api_v1_trips__trip_id__linter_pastes__paste_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The id returned by the 202. */
+                paste_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasteCheckRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.linter:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip or check not found, or the caller is not on the trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The trip's city has no places in the catalog. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The trip lacks dates, a city or people. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The worker or the job queue is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    pick_item_api_v1_trips__trip_id__linter_pastes__paste_id__items__index__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The id returned by the 202. */
+                paste_id: string;
+                /** @description Item index in the text. */
+                index: number;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ItemPick"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasteCheckRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `planning.linter:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip or check not found, or the caller is not on the trip. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The text is not parsed yet, or the city has no places. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The place is not a candidate of the item. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The worker or the job queue is unavailable. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17073,6 +18855,190 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    request_candidates_api_v1_trips__trip_id__places_candidates_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CandidatesRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description The city has places. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidatesStatus"];
+                };
+            };
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"] | components["schemas"]["CandidatesStatus"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `places.candidates:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The trip has no city, or `city_query` is for another. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The worker or the job queue is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    candidates_status_api_v1_trips__trip_id__places_candidates_status_get: {
+        parameters: {
+            query?: {
+                /** @description The job id from the 202 (or the 409). */
+                job_id?: string | null;
+            };
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidatesStatus"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `places.catalog:READ` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No city, or a foreign job. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The worker or the job queue is unavailable. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    import_takeout_api_v1_trips__trip_id__places_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_takeout_api_v1_trips__trip_id__places_import_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeoutImportRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `profiles.feedback:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Trip or profile not found, or the caller is not on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a Takeout list, too big, or the trip has no city. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

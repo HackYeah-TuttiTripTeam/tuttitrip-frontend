@@ -1,3 +1,4 @@
+import { PROPOSE_CHEAPER_DEFAULT } from '@/lib/constants'
 import { describe, expect, it } from 'vitest'
 import { fetchClient } from '@/api/client'
 import { ApiError } from '@/api/errors'
@@ -67,7 +68,7 @@ describe('family-warsaw', () => {
 
   it('creates a trip and lists it first', async () => {
     const created = await fetchClient.POST('/api/v1/trips', {
-      body: { name: 'Gdańsk', propose_cheaper_alternatives: null },
+      body: { name: 'Gdańsk', propose_cheaper_alternatives: PROPOSE_CHEAPER_DEFAULT },
     })
     expect(created.data?.name).toBe('Gdańsk')
     const list = await fetchClient.GET('/api/v1/trips')

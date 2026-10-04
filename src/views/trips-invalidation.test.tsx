@@ -1,3 +1,4 @@
+import { PROPOSE_CHEAPER_DEFAULT } from '@/lib/constants'
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
@@ -34,7 +35,9 @@ describe('trips list invalidation', () => {
     const { wrapper, invalidated } = setup()
     const { result } = renderHook(() => useCreateTrip(), { wrapper })
     await act(() =>
-      result.current.mutateAsync({ body: { name: 'Gdańsk', propose_cheaper_alternatives: null } }),
+      result.current.mutateAsync({
+        body: { name: 'Gdańsk', propose_cheaper_alternatives: PROPOSE_CHEAPER_DEFAULT },
+      }),
     )
     await waitFor(() => expect(invalidated()).toEqual([true, true]))
   })

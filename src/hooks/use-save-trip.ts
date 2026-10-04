@@ -11,6 +11,7 @@ import {
   type TripFormValues,
   tripToFormValues,
 } from '@/lib/trip-form'
+import { PROPOSE_CHEAPER_DEFAULT } from '@/lib/constants'
 import { m } from '@/paraglide/messages'
 import { useCreateTrip } from './use-create-trip'
 import { useUpdateTrip } from './use-update-trip'
@@ -41,7 +42,7 @@ export function useSaveTrip(trip: Trip | null, cities: City[]) {
       if (!trip) {
         return await create.mutateAsync({
           body: {
-            propose_cheaper_alternatives: null,
+            propose_cheaper_alternatives: PROPOSE_CHEAPER_DEFAULT,
             ...formValuesToPatch(values, currency),
             name: values.name.trim(),
           },
