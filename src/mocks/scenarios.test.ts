@@ -1,3 +1,4 @@
+import { PROPOSE_CHEAPER_DEFAULT } from '@/lib/constants'
 import { describe, expect, it } from 'vitest'
 import { fetchClient } from '@/api/client'
 import { ApiError } from '@/api/errors'

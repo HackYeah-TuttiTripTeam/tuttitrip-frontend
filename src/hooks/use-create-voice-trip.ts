@@ -1,6 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { VOICE_START_FLAG } from '@/lib/constants'
+import { PROPOSE_CHEAPER_DEFAULT, VOICE_START_FLAG } from '@/lib/constants'
 import { m } from '@/paraglide/messages'
 import { useCreateTrip } from './use-create-trip'
 
