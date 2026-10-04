@@ -101,7 +101,7 @@ export function buildPlan(
     version,
     input_hash: hash12(key).repeat(6).slice(0, 64),
     plan_hash: planHash === FAMILY_HASH ? plan(tripId).plan_hash : planHash,
-    params: { alpha: inputs.alpha, weight_preset: 'default', draft: false },
+    params: { alpha: inputs.alpha, weight_preset: 'default', draft: false, parameters_version: 1 },
     days: kept,
     fairness: groupFairness(people),
     budget: {

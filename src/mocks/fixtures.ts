@@ -84,6 +84,7 @@ export const trip = (overrides: Partial<Trip> = {}): Trip => ({
   my_status: 'confirmed',
   kind: 'trip',
   propose_cheaper_alternatives: true,
+  is_sample: false,
   ...overrides,
 })
 
@@ -508,7 +509,8 @@ export const verdicts = (): PlanVerdict[] => [
     ],
     skip_codes: [],
     substitute_place_id: SUBSTITUTE_PLACE_ID,
-    explanation: null,
+    justification: 'Pasuje do planu grupy.',
+    justification_source: 'template',
   },
   {
     place_id: PLACE_IDS.prasowy,
@@ -518,7 +520,8 @@ export const verdicts = (): PlanVerdict[] => [
     no: [],
     skip_codes: [],
     substitute_place_id: null,
-    explanation: null,
+    justification: 'Pasuje do planu grupy.',
+    justification_source: 'template',
   },
   {
     place_id: PLACE_IDS.kopernik,
@@ -528,7 +531,8 @@ export const verdicts = (): PlanVerdict[] => [
     no: [],
     skip_codes: [],
     substitute_place_id: null,
-    explanation: null,
+    justification: 'Pasuje do planu grupy.',
+    justification_source: 'template',
   },
   {
     place_id: SKIPPED_PLACE_ID,
@@ -538,7 +542,8 @@ export const verdicts = (): PlanVerdict[] => [
     no: [{ profile_id: PROFILE_IDS.babcia, reason_code: 'too_hard_for_child' }],
     skip_codes: ['stairs'],
     substitute_place_id: null,
-    explanation: null,
+    justification: 'Pasuje do planu grupy.',
+    justification_source: 'template',
   },
   {
     place_id: VETOED_PLACE_ID,
@@ -548,7 +553,8 @@ export const verdicts = (): PlanVerdict[] => [
     no: [{ profile_id: PROFILE_IDS.zosia, reason_code: 'other' }],
     skip_codes: ['veto'],
     substitute_place_id: null,
-    explanation: null,
+    justification: 'Pasuje do planu grupy.',
+    justification_source: 'template',
   },
 ]
 
@@ -635,7 +641,7 @@ export const plan = (tripId: string = TRIP_ID, overrides: Partial<Plan> = {}): P
   input_hash: 'a'.repeat(64),
   plan_hash: 'a1b2c3d4e5f6',
   created_at: '2026-10-02T12:00:00Z',
-  params: { alpha: 1, weight_preset: 'default', draft: false },
+  params: { alpha: 1, weight_preset: 'default', draft: false, parameters_version: 1 },
   days: days(),
   lodging: lodging(),
   fairness: groupFairness(familyFairness()),
@@ -843,6 +849,7 @@ const catalogPlace = (
   name,
   category: 'museum',
   tags: ['museums'],
+  unique_experience: false,
   lat: 52.23,
   lon: 21.02,
   osm_type: null,
