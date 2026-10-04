@@ -16,7 +16,18 @@ export interface TargetBox {
 export function useTargetBox(name: string | undefined): TargetBox | undefined {
   const [box, setBox] = useState<TargetBox>()
   useEffect(() => {
-    const element = name ? findTourTarget(name) : null
+    const tallish = (el: Element) =>
+      el.getBoundingClientRect().height > window.innerHeight * TOUR_TALL_TARGET
+    // A block taller than the ring can show is represented by its first child (the heading row,
+    // the tab list), as deep as it takes.
+    let element = name ? findTourTarget(name) : null
+    for (
+      let depth = 0;
+      element && tallish(element) && element.firstElementChild && depth < 3;
+      depth += 1
+    ) {
+      element = element.firstElementChild as HTMLElement
+    }
     if (!element) {
       setBox(undefined)
       return

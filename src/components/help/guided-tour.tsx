@@ -1,6 +1,6 @@
 import { X } from '@keyline-icons/react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
-import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { resolveSteps, TOUR_SPOTLIGHT_PADDING, type TourTopic } from '@/lib/help'
 import { cn } from '@/lib/utils'
@@ -25,9 +25,21 @@ export function GuidedTour({ topic, open, onOpenChange }: GuidedTourProps) {
 }
 
 function TourDialog({ topic, onClose }: { topic: TourTopic; onClose: () => void }) {
-  // Resolved once per opening: the page does not change under a modal.
-  const steps = useMemo(() => resolveSteps(topic), [topic])
-  const [index, setIndex] = useState(0)
+  // The page can still be loading under the modal (lists, plans): the steps follow what is on it
+  // now, and the current step is tracked by id so the list may grow around it.
+  const [, rerender] = useState(0)
+  useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => rerender((tick) => tick + 1))
+    observer.observe(document.body)
+    return () => observer.disconnect()
+  }, [])
+  const steps = resolveSteps(topic)
+  const [stepId, setStepId] = useState<string>()
+  const index = Math.max(
+    steps.findIndex((candidate) => candidate.id === stepId),
+    0,
+  )
   const nextRef = useRef<HTMLButtonElement>(null)
   // The Help button that opened the tour; the dialog is mounted without a Radix trigger.
   const [opener] = useState(() => document.activeElement)
@@ -43,7 +55,7 @@ function TourDialog({ topic, onClose }: { topic: TourTopic; onClose: () => void 
   const total = steps.length
   const last = index === total - 1
   const counter = m.help_step_counter({ n: index + 1, total })
-  const go = (to: number) => setIndex(Math.min(Math.max(to, 0), total - 1))
+  const go = (to: number) => setStepId(steps[Math.min(Math.max(to, 0), total - 1)]?.id)
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === 'ArrowRight') go(index + 1)
     if (event.key === 'ArrowLeft') go(index - 1)
