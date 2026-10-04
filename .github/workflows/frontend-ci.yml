@@ -161,7 +161,7 @@ jobs:
     # Pushes to main/develop deploy; pull requests from this repo get a preview,
     # except release PRs (develop -> main): develop already has its own deployment.
     if: >-
-      always() && !cancelled() && !contains(needs.*.result, 'failure') && (
+      always() && !cancelled() && needs.build.result == 'success' && (
       (github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'develop')) ||
       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository &&
        github.head_ref != 'develop' && github.head_ref != 'main' &&
