@@ -119,13 +119,13 @@ export function AppShell({
 
       <main
         id="main"
-        className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-10 md:px-6 md:pt-10 md:pb-12"
+        className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 pt-6 pb-10 md:px-6 md:pt-10 md:pb-12"
       >
         {children}
       </main>
 
       {/* The bottom action bar is fixed on phones; keep the footer clear of it. */}
-      <SiteFooter variant="compact" language={language} className="pb-20 md:pb-0 print:hidden" />
+      <SiteFooter language={language} className="pb-20 md:pb-0 print:hidden" />
 
       <nav
         aria-label={m.shell_nav_actions()}
