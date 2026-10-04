@@ -7462,30 +7462,6 @@ export interface components {
             approval_status: components["schemas"]["ApprovalStatus"];
         };
         /**
-         * PlanCatalogEmpty
-         * @description 409 body: there is nothing to plan from in this city yet.
-         */
-        PlanCatalogEmpty: {
-            detail: components["schemas"]["PlanCatalogEmptyDetail"];
-        };
-        /**
-         * PlanCatalogEmptyDetail
-         * @description The trip's city has no places in the catalog yet; clients map by ``code``.
-         */
-        PlanCatalogEmptyDetail: {
-            /**
-             * Code
-             * @default plan.catalog_empty
-             * @constant
-             */
-            code: "plan.catalog_empty";
-            /**
-             * Message
-             * @description For developers; clients map by code.
-             */
-            message: string;
-        };
-        /**
          * PlanConflict
          * @description A conflict between people or constraints; always with a reason code.
          */
@@ -14194,16 +14170,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The city has no places in the catalog yet. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlanCatalogEmpty"];
-                };
-            };
-            /** @description No city yet (`detail.code` is `plan.missing_inputs`, `message` `Podaj miasto`), or a city outside the catalog. */
+            /** @description No city yet (`detail.code` is `plan.missing_inputs`, `message` `Podaj miasto`), or an unplannable trip. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -14362,16 +14329,16 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The city has no places in the catalog yet: `detail.code` is `plan.catalog_empty`. */
+            /** @description The trip's city has no places (`detail.code` is `catalog_missing`, `detail.job_id` the candidate fetch). */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlanCatalogEmpty"];
+                    "application/json": components["schemas"]["PlanCatalogMissing"];
                 };
             };
-            /** @description The trip lacks a city, dates or people: `detail.code` is `plan.missing_inputs` and `detail.missing` lists every missing field with the interview card that asks for it. */
+            /** @description The trip lacks a destination, dates or people: `detail.code` is `plan.missing_inputs` and `detail.missing` lists every missing field with the interview card that asks for it. A city outside the catalog is not missing (see 409). */
             422: {
                 headers: {
                     [name: string]: unknown;
