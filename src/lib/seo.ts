@@ -7,7 +7,7 @@
 import { m } from '../paraglide/messages'
 import { baseLocale, type Locale, locales } from '../paraglide/runtime'
 
-export const SEO_PATHS = ['/', '/about', '/contact'] as const
+export const SEO_PATHS = ['/', '/about', '/contact', '/prywatnosc'] as const
 export type SeoPath = (typeof SEO_PATHS)[number]
 
 const SITE_NAME = 'TuttiTrip'
@@ -65,6 +65,10 @@ function textsFor(locale: Locale): Messages {
     '/contact': {
       title: () => m.seo_contact_title({}, options),
       description: () => m.seo_contact_description({}, options),
+    },
+    '/prywatnosc': {
+      title: () => m.seo_privacy_title({}, options),
+      description: () => m.seo_privacy_description({}, options),
     },
   }
 }

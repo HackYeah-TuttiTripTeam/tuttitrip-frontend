@@ -36,7 +36,7 @@ export function TripTabs({ tab, onTabChange, people, plan }: TripTabsProps) {
         if (next) onTabChange(next)
       }}
     >
-      <TabsList aria-label={m.trip_tabs_label()} className="md:max-w-md">
+      <TabsList aria-label={m.trip_tabs_label()} className="md:max-w-md print:hidden">
         {TRIP_TABS.map((value) => (
           <TabsTrigger key={value} value={value}>
             <span aria-hidden="true">{TAB_ICONS[value]}</span>

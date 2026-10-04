@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { headersFile, isProductionBuild, workboxOptions } from './pwa.config.ts'
+import { headersFile, injectDescriptions, isProductionBuild, workboxOptions } from './pwa.config.ts'
 
 describe('isProductionBuild', () => {
   it('is true only for the main deployment', () => {
@@ -81,5 +81,17 @@ describe('headersFile', () => {
     expect(headersFile(true)).toContain(
       '/assets/*\n  Cache-Control: public, max-age=31536000, immutable',
     )
+  })
+})
+
+describe('injectDescriptions', () => {
+  const html = '<meta content="%DESCRIPTION_PL%"><script>const t = __DESCRIPTIONS__</script>'
+
+  it('escapes the attribute, the script, and ignores replacement patterns', () => {
+    const out = injectDescriptions(html, { pl: 'a "b" & $& <c>', en: '</script><b>' })
+    expect(out).toContain('content="a &#34;b&#34; &#38; $&#38; &#60;c&#62;"')
+    expect(out).not.toContain('</script><b>')
+    expect(out).toContain('\\u003c/script>')
+    expect(out).not.toContain('%DESCRIPTION')
   })
 })

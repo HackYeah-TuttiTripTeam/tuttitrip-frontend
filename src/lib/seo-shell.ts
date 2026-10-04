@@ -3,7 +3,7 @@
 // screen, and for a visitor on a phone that is several seconds. This markup shows the headline,
 // the lede and the first photo at once, and is also what a crawler without JavaScript reads.
 // React replaces it when it mounts, so the class names must stay the same as in
-// components/public (landing-sections, about-sections, contact-body): same classes, same size,
+// components/public (landing-sections, about-sections, contact-body, privacy-body): same classes, same size,
 // no jump. Only the pieces that are above the fold on a phone are here.
 import { m } from '../paraglide/messages'
 import type { Locale } from '../paraglide/runtime'
@@ -102,6 +102,15 @@ export function shellHtml(path: SeoPath, locale: Locale): string {
         `<figure class="hidden flex-col gap-2 md:flex"><div class="overflow-hidden rounded-lg border">` +
         picture('rodzina', m.photo_rodzina_alt({}, o), '38vw', 'aspect-[4/5] object-cover', false) +
         `</div></figure></section>`,
+    )
+  }
+  if (path === '/prywatnosc') {
+    return frame(
+      `<section class="${SECTION} py-10 md:py-16"><div class="flex flex-col gap-5 md:max-w-3xl">` +
+        `<h1 class="text-balance font-extrabold text-4xl leading-[1.05] tracking-tight md:text-5xl">${escapeHtml(m.privacy_title({}, o))}</h1>` +
+        `<p class="max-w-prose text-lg text-muted-foreground leading-relaxed">${escapeHtml(m.privacy_lede({}, o))}</p>` +
+        `<p class="max-w-prose text-muted-foreground text-sm leading-relaxed"><strong class="font-medium text-foreground">${escapeHtml(m.privacy_updated({}, o))}.</strong> ${escapeHtml(m.privacy_scope({}, o))}</p>` +
+        `</div></section>`,
     )
   }
   const team = PHOTOS.zespol

@@ -59,6 +59,9 @@ export function SiteFooter({ language, extras, variant = 'full', className }: Si
             <Link to="/contact" className={linkClass}>
               {m.nav_contact()}
             </Link>
+            <Link to="/prywatnosc" className={linkClass}>
+              {m.nav_privacy()}
+            </Link>
             <External href={GITHUB_ORG_URL}>{m.footer_github()}</External>
           </nav>
           <div className="flex items-center justify-between gap-4 md:justify-end">
@@ -117,6 +120,9 @@ export function SiteFooter({ language, extras, variant = 'full', className }: Si
             <External href={GITHUB_ORG_URL}>{m.footer_github()}</External>
           </FooterColumn>
           <FooterColumn title={m.footer_licences()}>
+            <Link to="/prywatnosc" className={linkClass}>
+              {m.nav_privacy()}
+            </Link>
             <External href={UNSPLASH_LICENSE_URL}>{m.footer_unsplash_licence()}</External>
           </FooterColumn>
         </nav>

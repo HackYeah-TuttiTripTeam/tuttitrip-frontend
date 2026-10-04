@@ -6,10 +6,13 @@
 //   /api/*        the proxy;
 //   /assets/*     handed to the assets unchanged; a missing file would get the SPA fallback
 //                 (200 index.html), so it becomes a 404 (assetsOr404). Nothing is injected here;
-//   /, /about, /contact (and the trailing-slash forms), /robots.txt, /sitemap.xml
+//   /manifest.webmanifest
+//                 the build's manifest in the language of the request (manifest);
+//   /, /about, /contact, /prywatnosc (and the trailing-slash forms), /robots.txt, /sitemap.xml
 //                 the public pages with their own metadata and first screen (publicPage).
 // Every other path is served by the assets layer without this script.
 
+import { localizedManifest, MANIFEST_PATH } from '../src/lib/manifest'
 import { pageSeo, requestLocale, robotsTxt, seoHeadHtml, seoPath, sitemapXml } from '../src/lib/seo'
 import { SHELL_PRELOADS, shellHtml } from '../src/lib/seo-shell'
 
@@ -91,6 +94,34 @@ const text = (body: string, type: string) =>
     headers: { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'public, max-age=3600' },
   })
 
+/**
+ * The manifest from the build with description and lang in the user's language (?lang=, then
+ * Accept-Language). The browser fetches it with its own Accept-Language; public pages point at
+ * it with ?lang= so the chosen language wins. Not cacheable without revalidation, like the file.
+ */
+async function manifest(request: Request, env: Env, url: URL): Promise<Response> {
+  // The static file's validators say nothing about the localized body (see publicPage).
+  const headers = new Headers(request.headers)
+  headers.delete('if-none-match')
+  headers.delete('if-modified-since')
+  const response = await env.ASSETS.fetch(new Request(request, { headers }))
+  // A manifest the build did not emit would come back as the SPA fallback (HTML): a real 404.
+  if (!response.ok || response.headers.get('content-type')?.startsWith('text/html')) {
+    return assetsOr404(request, env)
+  }
+  const base = (await response.json()) as Record<string, unknown>
+  const locale = requestLocale(url, request.headers.get('accept-language'))
+  return new Response(JSON.stringify(localizedManifest(base, locale)), {
+    headers: {
+      'content-type': 'application/manifest+json; charset=utf-8',
+      'cache-control': 'no-cache',
+      vary: 'Accept-Language',
+      // The _headers rules do not apply to a Worker response.
+      'referrer-policy': 'no-referrer',
+    },
+  })
+}
+
 const isProduction = (env: Env) => env.ENVIRONMENT === 'production'
 
 /**
@@ -113,7 +144,16 @@ async function publicPage(request: Request, env: Env, url: URL): Promise<Respons
   const locale = requestLocale(url, request.headers.get('accept-language'))
   const seo = pageSeo(url.origin, path, locale)
   const page = new HTMLRewriter()
-    .on('html', { element: (element) => element.setAttribute('lang', locale) })
+    .on('html', {
+      element: (element) => {
+        element.setAttribute('lang', locale)
+        // Tells the language script in index.html that the Worker owns lang and description.
+        element.setAttribute('data-seo', '')
+      },
+    })
+    .on('link[rel="manifest"]', {
+      element: (element) => element.setAttribute('href', `${MANIFEST_PATH}?lang=${locale}`),
+    })
     // The static title and description of index.html give way to the page's own.
     .on('title', { element: (element) => element.remove() })
     .on('meta[name="description"]', { element: (element) => element.remove() })
@@ -144,6 +184,7 @@ export default {
     if (pathname.startsWith('/api/')) return proxy(request, env)
     if (pathname.startsWith('/assets/')) return assetsOr404(request, env)
     if (request.method === 'GET' || request.method === 'HEAD') {
+      if (pathname === MANIFEST_PATH) return manifest(request, env, url)
       if (pathname === '/robots.txt') {
         return text(robotsTxt(url.origin, isProduction(env)), 'text/plain')
       }

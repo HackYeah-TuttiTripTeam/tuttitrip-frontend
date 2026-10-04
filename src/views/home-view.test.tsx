@@ -51,6 +51,15 @@ describe('public pages', () => {
     const footer = screen.getByRole('navigation', { name: m.shell_nav_footer() })
     expect(footer.querySelector('a[href="/about"]')?.textContent).toBe(m.nav_about())
     expect(footer.querySelector('a[href="/contact"]')?.textContent).toBe(m.nav_contact())
+    expect(footer.querySelector('a[href="/prywatnosc"]')?.textContent).toBe(m.nav_privacy())
+  })
+
+  it('shows the privacy policy to a guest, one heading per section', async () => {
+    const router = renderAt('/prywatnosc')
+    expect(await screen.findByRole('heading', { level: 1, name: m.privacy_title() })).toBeTruthy()
+    expect(router.state.location.pathname).toBe('/prywatnosc')
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(12)
+    expect(screen.getByText('tuttitrip-demo-session')).toBeTruthy()
   })
 
   it('shows the landing page while the session loads when no session is stored', async () => {

@@ -332,7 +332,7 @@ paths in `schema.d.ts` start with `/api/v1`, so every call goes to its own
 origin. No CORS, and the same build works in every environment.
 
 - Deployed: `worker/index.ts` (typed by `tsconfig.worker.json`, plain Fetch API).
-  `assets.run_worker_first` lists `/api/*`, `/assets/*`, the public pages (`/`, `/about`, `/contact`, also with a
+  `assets.run_worker_first` lists `/api/*`, `/assets/*`, the public pages (`/`, `/about`, `/contact`, `/prywatnosc`, also with a
   trailing slash) and `/robots.txt`, `/sitemap.xml`. It sends `/api/*` to the script before
   the assets, so the SPA fallback never answers an API path, and `/assets/*` so a
   missing build file is a 404 (the assets layer alone answers any missing GET with

@@ -1,7 +1,7 @@
 import type { SessionStatus } from '@/hooks/use-session'
 
 /** Pages open to guests; they use the public layout instead of the app shell. */
-const PUBLIC_PATHS = new Set(['/', '/about', '/contact'])
+const PUBLIC_PATHS = new Set(['/', '/about', '/contact', '/prywatnosc'])
 
 /** "standalone" is /demo: the page draws all of itself, so no header flashes sign-in buttons. */
 export type ShellKind = 'public' | 'bare' | 'standalone' | 'app'

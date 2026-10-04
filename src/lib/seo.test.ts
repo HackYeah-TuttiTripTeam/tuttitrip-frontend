@@ -17,6 +17,7 @@ describe('seoPath', () => {
     expect(seoPath('/')).toBe('/')
     expect(seoPath('/about/')).toBe('/about')
     expect(seoPath('/contact')).toBe('/contact')
+    expect(seoPath('/prywatnosc/')).toBe('/prywatnosc')
   })
 
   it('leaves the app and unknown paths out', () => {
@@ -97,11 +98,23 @@ describe('seoTags and seoHeadHtml', () => {
   })
 })
 
+describe('privacy page', () => {
+  it('has its own title, canonical and language alternates', () => {
+    const seo = pageSeo(ORIGIN, '/prywatnosc', 'en')
+    expect(seo.title).toBe('TuttiTrip privacy policy')
+    expect(seo.canonical).toBe(`${ORIGIN}/prywatnosc?lang=en`)
+    expect(seo.alternates).toContainEqual({ hreflang: 'pl', href: `${ORIGIN}/prywatnosc` })
+    expect(pageSeo(ORIGIN, '/prywatnosc', 'pl').title).toBe('Polityka prywatności TuttiTrip')
+  })
+})
+
 describe('crawler files', () => {
   it('lists every public page with its alternates in the sitemap', () => {
     const xml = sitemapXml(ORIGIN)
-    expect(xml.match(/<url>/g)).toHaveLength(3)
+    expect(xml.match(/<url>/g)).toHaveLength(4)
     expect(xml).toContain(`<loc>${ORIGIN}/about</loc>`)
+    expect(xml).toContain(`<loc>${ORIGIN}/prywatnosc</loc>`)
+    expect(xml).toContain(`hreflang="en" href="${ORIGIN}/prywatnosc?lang=en"`)
     expect(xml).toContain(`hreflang="en" href="${ORIGIN}/about?lang=en"`)
   })
 

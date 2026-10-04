@@ -45,8 +45,8 @@ export function AppShell({
       </a>
 
       {/* Above the sticky header, not in it: it scrolls away and never grows the header on a phone. */}
-      {banner}
-      <header className="sticky top-0 z-40 border-b bg-background pt-[env(safe-area-inset-top)]">
+      <div className="print:hidden">{banner}</div>
+      <header className="sticky top-0 z-40 border-b bg-background pt-[env(safe-area-inset-top)] print:hidden">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-6 px-4 md:px-6">
           <Link
             to={account.status === 'authenticated' ? '/trips' : '/'}
@@ -93,11 +93,11 @@ export function AppShell({
       </main>
 
       {/* The bottom action bar is fixed on phones; keep the footer clear of it. */}
-      <SiteFooter variant="compact" language={language} className="pb-20 md:pb-0" />
+      <SiteFooter variant="compact" language={language} className="pb-20 md:pb-0 print:hidden" />
 
       <nav
         aria-label={m.shell_nav_actions()}
-        className="fixed inset-x-0 bottom-0 z-40 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t print:hidden bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         <div className="mx-auto grid h-16 max-w-md grid-cols-3 items-center px-2">
           <Link to="/trips" className={tabClass}>

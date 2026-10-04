@@ -7,6 +7,9 @@ describe('shellHtml', () => {
     expect(shellHtml('/', 'pl')).toContain(`>${m.home_title({}, { locale: 'pl' })}</h1>`)
     expect(shellHtml('/about', 'en')).toContain(`>${m.about_title({}, { locale: 'en' })}</h1>`)
     expect(shellHtml('/contact', 'pl')).toContain(`>${m.contact_title({}, { locale: 'pl' })}</h1>`)
+    expect(shellHtml('/prywatnosc', 'en')).toContain(
+      `>${m.privacy_title({}, { locale: 'en' })}</h1>`,
+    )
   })
 
   it('points to photo files that keep their names in a build', () => {

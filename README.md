@@ -121,7 +121,7 @@ Przykładowa funkcja, na której można się wzorować, to lista wyjazdów: `api
 
 ## Strony publiczne: SEO, zdjęcia i ruch
 
-- **Meta tagi** (`title`, opis, `canonical`, `hreflang`, Open Graph, Twitter, JSON-LD) dla `/`, `/about` i `/contact`
+- **Meta tagi** (`title`, opis, `canonical`, `hreflang`, Open Graph, Twitter, JSON-LD) dla `/`, `/about`, `/contact` i `/prywatnosc` (polityka prywatności)
   buduje `src/lib/seo.ts` z tekstów Paraglide (`seo_*`). Wstrzykuje je Worker (`worker/index.ts`, `HTMLRewriter`),
   więc boty bez JavaScriptu widzą je w pierwszej odpowiedzi, a po stronie klienta utrzymuje je `head` trasy
   (`src/loaders/seo.ts`). Język strony: `?lang=pl|en`, potem `Accept-Language`, potem polski. `robots.txt` i
