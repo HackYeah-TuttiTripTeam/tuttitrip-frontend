@@ -274,6 +274,15 @@ start on a tap; stop releases the mic first, then tells the server; closing the 
 `keepalive` hang-up (`api/voice.ts`). Captions come from the data-channel events (`lib/voice-events.ts`,
 keyed by item id, so a late user transcript keeps its place). A call and a text turn exclude each other.
 No microphone or no WebRTC leaves the text field.
+The call shows what it does from the data-channel events (`lib/voice-events.ts`: listening, hearing,
+thinking, saving a field, building the plan, speaking; a finished tool refreshes the panel at once).
+In the open mode the mic track is muted from the end of the host's speech until the assistant has
+finished (`micMayBeOpen`), with "Mów mimo to"; in the hold-to-talk mode (`tt.voice.mode` in
+localStorage) server voice detection is turned off with `session.update`, the track is live only
+while the button is held (pointer, touch, Space), release sends `input_audio_buffer.commit` and
+`response.create`, and only the square ends the call. Ending shows "filling in the details" while
+the server extracts them from the transcript. The offer carries `locale`. A 409 reads
+`SessionRead.running`: a call elsewhere offers `voice/release` ("Zakończ tamtą rozmowę").
 
 ## Data flow for a feature (example: trips)
 

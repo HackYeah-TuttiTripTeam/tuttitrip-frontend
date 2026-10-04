@@ -65,6 +65,7 @@ export const scenarioNames = [
   'vote-write-error',
   'interview-empty',
   'interview-resumed',
+  'interview-voice-elsewhere',
 ] as const
 
 export type ScenarioName = (typeof scenarioNames)[number]
@@ -291,6 +292,13 @@ export function createWorld(name: ScenarioName): World {
         trips: [fresh, outing()],
         profiles: familyProfiles().slice(0, 1),
         preferences: [],
+      }
+    }
+    case 'interview-voice-elsewhere': {
+      const messages = resumedMessages(6)
+      return {
+        ...base,
+        interview: { ...emptyInterviewWorld(), started: true, messages, running: 'voice' },
       }
     }
     case 'interview-resumed': {
