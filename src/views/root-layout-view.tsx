@@ -5,6 +5,7 @@ import { BootScreen } from '@/components/shared/boot-screen'
 import { DemoBanner } from '@/components/shared/demo-banner'
 import { OfflineBanner } from '@/components/shared/offline-banner'
 import { PublicShell } from '@/components/shared/public-shell'
+import { useAdminAccess } from '@/hooks/use-admin-access'
 import { useApiAuthBridge } from '@/hooks/use-api-auth-bridge'
 import { useCleanServerHead } from '@/hooks/use-clean-server-head'
 import { useDemoStatus } from '@/hooks/use-demo-session'
@@ -52,6 +53,7 @@ export function RootLayoutView() {
   const shell = shellFor(pathname, session.status, storedSession)
   useHomeRedirect(pathname, session.status, storedSession)
   const demo = useDemoStatus()
+  const { access: adminAccess } = useAdminAccess(session.status)
   const online = useOnline()
   const banner = (
     <>
@@ -93,6 +95,7 @@ export function RootLayoutView() {
             showPermissions: access !== 'NONE',
             onLogin: session.login,
             onLogout: session.logout,
+            canAdminUsers: adminAccess !== 'NONE',
           }}
           language={language}
           theme={{ theme, resolved, onChange: setTheme }}
@@ -101,7 +104,7 @@ export function RootLayoutView() {
           onCreateTrip={() => {
             // Creating a trip needs an account; ask guests to sign in first.
             if (session.status === 'anonymous') return session.login()
-            void navigate({ to: '/trips', search: (prev) => prev })
+            void navigate({ to: '/trips', search: {} })
             setCreateTripOpen(true)
           }}
         >

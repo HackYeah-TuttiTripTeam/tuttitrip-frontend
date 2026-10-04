@@ -1,4 +1,4 @@
-import { CircleUser, Door, DoorOpen, ShieldCheck } from '@keyline-icons/react'
+import { CircleUser, Door, DoorOpen, Settings, ShieldCheck, ShieldUser } from '@keyline-icons/react'
 import { Link } from '@tanstack/react-router'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -22,6 +22,8 @@ export interface AccountState {
   showPermissions?: boolean
   onLogin: () => void
   onLogout: () => void
+  /** From `GET /me`: whether to offer the accounts panel. Never inferred on the client. */
+  canAdminUsers?: boolean
 }
 
 function initials(name: string | undefined): string {
@@ -100,6 +102,20 @@ export function AccountMenu({
                 <ThemeRadioGroup state={theme} />
                 <DropdownMenuSeparator />
               </>
+            )}
+            <DropdownMenuItem asChild>
+              <Link to="/account">
+                <Settings />
+                {m.account_settings_link()}
+              </Link>
+            </DropdownMenuItem>
+            {account.canAdminUsers && (
+              <DropdownMenuItem asChild>
+                <Link to="/admin/users">
+                  <ShieldUser />
+                  {m.admin_users_link()}
+                </Link>
+              </DropdownMenuItem>
             )}
             {account.showPermissions && (
               <DropdownMenuItem asChild>

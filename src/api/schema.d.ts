@@ -443,6 +443,89 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/users/{sub}/block": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Block User
+         * @description Block an account in Auth0 and in this API (tokens already issued stop too).
+         *
+         *     Args:
+         *         sub: Auth0 user id.
+         *         admin: The calling administrator.
+         *         session: Database session.
+         *         client: Management API client.
+         *
+         *     Returns:
+         *         Empty 204.
+         *
+         *     Wymagane uprawnienie: `admin.users:WRITE`.
+         */
+        post: operations["block_user_api_v1_admin_users__sub__block_post"];
+        /**
+         * Unblock User
+         * @description Lift a block in Auth0 and in this API.
+         *
+         *     Args:
+         *         sub: Auth0 user id.
+         *         admin: The calling administrator.
+         *         session: Database session.
+         *         client: Management API client.
+         *
+         *     Returns:
+         *         Empty 204.
+         *
+         *     Wymagane uprawnienie: `admin.users:WRITE`.
+         */
+        delete: operations["unblock_user_api_v1_admin_users__sub__block_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{sub}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete User
+         * @description Delete an account in Auth0 and clear its data.
+         *
+         *     Trips it hosts pass to the co-host who joined first; **a trip without a
+         *     co-host is deleted** with everything under it. Memberships, roles, grants,
+         *     issued access tokens and open invitations go; profiles are detached from
+         *     the account; expenses stay. The account is blocked first and stays refused
+         *     afterwards. The audit entry carries the counts.
+         *
+         *     Args:
+         *         sub: Auth0 user id.
+         *         admin: The calling administrator.
+         *         session: Database session.
+         *         client: Management API client.
+         *
+         *     Returns:
+         *         Empty 204.
+         *
+         *     Wymagane uprawnienie: `admin.users:WRITE`.
+         */
+        delete: operations["delete_user_api_v1_admin_users__sub__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/account": {
         parameters: {
             query?: never;
@@ -654,6 +737,10 @@ export interface paths {
          *     and the filters `q`, `city`, `kind`, `start_from`, `start_to` and `role`
          *     (repeatable). Trips without `start_date` sort last in both directions.
          *
+         *     `when=past` is the history of the groups the caller was in, `when=upcoming`
+         *     the trips still ahead (or without dates). `status=pending` finds the trips
+         *     the caller was added to and has not confirmed yet.
+         *
          *     Args:
          *         query: Paging, sort and filters.
          *         user: The authenticated caller.
@@ -820,6 +907,99 @@ export interface paths {
          *     Wymagane uprawnienie: `trips.members:WRITE`.
          */
         patch: operations["update_member_api_v1_trips__trip_id__members__profile_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/members/{profile_id}/host": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transfer Host
+         * @description Hand the host role to another member; the caller becomes a co-host.
+         *
+         *     Needed before the host can leave the trip.
+         *
+         *     Args:
+         *         profile_id: Profile of the new host.
+         *         membership: The caller's membership (host).
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The new host.
+         *
+         *     Wymagane uprawnienie: `trips.members:WRITE`.
+         */
+        post: operations["transfer_host_api_v1_trips__trip_id__members__profile_id__host_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/membership/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm Membership
+         * @description Confirm the caller's participation; the host then sees `confirmed`.
+         *
+         *     Idempotent. Any member may confirm, whatever their role.
+         *
+         *     Args:
+         *         membership: The caller's membership (any role).
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The caller as a member.
+         *
+         *     Wymagane uprawnienie: `trips.members:WRITE`.
+         */
+        post: operations["confirm_membership_api_v1_trips__trip_id__membership_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/trips/{trip_id}/membership/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leave Trip
+         * @description Leave the trip; the caller's profile stays without an account.
+         *
+         *     The profile, expenses and balance stay in the trip and the profile can be
+         *     claimed again from an invitation. The host answers 409 until they hand over
+         *     the host role.
+         *
+         *     Args:
+         *         membership: The caller's membership (any role).
+         *         session: Database session.
+         *
+         *     Wymagane uprawnienie: `trips.members:WRITE`.
+         */
+        post: operations["leave_trip_api_v1_trips__trip_id__membership_leave_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/trips/{trip_id}/invitations": {
@@ -3307,8 +3487,9 @@ export interface components {
          *     by the worker show up as ERROR with the worker's message in ``error``.
          *     ``error_code`` is the worker's machine code (``invalid_payload``,
          *     ``unsupported_contract_version``, ``not_implemented``, ``document_not_found``,
-         *     ``model_output_invalid``, ``city_not_found`` or ``rate_limited``); such a job
-         *     is not retried by the backend and ``error`` carries a readable message.
+         *     ``model_output_invalid``, ``city_not_found``, ``rate_limited`` or
+         *     ``slug_conflict``); such a job is not retried by the backend and ``error``
+         *     carries a readable message.
          */
         JobState: {
             /** Workflow Id */
@@ -3326,8 +3507,13 @@ export interface components {
             /** Error */
             error?: string | null;
             /**
+             * Error En
+             * @description English text of `error` for codes the API knows; else null.
+             */
+            error_en?: string | null;
+            /**
              * Error Code
-             * @description Machine code of a worker error: `unsupported_contract_version`, `invalid_payload`, `not_implemented`, `document_not_found`, `model_output_invalid`, `city_not_found` or `rate_limited`. Clients branch on this, never on the text of `error`.
+             * @description Machine code of a worker error: `unsupported_contract_version`, `invalid_payload`, `not_implemented`, `document_not_found`, `model_output_invalid`, `city_not_found`, `rate_limited` or `slug_conflict`. Clients branch on this, never on the text of `error`.
              */
             error_code?: string | null;
             progress?: components["schemas"]["Progress"] | null;
@@ -3676,6 +3862,8 @@ export interface components {
             /** Display Name */
             display_name: string;
             role: components["schemas"]["TripRole"];
+            /** @description Whether the member confirmed. */
+            status: components["schemas"]["MemberStatus"];
             /**
              * Is Me
              * @description Whether this member is the caller.
@@ -3693,6 +3881,16 @@ export interface components {
              */
             role: "member" | "co_host";
         };
+        /**
+         * MemberStatus
+         * @description Whether a member confirmed they are going.
+         *
+         *     The host and the creator are ``confirmed``; someone who joined from an
+         *     invitation is ``pending`` until they confirm. Leaving the trip removes the
+         *     membership, so there is no third value.
+         * @enum {string}
+         */
+        MemberStatus: "pending" | "confirmed";
         /**
          * MessageRole
          * @description Who said a displayed message.
@@ -5592,6 +5790,8 @@ export interface components {
             fairness_alpha: number;
             /** @description The caller's role on this trip. */
             my_role: components["schemas"]["TripRole"];
+            /** @description Whether the caller confirmed they are going (`confirmed`). */
+            my_status: components["schemas"]["MemberStatus"];
             /**
              * Kind
              * @description ``outing`` for a single day without a stay, otherwise ``trip``.
@@ -5685,6 +5885,12 @@ export interface components {
             /** Detail */
             detail: components["schemas"]["TripValidationError"][];
         };
+        /**
+         * TripWhen
+         * @description Time filter of the trip list, the history of the groups a person is in.
+         * @enum {string}
+         */
+        TripWhen: "past" | "upcoming";
         /**
          * UnconfirmedReason
          * @description Why a requirement is ``unconfirmed`` (the UI label is in parentheses).
@@ -6706,6 +6912,219 @@ export interface operations {
             };
         };
     };
+    block_user_api_v1_admin_users__sub__block_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.users:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Auth0 has no such account. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Own account or a superadmin. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Auth0 did not answer correctly. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Management API credentials are not configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    unblock_user_api_v1_admin_users__sub__block_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.users:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Auth0 has no such account. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Own account or a superadmin. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Auth0 did not answer correctly. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Management API credentials are not configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    delete_user_api_v1_admin_users__sub__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sub: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `admin.users:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Auth0 has no such account. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Own account or a superadmin. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Auth0 did not answer correctly. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Management API credentials are not configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     update_my_account_api_v1_me_account_patch: {
         parameters: {
             query?: never;
@@ -6979,6 +7398,10 @@ export interface operations {
                 start_to?: string | null;
                 /** @description The caller's role on the trip; repeat for several. */
                 role?: components["schemas"]["TripRole"][] | null;
+                /** @description `past`: the trip ended before today. `upcoming`: it ends today or later, or has no dates yet. Omitted: all trips. */
+                when?: components["schemas"]["TripWhen"] | null;
+                /** @description The caller's participation status on the trip. */
+                status?: components["schemas"]["MemberStatus"] | null;
                 /** @description Page number, from 1. */
                 page?: number;
                 /** @description Items per page (max 100). */
@@ -7334,6 +7757,147 @@ export interface operations {
             };
             /** @description Brak uprawnienia `trips.members:WRITE` */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transfer_host_api_v1_trips__trip_id__members__profile_id__host_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.members:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_membership_api_v1_trips__trip_id__membership_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.members:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    leave_trip_api_v1_trips__trip_id__membership_leave_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `trips.members:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The host cannot leave before handing over. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
