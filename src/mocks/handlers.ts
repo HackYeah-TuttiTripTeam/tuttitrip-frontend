@@ -8,16 +8,21 @@ import {
   toCents,
 } from '@/lib/money'
 import {
+  checkin,
   type Expense,
   expenseParticipants,
   INVITATION_TOKEN,
   invitation,
+  location,
   MOCK_DEMO_TOKEN,
   MOCK_USER_SUB,
+  type Photo,
+  PIXEL_PNG_BASE64,
   type Plan,
   PROFILE_IDS,
   type Preferences,
   type Profile,
+  photo,
   plan,
   preferences,
   TRIP_ID,
@@ -222,6 +227,7 @@ function normalHandlers(
 ): RequestHandler[] {
   const findTrip = (id: unknown) => world.trips.find((candidate) => candidate.id === id)
   const canWrite = (id: unknown) => findTrip(id)?.my_role !== 'member'
+  const isHostOf = (id: unknown) => findTrip(id)?.my_role === 'host'
 
   return [
     ...interviewHandlers({
@@ -818,6 +824,164 @@ function normalHandlers(
       return HttpResponse.json(place)
     }),
 
+    // Check-ins. Like the API: any member reads them all; a member sets their own profile, a
+    // co-host or host also profiles without an account.
+    http.get(`${API}/trips/:tripId/checkins`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const query = new URL(request.url).searchParams
+      const part = (query.get('accommodation') ?? '').toLowerCase()
+      const sort = (query.get('sort') ?? 'accommodation') as 'accommodation' | 'room' | 'updated_at'
+      const rows = world.checkins.filter((entry) =>
+        entry.accommodation.toLowerCase().includes(part),
+      )
+      return HttpResponse.json(
+        pageOf(rows, query, (a, b) => String(a[sort] ?? '').localeCompare(String(b[sort] ?? ''))),
+      )
+    }),
+
+    http.put(`${API}/trips/:tripId/checkins/:profileId`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const profile = world.profiles.find((p) => p.id === params.profileId)
+      if (!profile) return notFound('Profile not found')
+      const allowed = isMe(world, profile.id) || (isHostOf(params.tripId) && !profile.user_sub)
+      if (!allowed) return forbidden()
+      const body = (await request.json()) as Schemas['CheckinUpdate']
+      const entry = checkin(profile.id, {
+        display_name: profile.display_name,
+        accommodation: body.accommodation.trim(),
+        room: body.room?.trim() || null,
+        updated_at: new Date().toISOString(),
+        is_me: isMe(world, profile.id),
+      })
+      world.checkins = [...world.checkins.filter((c) => c.profile_id !== profile.id), entry]
+      return HttpResponse.json(entry)
+    }),
+
+    http.delete(`${API}/trips/:tripId/checkins/:profileId`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const profile = world.profiles.find((p) => p.id === params.profileId)
+      if (profile && !(isMe(world, profile.id) || (isHostOf(params.tripId) && !profile.user_sub)))
+        return forbidden()
+      world.checkins = world.checkins.filter((c) => c.profile_id !== params.profileId)
+      return new HttpResponse(null, { status: 204 })
+    }),
+
+    // Photos. The upload takes the two multipart parts and keeps the thumbnail as a data: URL.
+    http.get(`${API}/trips/:tripId/photos`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const query = new URL(request.url).searchParams
+      const mine = query.get('mine')
+      const sort = (query.get('sort') ?? 'created_at') as 'created_at' | 'size_bytes'
+      const rows = world.photos.filter((p) => mine === null || p.is_mine === (mine === 'true'))
+      return HttpResponse.json(
+        pageOf(
+          rows,
+          query,
+          (a, b) => String(a[sort]).localeCompare(String(b[sort]), 'en', { numeric: true }),
+          'desc',
+        ),
+      )
+    }),
+
+    http.post(`${API}/trips/:tripId/photos`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (world.photoUploadStatus) return failure(world.photoUploadStatus)
+      const form = await request.formData()
+      const image = form.get('image')
+      const thumbnail = form.get('thumbnail')
+      // Not `instanceof Blob`: under jsdom the parts are undici's, not the page's Blob class.
+      if (!isFilePart(image) || !isFilePart(thumbnail))
+        return HttpResponse.json({ detail: 'image and thumbnail are required' }, { status: 422 })
+      const created: Photo = photo(crypto.randomUUID(), {
+        author_name: 'Ola',
+        is_mine: true,
+        content_type: image.type || 'image/jpeg',
+        size_bytes: image.size,
+        created_at: new Date().toISOString(),
+        thumbnail: `data:${thumbnail.type || 'image/jpeg'};base64,${PIXEL_PNG_BASE64}`,
+      })
+      world.photos.push(created)
+      return HttpResponse.json(created, { status: 201 })
+    }),
+
+    http.get(`${API}/trips/:tripId/photos/:photoId/image`, async ({ params }) => {
+      await latency()
+      if (!world.photos.some((p) => p.id === params.photoId)) return notFound('Photo not found')
+      return new HttpResponse(
+        Uint8Array.from(atob(PIXEL_PNG_BASE64), (c) => c.charCodeAt(0)),
+        {
+          headers: { 'Content-Type': 'image/png' },
+        },
+      )
+    }),
+
+    http.delete(`${API}/trips/:tripId/photos/:photoId`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const found = world.photos.find((p) => p.id === params.photoId)
+      if (!found) return notFound('Photo not found')
+      if (!found.is_mine && findTrip(params.tripId)?.my_role !== 'host') return forbidden()
+      world.photos = world.photos.filter((p) => p.id !== found.id)
+      return new HttpResponse(null, { status: 204 })
+    }),
+
+    // Locations. Opt-in: a position without a live consent is refused and not stored.
+    http.get(`${API}/trips/:tripId/locations`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const mine = new URL(request.url).searchParams.get('mine')
+      const rows = world.locations.filter((l) => mine === null || l.is_me === (mine === 'true'))
+      return HttpResponse.json(pageOf(rows, new URL(request.url).searchParams, () => 0, 'desc'))
+    }),
+
+    http.get(`${API}/trips/:tripId/locations/me/consent`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      return HttpResponse.json(world.consent)
+    }),
+
+    http.put(`${API}/trips/:tripId/locations/me/consent`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      const body = (await request.json()) as Schemas['ConsentUpdate']
+      const minutes = body.duration_minutes ?? 240
+      world.consent = {
+        enabled: true,
+        until: new Date(Date.now() + minutes * 60_000).toISOString(),
+      }
+      return HttpResponse.json(world.consent)
+    }),
+
+    http.put(`${API}/trips/:tripId/locations/me`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!world.consent.enabled) return forbidden()
+      const body = (await request.json()) as Schemas['PositionUpdate']
+      const mine = world.profiles.find((p) => isMe(world, p.id))
+      const stored = location(mine?.id ?? PROFILE_IDS.mama, {
+        display_name: mine?.display_name ?? 'Ola',
+        latitude: body.latitude,
+        longitude: body.longitude,
+        accuracy_m: body.accuracy_m ?? null,
+        is_me: true,
+      })
+      world.locations = [...world.locations.filter((l) => !l.is_me), stored]
+      return HttpResponse.json(stored)
+    }),
+
+    http.delete(`${API}/trips/:tripId/locations/me`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      world.consent = { enabled: false, until: null }
+      world.locations = world.locations.filter((l) => !l.is_me)
+      return new HttpResponse(null, { status: 204 })
+    }),
+
     http.get(`${API}/trips/:tripId/plans/latest`, async ({ params }) => {
       await latency()
       if (!findTrip(params.tripId)) return notFound('Trip not found')
@@ -838,6 +1002,29 @@ function normalHandlers(
       return HttpResponse.json(created, { status: 201 })
     }),
   ]
+}
+
+const isFilePart = (value: unknown): value is File =>
+  typeof value === 'object' && value !== null && 'size' in value && 'type' in value
+
+/** One page of a list like the API's: `page`, `size`, `sort` and `dir` from the query string. */
+function pageOf<T>(
+  rows: T[],
+  query: URLSearchParams,
+  compare: (a: T, b: T) => number,
+  defaultDir: 'asc' | 'desc' = 'asc',
+) {
+  const size = Number(query.get('size') ?? 20)
+  const page = Number(query.get('page') ?? 1)
+  const direction = (query.get('dir') ?? defaultDir) === 'desc' ? -1 : 1
+  const sorted = rows.toSorted((a, b) => direction * compare(a, b))
+  return {
+    items: sorted.slice((page - 1) * size, page * size),
+    total: rows.length,
+    page,
+    size,
+    pages: Math.ceil(rows.length / size),
+  }
 }
 
 const COMFORT_FIELDS = [

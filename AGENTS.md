@@ -531,7 +531,9 @@ branch deleted by hand), which also rewrites the PR's preview comment to
 Secrets and variables (GitHub Actions): secret `CLOUDFLARE_API_TOKEN` (Workers
 Scripts:Edit, Account Workers subdomain read, Zone Workers Routes:Edit and
 DNS:Edit for gburek.app); variables `CLOUDFLARE_ACCOUNT_ID`, `AUTH0_DOMAIN`,
-`AUTH0_CLIENT_ID`, `AUTH0_AUDIENCE`. Without the token the deploy job is
+`AUTH0_CLIENT_ID`, `AUTH0_AUDIENCE`, `VITE_GOOGLE_MAPS_API_KEY`, `VITE_GOOGLE_MAPS_MAP_ID`
+(the Google key is public by design: referrer, API and daily quota limits are set in Google Cloud,
+backend#28). Without the token the deploy job is
 skipped with a warning and `checks` stays green.
 
 ## Workflows

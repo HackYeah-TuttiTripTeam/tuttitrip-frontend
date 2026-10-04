@@ -6,6 +6,7 @@ import {
   RefreshCcw,
   TriangleAlert,
 } from '@keyline-icons/react'
+import { getRouteApi } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ApiError } from '@/api/errors'
 import type { Trip } from '@/api/queries/trips'
@@ -13,7 +14,6 @@ import { DayTabs } from '@/components/planning/day-tabs'
 import { PlanHashLabel } from '@/components/planning/plan-hash-label'
 import { PlanPrintout } from '@/components/planning/plan-printout'
 import { PlanSummary } from '@/components/planning/plan-summary'
-import { PlanTimeline } from '@/components/planning/plan-timeline'
 import { StatusMessage } from '@/components/shared/status-message'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -22,6 +22,9 @@ import { usePlan } from '@/hooks/use-plan'
 import { usePrinting } from '@/hooks/use-printing'
 import { TOUR } from '@/lib/help'
 import { m } from '@/paraglide/messages'
+import { PlanDayPanel } from './trip-view.plan-day'
+
+const route = getRouteApi('/trips_/$tripId')
 
 interface TripPlanViewProps {
   trip: Trip
@@ -34,6 +37,10 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
   const { plan, isPending, hasNoPlan, forbidden, problem, refetch } = usePlan(tripId)
   const creation = useCreatePlan(tripId)
   const [day, setDay] = useState(1)
+  const { view } = route.useSearch()
+  const navigate = route.useNavigate()
+  const setView = (next: typeof view) =>
+    void navigate({ search: (prev) => ({ ...prev, view: next }), replace: true })
   const canBuild = role !== 'member'
 
   if (isPending) return <PlanSkeleton />
@@ -170,7 +177,13 @@ export function TripPlanView({ trip }: TripPlanViewProps) {
               planDay.items.length === 0 ? (
                 <p className="text-muted-foreground text-sm">{m.plan_day_empty()}</p>
               ) : (
-                <PlanTimeline stops={planDay.items} currency={plan.budget.currency} />
+                <PlanDayPanel
+                  key={planDay.index}
+                  day={planDay}
+                  currency={plan.budget.currency}
+                  view={view}
+                  onViewChange={setView}
+                />
               )
             }
           />

@@ -1566,6 +1566,131 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/vote/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Vote Session
+         * @description The places of the current plan with this person's own answers.
+         *
+         *     Nothing about other people: no preferences, ratings or vetoes of theirs.
+         *
+         *     Args:
+         *         access: The checked token (trip and person come from it).
+         *         session: Database session.
+         *
+         *     Returns:
+         *         Trip name, the person's name and the places.
+         *
+         *     Dostęp tokenem bez konta (`X-Access-Token`), zakres `vote`.
+         */
+        get: operations["read_vote_session_api_v1_vote_session_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vote/ratings/{place_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Rate Place By Link
+         * @description Rate a place: want, neutral, or do not want with a reason.
+         *
+         *     Args:
+         *         place_id: Catalog place.
+         *         data: Value and, for `dont_want`, the reason code.
+         *         access: The checked token.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The place with the stored answer.
+         *
+         *     Dostęp tokenem bez konta (`X-Access-Token`), zakres `vote`.
+         */
+        put: operations["rate_place_by_link_api_v1_vote_ratings__place_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vote/vetoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Veto Place By Link
+         * @description Veto a place and recompute the plan at once.
+         *
+         *     Repeating the veto of the same place keeps one. The new plan version is
+         *     stored in this request; the host sees it as the latest plan.
+         *
+         *     Args:
+         *         data: The place.
+         *         access: The checked token.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The place with `veto_id` set.
+         *
+         *     Dostęp tokenem bez konta (`X-Access-Token`), zakres `vote`.
+         */
+        post: operations["veto_place_by_link_api_v1_vote_vetoes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vote/vetoes/{veto_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Withdraw Veto By Link
+         * @description Withdraw this person's own veto and recompute the plan.
+         *
+         *     Args:
+         *         veto_id: `veto_id` from the session.
+         *         access: The checked token.
+         *         session: Database session.
+         *
+         *     Returns:
+         *         The place with `veto_id` cleared.
+         *
+         *     Dostęp tokenem bez konta (`X-Access-Token`), zakres `vote`.
+         */
+        delete: operations["withdraw_veto_by_link_api_v1_vote_vetoes__veto_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/trips/{trip_id}/profiles": {
         parameters: {
             query?: never;
@@ -8156,6 +8281,53 @@ export interface components {
             last_used_at: string | null;
         };
         /**
+         * VotePlace
+         * @description A place of the plan with this person's own answer; nothing about anybody else.
+         */
+        VotePlace: {
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @description Short text about the place; null: the catalog has none yet.
+             */
+            description: string | null;
+            /**
+             * Photo Url
+             * @description Photo of the place; null: the catalog has none yet.
+             */
+            photo_url: string | null;
+            /**
+             * Category
+             * @description Catalog category of the place.
+             */
+            category: string;
+            /**
+             * Address
+             * @description Street address; null when unknown.
+             */
+            address: string | null;
+            /**
+             * In Plan
+             * @description Whether the place is in the current plan. A place the plan dropped (after a veto) still comes back, with this person's answer.
+             */
+            in_plan: boolean;
+            /** @description This person's rating, if any. */
+            rating: components["schemas"]["RatingValue"] | null;
+            /** @description Why they are against it (only with `dont_want`). */
+            reason_code: components["schemas"]["ReasonCode"] | null;
+            /**
+             * Veto Id
+             * @description Set while this person's veto is active; use it to withdraw it.
+             */
+            veto_id: string | null;
+        };
+        /**
          * VoteReason
          * @description A person on one side of a verdict, with a reason code.
          */
@@ -8166,6 +8338,21 @@ export interface components {
              */
             profile_id: string;
             reason_code?: components["schemas"]["ReasonCode"] | null;
+        };
+        /**
+         * VoteSession
+         * @description What the voting page shows: the trip, the person and the places to judge.
+         */
+        VoteSession: {
+            /** Trip Name */
+            trip_name: string;
+            /** Profile Name */
+            profile_name: string;
+            /**
+             * Places
+             * @description Places of the current plan in visiting order, then the places this person answered that the plan no longer has. A bounded document (one plan), not a paged list.
+             */
+            places: components["schemas"]["VotePlace"][];
         };
         /**
          * VoteSource
@@ -8179,6 +8366,17 @@ export interface components {
          * @enum {string}
          */
         VoteSummarySort: "name" | "want" | "dont_want" | "veto";
+        /**
+         * VoteVetoCreate
+         * @description A veto of one place by the person the link belongs to.
+         */
+        VoteVetoCreate: {
+            /**
+             * Place Id
+             * Format: uuid
+             */
+            place_id: string;
+        };
         /**
          * Weekday
          * @description Day of the week, as a key of the weekly opening hours.
@@ -11087,6 +11285,200 @@ export interface operations {
                 content?: never;
             };
             /** @description Not a member of the trip, or no such photo on it. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_vote_session_api_v1_vote_session_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Secret access token (from the link fragment). */
+                "X-Access-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoteSession"];
+                };
+            };
+            /** @description No `X-Access-Token` header. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown, expired or revoked token, or the person has an account now (they log in to vote). The answer is the same for all of them. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rate_place_by_link_api_v1_vote_ratings__place_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Secret access token (from the link fragment). */
+                "X-Access-Token"?: string | null;
+            };
+            path: {
+                place_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RatingUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VotePlace"];
+                };
+            };
+            /** @description No `X-Access-Token` header. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown, expired or revoked token, or the person has an account now (they log in to vote). The answer is the same for all of them. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `dont_want` needs a reason. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    veto_place_by_link_api_v1_vote_vetoes_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Secret access token (from the link fragment). */
+                "X-Access-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoteVetoCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VotePlace"];
+                };
+            };
+            /** @description No `X-Access-Token` header. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown, expired or revoked token, or the person has an account now (they log in to vote). The answer is the same for all of them. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    withdraw_veto_by_link_api_v1_vote_vetoes__veto_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Secret access token (from the link fragment). */
+                "X-Access-Token"?: string | null;
+            };
+            path: {
+                veto_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VotePlace"];
+                };
+            };
+            /** @description No `X-Access-Token` header. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown, expired or revoked token, or the person has an account now (they log in to vote). The answer is the same for all of them. */
             404: {
                 headers: {
                     [name: string]: unknown;
