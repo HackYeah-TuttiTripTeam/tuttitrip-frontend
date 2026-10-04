@@ -6,6 +6,7 @@ import {
   type NotificationsPage,
   unreadCountKey,
 } from '@/api/queries/notifications'
+import { announceMarked } from '@/lib/notification-channel'
 import { guessUnreadCount } from '@/lib/notification-count'
 
 const isNotificationsQuery = ({ queryKey }: { queryKey: QueryKey }) =>
@@ -40,9 +41,8 @@ export function useMarkNotifications() {
       }
       const before = queryClient.getQueryData<{ count: number }>(unreadCountKey)
       if (before) {
-        const loaded = queryClient
-          .getQueriesData<NotificationsPage>({ predicate: isNotificationsQuery })
-          .flatMap(([, page]) => page?.items ?? [])
+        // The rows as they were before the optimistic write above: the guess needs their old state.
+        const loaded = lists.flatMap(([, page]) => page?.items ?? [])
         const next = guessUnreadCount(before.count, body, dedupe(loaded))
         if (next !== undefined) queryClient.setQueryData(unreadCountKey, { count: next })
       }
@@ -52,6 +52,7 @@ export function useMarkNotifications() {
       for (const [key, page] of context?.lists ?? []) queryClient.setQueryData(key, page)
       if (context?.before) queryClient.setQueryData(unreadCountKey, context.before)
     },
+    onSuccess: () => announceMarked(),
     onSettled: () => queryClient.invalidateQueries({ predicate: isNotificationsQuery }),
   })
 }

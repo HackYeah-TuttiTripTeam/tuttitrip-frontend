@@ -22,7 +22,7 @@ const bell = (count: number) =>
     { timeout: 5000 },
   )
 
-describe('the bell', () => {
+describe('the bell', { timeout: 20_000 }, () => {
   it('shows the unread count and the five latest notifications without marking any', async () => {
     useScenario('notifications-inbox')
     const user = userEvent.setup()

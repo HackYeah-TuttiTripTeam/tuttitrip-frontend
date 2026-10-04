@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { HttpResponse, http } from 'msw'
+import { delay, HttpResponse, http } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetDemoSessionForTests, setDemoSession } from '@/lib/demo-session'
 import { notifications, TRIP_ID } from '@/mocks/fixtures'
@@ -197,6 +197,38 @@ describe('notification dialog', () => {
         timeout: 5000,
       })
       expect(router.state.location.search).toMatchObject({ open: FIRST?.id })
+    },
+    SLOW,
+  )
+})
+
+describe('optimistic marking', () => {
+  it(
+    'drops the badge before the server has answered, by the rows that were unread',
+    async () => {
+      useScenario('notifications-inbox')
+      server.use(
+        http.post('*/api/v1/notifications/mark', async () => {
+          await delay(1500)
+          return undefined // the scenario's own handler answers
+        }),
+      )
+      const user = userEvent.setup()
+      renderApp('/notifications')
+      await screen.findAllByRole('checkbox', { name: /^Zaznacz powiadomienie/ }, { timeout: 5000 })
+      const boxes = screen.getAllByRole('checkbox', { name: /^Zaznacz powiadomienie/ })
+      await user.click(boxes[0] as HTMLElement)
+      await user.click(boxes[1] as HTMLElement)
+      await user.click(screen.getByRole('button', { name: m.notif_mark_read() }))
+
+      // 40 unread, two marked: the badge shows 38 while the request is still in flight.
+      expect(
+        await screen.findByRole(
+          'button',
+          { name: m.notif_bell_label_unread({ count: 38 }), hidden: true },
+          { timeout: 1000 },
+        ),
+      ).toBeTruthy()
     },
     SLOW,
   )

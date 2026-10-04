@@ -2,10 +2,13 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { getAuthorization, refreshAuthorization } from '@/api/client'
 import { NOTIFICATIONS_PATH, type Notification, unreadCountKey } from '@/api/queries/notifications'
+import { onMarkedElsewhere } from '@/lib/notification-channel'
 import { openNotificationStream } from '@/lib/notification-stream'
 import { getLocale } from '@/paraglide/runtime'
 import { useNotificationStore } from '@/stores/notification-store'
 import type { SessionStatus } from './use-session'
+
+const REFRESH_DEBOUNCE_MS = 300
 
 /**
  * One live connection for the signed-in user (mounted once, in the root layout). `ready` and
@@ -25,11 +28,21 @@ export function useNotificationStream(
   useEffect(() => {
     if (sessionStatus !== 'authenticated') return
     const controller = new AbortController()
-    const refresh = () =>
-      queryClient.invalidateQueries({
-        predicate: ({ queryKey }) =>
-          typeof queryKey[1] === 'string' && queryKey[1].startsWith(NOTIFICATIONS_PATH),
-      })
+    // A burst of events (a replay after a reconnect) costs one refetch, not one per event.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const refresh = () => {
+      clearTimeout(timer)
+      timer = setTimeout(
+        () =>
+          void queryClient.invalidateQueries({
+            predicate: ({ queryKey }) =>
+              typeof queryKey[1] === 'string' && queryKey[1].startsWith(NOTIFICATIONS_PATH),
+          }),
+        REFRESH_DEBOUNCE_MS,
+      )
+    }
+    // Another tab marked something: the same refresh.
+    const stopListening = onMarkedElsewhere(refresh)
 
     void openNotificationStream({
       getAuthorization,
@@ -45,10 +58,12 @@ export function useNotificationStream(
           latest.current(event.notification)
         }
         // The server's answer wins over the bump above, and the lists show the new row.
-        void refresh()
+        refresh()
       },
     })
     return () => {
+      clearTimeout(timer)
+      stopListening()
       controller.abort()
       setStreamStatus('connecting')
     }

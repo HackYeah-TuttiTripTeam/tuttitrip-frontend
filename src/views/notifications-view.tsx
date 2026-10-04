@@ -1,5 +1,5 @@
 import { Bell, CloudOff, KeyRound, SearchX, TriangleAlert } from '@keyline-icons/react'
-import { getRouteApi } from '@tanstack/react-router'
+import { getRouteApi, useRouter } from '@tanstack/react-router'
 import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { LATEST, notificationFilter } from '@/api/queries/notifications'
@@ -53,8 +53,22 @@ export function NotificationsView() {
   )
   const opened = onPage ?? latest.notifications.find((item) => item.id === openId) ?? null
   const lookingUp = Boolean(openId) && !opened && (isPending || !latest.isSettled)
-  const setOpen = (id: string | undefined) =>
+  // Opened from a row on this page: that was a history entry of its own, so closing steps back
+  // over it and Back needs one press. A link, a reload or an open from the bell/toast is replaced.
+  const router = useRouter()
+  const openedHere = useRef(false)
+  useEffect(() => {
+    if (!openId) openedHere.current = false
+  }, [openId])
+  const setOpen = (id: string | undefined) => {
+    if (id === undefined && openedHere.current) {
+      openedHere.current = false
+      router.history.back()
+      return
+    }
+    openedHere.current = id !== undefined
     void navigate({ search: (prev) => ({ ...prev, open: id }), replace: id === undefined })
+  }
 
   // Opening reads it, once: marking it unread again from the dialog must stick.
   const autoRead = useRef(new Set<string>())
@@ -62,7 +76,11 @@ export function NotificationsView() {
   useEffect(() => {
     if (!opened || opened.read_at !== null || autoRead.current.has(opened.id)) return
     autoRead.current.add(opened.id)
-    markRead({ body: { read: true, ids: [opened.id] } })
+    markRead(
+      { body: { read: true, ids: [opened.id] } },
+      // Failed: allow another try the next time it is opened.
+      { onError: () => autoRead.current.delete(opened.id) },
+    )
   }, [opened, markRead])
 
   const hasFilters = hasNotificationFilters(search)
@@ -102,7 +120,7 @@ export function NotificationsView() {
         <h1 className="font-semibold text-2xl tracking-tight md:text-3xl">
           {m.notif_page_title()}
         </h1>
-        <p className="text-muted-foreground text-sm" aria-live="polite">
+        <p className="text-muted-foreground text-sm">
           {showList && total > 0 ? m.notif_count({ count: total }) : m.notif_page_tagline()}
         </p>
       </div>

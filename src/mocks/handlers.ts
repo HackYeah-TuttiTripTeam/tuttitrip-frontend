@@ -163,6 +163,7 @@ function notificationStream(world: World, signal: AbortSignal) {
       if (world.notificationStream === 'live') {
         timer = setInterval(() => {
           const live = makeNotification({
+            created_at: new Date().toISOString(),
             type: 'proposal_waiting',
             params: { proposal_name: 'Muzeum zamiast parku' },
             actions: [

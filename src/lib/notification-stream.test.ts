@@ -32,7 +32,10 @@ function sse(chunks: string[], { hold = false }: { hold?: boolean } = {}) {
 const frame = (event: string, data: unknown, id?: string) =>
   `${id ? `id: ${id}\n` : ''}event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
 
-function setup(responses: (Response | Error)[], overrides: Partial<StreamOptions> = {}) {
+function setup(
+  responses: (Response | Error)[],
+  makeOverrides: (stop: () => void) => Partial<StreamOptions> = () => ({}),
+) {
   const controller = new AbortController()
   const events: StreamEvent[] = []
   const statuses: StreamStatus[] = []
@@ -67,7 +70,7 @@ function setup(responses: (Response | Error)[], overrides: Partial<StreamOptions
     fetchImpl: fetchImpl as unknown as typeof fetch,
     baseUrl: 'http://localhost',
     sleep: async () => undefined,
-    ...overrides,
+    ...makeOverrides(() => controller.abort()),
   })
   return { controller, events, statuses, calls, done, fetchImpl }
 }
@@ -133,21 +136,52 @@ describe('openNotificationStream', () => {
     ])
   })
 
-  it('stops for good on a second 401 and falls back to polling', async () => {
-    const { statuses, fetchImpl, done } = setup([
-      new Response('no', { status: 401 }),
-      new Response('no', { status: 401 }),
-    ])
+  it('waits and tries again after a second 401 instead of giving up', async () => {
+    const waits: number[] = []
+    const { statuses, fetchImpl, done } = setup(
+      [new Response('no', { status: 401 }), new Response('no', { status: 401 })],
+      (stop) => ({
+        sleep: async (ms) => {
+          waits.push(ms)
+          stop()
+        },
+      }),
+    )
     await done
     expect(fetchImpl).toHaveBeenCalledTimes(2)
     expect(statuses.at(-1)).toBe('polling')
+    expect(waits).toEqual([60_000])
   })
 
-  it('does not connect without a token', async () => {
-    const { statuses, fetchImpl, done } = setup([], { getAuthorization: async () => undefined })
+  it('waits a minute and tries again without a token', async () => {
+    const waits: number[] = []
+    const { statuses, fetchImpl, done } = setup([], (stop) => ({
+      getAuthorization: async () => undefined,
+      sleep: async (ms) => {
+        waits.push(ms)
+        stop()
+      },
+    }))
     await done
     expect(fetchImpl).not.toHaveBeenCalled()
     expect(statuses).toEqual(['connecting', 'polling'])
+    expect(waits).toEqual([60_000])
+  })
+
+  it('does not treat a failing consumer as a broken connection', async () => {
+    const { fetchImpl, done, controller } = setup(
+      [sse([frame('ready', { unread: 1 }), frame('resync', {})], { hold: true })],
+      () => ({
+        onEvent: () => {
+          throw new Error('consumer bug')
+        },
+      }),
+    )
+    await vi.waitFor(() => expect(fetchImpl).toHaveBeenCalled())
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    controller.abort()
+    await done
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
   })
 
   it('reports nothing after it was closed', async () => {

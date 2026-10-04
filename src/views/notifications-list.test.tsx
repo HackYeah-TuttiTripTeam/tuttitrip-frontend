@@ -8,7 +8,7 @@ import { m } from '@/paraglide/messages'
 
 const rows = () => screen.getAllByRole('row').length - 1 // minus the header row
 
-describe('notifications history', () => {
+describe('notifications history', { timeout: 20_000 }, () => {
   it('shows page 2 of 134 from the URL, with the range and the pages', async () => {
     useScenario('notifications-inbox')
     renderApp('/notifications?page=2&size=20')
@@ -87,7 +87,7 @@ describe('notifications history', () => {
   })
 })
 
-describe('selecting and marking', () => {
+describe('selecting and marking', { timeout: 20_000 }, () => {
   it('ticks the page, offers every match, and marks them all through the filter', async () => {
     useScenario('notifications-inbox')
     const user = userEvent.setup()

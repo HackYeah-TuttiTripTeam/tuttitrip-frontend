@@ -31,6 +31,8 @@ const MIN_DELAY = 1_000
 const MAX_DELAY = 30_000
 /** A connection that lasted less than this and ended counts as a failure, so a server that closes at once is not hammered. */
 const MIN_HEALTHY_MS = 2_000
+/** Waiting when there is no token or the API keeps refusing it: a session may come back. */
+const RETRY_AFTER_AUTH_FAILURE_MS = 60_000
 
 const sleepUnlessAborted = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve) => {
@@ -75,7 +77,7 @@ function parseEvent(name: string | undefined, data: string): StreamEvent | null 
  * Keeps one connection to the notification stream until `signal` fires. `EventSource` cannot send
  * an `Authorization` header, so the body is read with `fetch` and parsed by eventsource-parser.
  *
- * - A 401 gets one retry with a refreshed token; a second one stops the stream (status `polling`).
+ * - A 401 gets one retry with a refreshed token; a second one (or a missing token) waits a minute.
  * - Other failures reconnect with backoff, resuming from the last notification id (`Last-Event-ID`).
  * - The server closing the stream (token expiry, the 30-minute limit) reconnects at once.
  */
@@ -95,7 +97,12 @@ export async function openNotificationStream(options: StreamOptions): Promise<vo
     report('connecting')
     let authorization = await options.getAuthorization()
     if (signal.aborted) return
-    if (!authorization) return report('polling')
+    if (!authorization) {
+      // A guest never gets here (the hook runs for signed-in users); a missing token is passing.
+      report('polling')
+      await sleep(RETRY_AFTER_AUTH_FAILURE_MS, signal)
+      continue
+    }
     const startedAt = Date.now()
     try {
       const request = (value: string) =>
@@ -115,7 +122,12 @@ export async function openNotificationStream(options: StreamOptions): Promise<vo
         if (signal.aborted) return
         if (authorization) response = await request(authorization)
       }
-      if (response.status === 401) return report('polling')
+      if (response.status === 401) {
+        report('polling')
+        refreshedAfter401 = false
+        await sleep(RETRY_AFTER_AUTH_FAILURE_MS, signal)
+        continue
+      }
       if (!response.ok || !response.body) throw new Error(`Stream answered ${response.status}`)
 
       const events = response.body
@@ -126,12 +138,16 @@ export async function openNotificationStream(options: StreamOptions): Promise<vo
         const event = parseEvent(message.event, message.data)
         if (!event) continue
         if (event.type === 'ready') {
-          failures = 0
           refreshedAfter401 = false
           report('open')
         }
         if (event.type === 'notification' && message.id) lastEventId = message.id
-        onEvent(event)
+        try {
+          onEvent(event)
+        } catch (error) {
+          // A consumer's bug is not a broken connection: log it and keep reading.
+          console.error('Notification event handler failed', error)
+        }
       }
     } catch (error) {
       if (signal.aborted) return
