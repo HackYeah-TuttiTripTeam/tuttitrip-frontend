@@ -67,14 +67,14 @@ describe('admin users', () => {
   })
 
   it('offers the panel in the menu to an administrator', async () => {
-    useScenario('admin')
+    useScenario('users-admin')
     const user = userEvent.setup()
     await openAccountMenu(user)
     expect(await screen.findByRole('menuitem', { name: m.admin_users_link() })).toBeTruthy()
   })
 
   it('lists the first page of accounts for an administrator', async () => {
-    useScenario('admin')
+    useScenario('users-admin')
     renderApp('/admin/users')
     expect(await screen.findByText(m.list_range({ from: 1, to: 20, total: 23 }))).toBeTruthy()
     expect(rows()).toBe(20)
@@ -84,7 +84,7 @@ describe('admin users', () => {
   })
 
   it('finds an account by e-mail, keeping the search in the URL', async () => {
-    useScenario('admin')
+    useScenario('users-admin')
     const user = userEvent.setup()
     const { router } = renderApp('/admin/users')
     await screen.findByText(m.list_range({ from: 1, to: 20, total: 23 }))
@@ -99,7 +99,7 @@ describe('admin users', () => {
   })
 
   it('reads the blocked filter from a pasted URL', async () => {
-    useScenario('admin')
+    useScenario('users-admin')
     renderApp('/admin/users?blocked=true')
     expect(await screen.findByText(m.admin_users_count({ count: 3 }))).toBeTruthy()
     expect(
@@ -110,7 +110,7 @@ describe('admin users', () => {
   })
 
   it('lets a read-only administrator look but not change anything', async () => {
-    useScenario('admin-read-only')
+    useScenario('users-admin-read-only')
     renderApp('/admin/users')
     await screen.findByText('osoba22@example.com')
     expect(
@@ -119,7 +119,7 @@ describe('admin users', () => {
   })
 
   it('asks before blocking, then blocks', async () => {
-    useScenario('admin')
+    useScenario('users-admin')
     const calls = recordCalls()
     const user = userEvent.setup()
     renderApp('/admin/users')
@@ -142,7 +142,7 @@ describe('admin users', () => {
   })
 
   it('unblocks without a dialog', async () => {
-    useScenario('admin')
+    useScenario('users-admin')
     const calls = recordCalls()
     const user = userEvent.setup()
     renderApp('/admin/users?q=osoba06')
@@ -157,7 +157,7 @@ describe('admin users', () => {
   })
 
   it('makes the administrator type the e-mail before deleting', async () => {
-    useScenario('admin')
+    useScenario('users-admin')
     const calls = recordCalls()
     const user = userEvent.setup()
     renderApp('/admin/users?q=osoba03')
@@ -192,7 +192,7 @@ describe('admin users', () => {
   })
 
   it("offers no block or delete on the caller's own row", async () => {
-    useScenario('admin', {
+    useScenario('users-admin', {
       tweak: (world) => {
         const own = world.adminUsers.find((u) => u.email === 'osoba22@example.com')
         if (own) own.sub = MOCK_USER_SUB
@@ -206,7 +206,7 @@ describe('admin users', () => {
   })
 
   it('shows a retry, not a redirect, when GET /me fails', async () => {
-    useScenario('admin')
+    useScenario('users-admin')
     server.use(
       http.get('*/api/v1/me', () => HttpResponse.json({ detail: 'down' }, { status: 500 })),
     )

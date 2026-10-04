@@ -14,7 +14,12 @@ import {
   TRIP_ID,
   type Trip,
   trip,
+  VOTE_TOKEN,
+  VOTE_TOKEN_OTHER,
+  voteLink,
+  votePlaces,
 } from './fixtures'
+import { permissionHandlers } from './permissions'
 import { createWorld, type ScenarioName, type World } from './scenarios'
 
 const API = '*/api/v1'
@@ -26,6 +31,29 @@ const deadInvitation = () =>
   HttpResponse.json({ detail: 'Invitation not found' }, { status: 404, headers: NO_STORE })
 const forbidden = () =>
   HttpResponse.json({ detail: 'Brak uprawnienia do tej operacji' }, { status: 403 })
+
+const unauthorized = () => HttpResponse.json({ detail: 'Unauthorized' }, { status: 401 })
+const serverError = () => HttpResponse.json({ detail: 'Internal Server Error' }, { status: 500 })
+
+/** The voting token of a request: sent in the header, and still working. */
+const liveToken = (request: Request, world: World) => {
+  const token = request.headers.get('X-Access-Token')
+  return (token === VOTE_TOKEN || token === VOTE_TOKEN_OTHER) && world.vote.link === 'ok'
+}
+
+/** Whose link it is: the second token belongs to Antek, who has rated nothing. */
+const profileNameFor = (request: Request, world: World) =>
+  request.headers.get('X-Access-Token') === VOTE_TOKEN_OTHER ? 'Antek' : world.vote.profileName
+
+function paged<T>(items: T[], page: number, size: number) {
+  return {
+    items: items.slice((page - 1) * size, page * size),
+    total: items.length,
+    page,
+    size,
+    pages: Math.ceil(items.length / size),
+  }
+}
 
 export interface HandlerOptions {
   /** Artificial latency so loading states are visible in the browser; 0 in tests. */
@@ -197,6 +225,7 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       )
     }),
 
+    ...permissionHandlers(world.permissions, () => world.me, latency),
     http.get(`${API}/me`, async () => {
       await latency()
       return HttpResponse.json(world.me)
@@ -631,6 +660,137 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
         },
         { headers: NO_STORE },
       )
+    }),
+
+    // Voting links of the host. Like the real API the token is in the 201 answer only, and
+    // creating a link for a person with an account is a 409.
+    http.get(`${API}/trips/:tripId/vote-links`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!canWrite(params.tripId)) return forbidden()
+      return HttpResponse.json(paged(world.voteLinks, 1, 100))
+    }),
+
+    http.post(`${API}/trips/:tripId/vote-links`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!canWrite(params.tripId)) return forbidden()
+      const body = (await request.json()) as Schemas['VoteLinkCreate']
+      const profile = world.profiles.find((p) => p.id === body.profile_id)
+      if (!profile) return notFound('Profile not found')
+      if (profile.user_sub) return HttpResponse.json({ detail: 'Has an account' }, { status: 409 })
+      const created = voteLink({
+        id: crypto.randomUUID(),
+        profile_id: profile.id,
+        profile_name: profile.display_name,
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + body.expires_in_days * 86_400_000).toISOString(),
+      })
+      world.voteLinks.unshift(created)
+      return HttpResponse.json(
+        { ...created, token: VOTE_TOKEN, url: `/glos#t=${VOTE_TOKEN}` },
+        { status: 201, headers: NO_STORE },
+      )
+    }),
+
+    http.delete(`${API}/trips/:tripId/vote-links/:linkId`, async ({ params }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!canWrite(params.tripId)) return forbidden()
+      const found = world.voteLinks.find((link) => link.id === params.linkId)
+      if (!found) return notFound('Voting link not found')
+      found.state = 'revoked'
+      found.revoked_at ??= new Date().toISOString()
+      return HttpResponse.json(found)
+    }),
+
+    // The group's answers; filtered, sorted and cut into pages like the API does.
+    http.get(`${API}/trips/:tripId/vote-summary`, async ({ params, request }) => {
+      await latency()
+      if (!findTrip(params.tripId)) return notFound('Trip not found')
+      if (!canWrite(params.tripId)) return forbidden()
+      const query = new URL(request.url).searchParams
+      const source = query.get('source')
+      const hasVeto = query.get('has_veto')
+      const sort = query.get('sort') ?? 'name'
+      const rows = world.voteSummary
+        .filter((row) => !source || [...row.votes, ...row.vetoes].some((v) => v.source === source))
+        .filter((row) => hasVeto === null || row.veto_count > 0 === (hasVeto === 'true'))
+      const key = { want: 'want', dont_want: 'dont_want', veto: 'veto_count' } as const
+      const sorted =
+        sort === 'name'
+          ? rows.toSorted((a, b) => a.place_name.localeCompare(b.place_name))
+          : rows.toSorted(
+              (a, b) => b[key[sort as keyof typeof key]] - a[key[sort as keyof typeof key]],
+            )
+      return HttpResponse.json(
+        paged(sorted, Number(query.get('page') ?? 1), Number(query.get('size') ?? 20)),
+      )
+    }),
+
+    // The voting page without an account (contract of backend#81): the token is the whole login.
+    http.get(`${API}/vote/session`, async ({ request }) => {
+      await latency()
+      if (!liveToken(request, world)) return unauthorized()
+      return HttpResponse.json({
+        trip_name: world.trips[0]?.name ?? '',
+        profile_name: profileNameFor(request, world),
+        places: profileNameFor(request, world) === 'Antek' ? votePlaces() : world.vote.places,
+      })
+    }),
+
+    http.put(`${API}/vote/ratings/:placeId`, async ({ params, request }) => {
+      await latency()
+      if (!liveToken(request, world)) return unauthorized()
+      if (world.vote.writeFails) return serverError()
+      const place = world.vote.places.find((p) => p.place_id === params.placeId)
+      if (!place) return notFound('Place not found')
+      const body = (await request.json()) as {
+        value: Schemas['RatingValue']
+        reason_code?: Schemas['ReasonCode'] | null
+      }
+      if (body.value === 'dont_want' && !body.reason_code) return unprocessable([])
+      place.rating = body.value
+      place.reason_code = body.value === 'dont_want' ? (body.reason_code ?? null) : null
+      return HttpResponse.json(place)
+    }),
+
+    http.post(`${API}/vote/vetoes`, async ({ request }) => {
+      await latency()
+      if (!liveToken(request, world)) return unauthorized()
+      if (world.vote.writeFails) return serverError()
+      const body = (await request.json()) as { place_id: string }
+      const place = world.vote.places.find((p) => p.place_id === body.place_id)
+      if (!place) return notFound('Place not found')
+      place.veto_id ??= crypto.randomUUID()
+      // The host sees it in the summary: the same veto, from the link.
+      const row = world.voteSummary.find((r) => r.place_id === place.place_id)
+      if (row && row.veto_count === 0) {
+        row.veto_count = 1
+        row.vetoes.push({
+          veto_id: place.veto_id,
+          profile_id: PROFILE_IDS.zosia,
+          display_name: world.vote.profileName,
+          source: 'link',
+          created_at: new Date().toISOString(),
+        })
+      }
+      return HttpResponse.json(place)
+    }),
+
+    http.delete(`${API}/vote/vetoes/:vetoId`, async ({ params, request }) => {
+      await latency()
+      if (!liveToken(request, world)) return unauthorized()
+      if (world.vote.writeFails) return serverError()
+      const place = world.vote.places.find((p) => p.veto_id === params.vetoId)
+      if (!place) return notFound('Veto not found')
+      place.veto_id = null
+      const row = world.voteSummary.find((r) => r.place_id === place.place_id)
+      if (row) {
+        row.vetoes = row.vetoes.filter((v) => v.veto_id !== params.vetoId)
+        row.veto_count = row.vetoes.length
+      }
+      return HttpResponse.json(place)
     }),
 
     http.get(`${API}/trips/:tripId/plans/latest`, async ({ params }) => {

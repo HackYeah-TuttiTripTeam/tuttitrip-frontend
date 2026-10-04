@@ -86,7 +86,9 @@ describe('Osoby, family-warsaw (host)', () => {
     await userEvent.type(screen.getByLabelText(m.people_form_age_label()), '6')
     await userEvent.click(screen.getByRole('button', { name: m.people_form_add_submit() }))
 
-    expect(await screen.findByText('Kasia')).toBeTruthy()
+    // The people list; the voting tools below it name the new person too.
+    const peopleList = await screen.findByRole('list', { name: m.people_list_label() })
+    expect(await within(peopleList).findByText('Kasia')).toBeTruthy()
     expect(bodies).toEqual([{ display_name: 'Kasia', age: 6 }])
   })
 
@@ -121,7 +123,8 @@ describe('Osoby, family-warsaw (host)', () => {
     await userEvent.click(screen.getByRole('button', { name: m.people_delete_yes() }))
 
     await waitFor(() => expect(screen.queryByText('Antek')).toBeNull())
-    expect(screen.getByText('Zosia')).toBeTruthy()
+    const peopleList = screen.getByRole('list', { name: m.people_list_label() })
+    expect(within(peopleList).getByText('Zosia')).toBeTruthy()
   })
 
   it('keeps the dialog open and explains a 409 when the person has gained an account', async () => {

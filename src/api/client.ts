@@ -120,6 +120,17 @@ fetchClient.use(authMiddleware)
 fetchClient.use(errorMiddleware)
 fetchClient.use(demoMiddleware)
 
+/**
+ * A client for pages without any session (the voting page): no Authorization, no demo token, no
+ * retry. The caller passes its own token header. `P` is the contract of those routes.
+ */
+export function createPublicClient<P extends object>() {
+  const client = createFetchClient<P>()
+  client.use(languageMiddleware)
+  client.use(errorMiddleware)
+  return client
+}
+
 /** For the entry call only: no demo token, no retry, so a bad link never touches a session. */
 const bareClient = createFetchClient<paths>()
 bareClient.use(languageMiddleware)

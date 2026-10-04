@@ -2,6 +2,7 @@
 // after `pnpm api:sync` a contract change breaks `tsc` here instead of silently drifting.
 // Amounts are decimal strings, like in the API.
 import type { Schemas } from '@/api/client'
+import type { VotePlace } from '@/api/vote-contract'
 
 export type Trip = Schemas['TripRead']
 export type Profile = Schemas['ProfileRead']
@@ -15,6 +16,8 @@ export type Me = Schemas['MeResponse']
 export type Member = Schemas['MemberRead']
 export type AdminUser = Schemas['AdminUserRead']
 export type Invitation = Schemas['InvitationRead']
+export type VoteLink = Schemas['VoteLinkRead']
+export type PlaceVoteSummary = Schemas['PlaceVoteSummary']
 export type City = Schemas['CityRead']
 export type Preferences = Schemas['PreferencesRead']
 export type CatalogPlace = Schemas['PlaceRead']
@@ -313,6 +316,7 @@ const days = (): PlanDay[] => [
       verifiedStop({
         place_id: PLACE_IDS.zamek,
         name: 'Zamek Królewski',
+        address: 'Plac Zamkowy 4, 00-277 Warszawa',
         start: '10:00:00',
         end: '12:00:00',
       }),
@@ -597,3 +601,78 @@ export const catalogPlaces = (): CatalogPlace[] => [
   catalogPlace(CATALOG_IDS.kopernik, 'Centrum Nauki Kopernik', { tags: ['science', 'kids'] }),
   catalogPlace(CATALOG_IDS.polin, 'Muzeum Polin'),
 ]
+/** The secret of the voting link a mock host creates (shown once, in the 201 answer). */
+export const VOTE_TOKEN = 'mock-vote-token'
+/** The voting link of a second person (Antek), to open two links one after the other. */
+export const VOTE_TOKEN_OTHER = 'mock-vote-token-other'
+export const VOTE_LINK_ID = 'c4e1f2a0-5b6d-4c7e-8f90-1a2b3c4d5e01'
+
+export const voteLink = (overrides: Partial<VoteLink> = {}): VoteLink => ({
+  id: VOTE_LINK_ID,
+  profile_id: PROFILE_IDS.zosia,
+  profile_name: 'Zosia',
+  state: 'active',
+  created_at: '2026-10-01T10:00:00Z',
+  expires_at: '2036-10-15T10:00:00Z',
+  revoked_at: null,
+  last_used_at: null,
+  ...overrides,
+})
+
+/** What the group said so far: Zosia wants the castle, nobody has vetoed anything. */
+export const voteSummary = (): PlaceVoteSummary[] => [
+  summaryRow(PLACE_IDS.zamek, 'Zamek Królewski', [
+    ['want', null, 'app', PROFILE_IDS.mama, 'Ola'],
+    ['want', null, 'link', PROFILE_IDS.zosia, 'Zosia'],
+  ]),
+  summaryRow(PLACE_IDS.kopernik, 'Centrum Nauki Kopernik', [
+    ['dont_want', 'too_crowded', 'app', PROFILE_IDS.tata, 'Marek'],
+  ]),
+  summaryRow(PLACE_IDS.lazienki, 'Łazienki Królewskie', []),
+]
+
+function summaryRow(
+  placeId: string,
+  name: string,
+  votes: [
+    Schemas['RatingValue'],
+    Schemas['ReasonCode'] | null,
+    Schemas['VoteSource'],
+    string,
+    string,
+  ][],
+): PlaceVoteSummary {
+  return {
+    place_id: placeId,
+    place_name: name,
+    want: votes.filter(([value]) => value === 'want').length,
+    dont_want: votes.filter(([value]) => value === 'dont_want').length,
+    neutral: votes.filter(([value]) => value === 'neutral').length,
+    veto_count: 0,
+    votes: votes.map(([value, reason, source, profileId, displayName]) => ({
+      profile_id: profileId,
+      display_name: displayName,
+      value,
+      reason_code: reason,
+      source,
+      updated_at: '2026-10-02T10:00:00Z',
+    })),
+    vetoes: [],
+  }
+}
+
+/** What the voting page of Zosia shows: the plan's places, nothing rated yet. */
+export const votePlaces = (): VotePlace[] =>
+  [
+    [PLACE_IDS.zamek, 'Zamek Królewski', 'Zwiedzanie komnat i taras widokowy.'],
+    [PLACE_IDS.kopernik, 'Centrum Nauki Kopernik', 'Doświadczenia dla dzieci i dorosłych.'],
+    [PLACE_IDS.lazienki, 'Łazienki Królewskie', 'Spacer po parku z pawiami.'],
+  ].map(([place_id, name, description]) => ({
+    place_id: place_id as string,
+    name: name as string,
+    description: description as string,
+    photo_url: null,
+    rating: null,
+    reason_code: null,
+    veto_id: null,
+  }))

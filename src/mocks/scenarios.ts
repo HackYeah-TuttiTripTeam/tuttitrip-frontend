@@ -1,4 +1,5 @@
 import type { Schemas } from '@/api/client'
+import type { VotePlace } from '@/api/vote-contract'
 import {
   type AdminUser,
   adminUsers,
@@ -17,6 +18,7 @@ import {
   me,
   needsApprovalBudget,
   outing,
+  type PlaceVoteSummary,
   type Plan,
   PROFILE_IDS,
   type Preferences,
@@ -24,7 +26,12 @@ import {
   plan,
   type Trip,
   trip,
+  type VoteLink,
+  voteLink,
+  votePlaces,
+  voteSummary,
 } from './fixtures'
+import { adminMe, createPermissionsWorld, type PermissionsWorld } from './permissions'
 
 export const scenarioNames = [
   'family-warsaw',
@@ -34,8 +41,8 @@ export const scenarioNames = [
   'member-readonly',
   'member-pending',
   'cohost',
-  'admin',
-  'admin-read-only',
+  'users-admin',
+  'users-admin-read-only',
   'google-account',
   'preferences-save-error',
   'server-error',
@@ -50,6 +57,11 @@ export const scenarioNames = [
   'join-claim-taken',
   'join-named',
   'join-named-taken',
+  'admin',
+  'admin-readonly',
+  'vote-with-link',
+  'vote-dead',
+  'vote-write-error',
 ] as const
 
 export type ScenarioName = (typeof scenarioNames)[number]
@@ -71,6 +83,10 @@ export function pickScenario(search: string, stored: string | null): ScenarioNam
 export interface World {
   /** How the API behaves: normally, with 500 for everything, or unreachable. */
   behaviour: 'normal' | 'server-error' | 'offline'
+  /** `GET /me`: who the caller is and what the API lets them do. */
+  me: Me
+  /** The roles, users and audit behind `/admin/permissions`. */
+  permissions: PermissionsWorld
   trips: Trip[]
   /** The city catalogue (`GET /places/cities`). */
   cities: City[]
@@ -81,8 +97,6 @@ export interface World {
   profiles: Profile[]
   /** People with an account and their trip role (the Osoby view joins them with profiles on profile_id). */
   members: Member[]
-  /** What `GET /me` answers: the roles and access that decide which admin screens exist. */
-  me: Me
   /** The accounts of the admin panel (`GET /admin/users`). */
   adminUsers: AdminUser[]
   /** The caller's display name, changed by `PATCH /me/account`. */
@@ -97,6 +111,19 @@ export interface World {
   plan: Plan | null
   /** Invitations of the main trip, newest first (the host's list). */
   invitations: Invitation[]
+  /** Voting links of the main trip, newest first (the host's panel; never holds a token). */
+  voteLinks: VoteLink[]
+  /** The group's answers per place (`GET /vote-summary`). */
+  voteSummary: PlaceVoteSummary[]
+  /** The voting page of a person without an account (`/vote/*`, the contract of backend#81). */
+  vote: {
+    /** "dead": expired or revoked, which the API answers with 401. */
+    link: 'ok' | 'dead'
+    profileName: string
+    places: VotePlace[]
+    /** Every write answers 500. */
+    writeFails: boolean
+  }
   /** Whether POST /auth/demo accepts the invitation token (false: switched off, answers 404). */
   demoEnabled: boolean
   /** POST /auth/demo answers 429: too many attempts from this address. */
@@ -142,12 +169,13 @@ export function createWorld(name: ScenarioName): World {
   const main = trip()
   const base: World = {
     behaviour: 'normal',
+    me: me(),
+    permissions: createPermissionsWorld(),
     trips: [main, outing()],
     cities: cities(),
     failures: {},
     profiles: familyProfiles(),
     members: familyMembers(),
-    me: me(),
     adminUsers: adminUsers(),
     accountName: MOCK_USER_NAME,
     preferences: familyPreferences(),
@@ -155,6 +183,9 @@ export function createWorld(name: ScenarioName): World {
     preferencesSaveFails: false,
     plan: plan(main.id),
     invitations: [invitation()],
+    voteLinks: [],
+    voteSummary: voteSummary(),
+    vote: { link: 'ok', profileName: 'Zosia', places: votePlaces(), writeFails: false },
     demoEnabled: true,
     demoRateLimited: false,
     join: {
@@ -196,9 +227,9 @@ export function createWorld(name: ScenarioName): World {
         trips: [trip({ my_role: 'co_host' }), outing({ my_role: 'co_host' })],
         members: familyMembers('co_host'),
       }
-    case 'admin':
+    case 'users-admin':
       return { ...base, me: me({ is_admin: true, roles: ['admin'] }) }
-    case 'admin-read-only':
+    case 'users-admin-read-only':
       return { ...base, me: me({ access: { 'admin.users': 'READ' } }) }
     case 'google-account':
       return { ...base, me: me({ sub: 'google-oauth2|mock-user' }) }
@@ -241,6 +272,12 @@ export function createWorld(name: ScenarioName): World {
           namedFor: PROFILE_IDS.zosia,
         },
       }
+    case 'vote-with-link':
+      return { ...base, voteLinks: [voteLink({ last_used_at: '2026-10-02T12:00:00Z' })] }
+    case 'vote-dead':
+      return { ...base, vote: { ...base.vote, link: 'dead' } }
+    case 'vote-write-error':
+      return { ...base, vote: { ...base.vote, writeFails: true } }
     case 'join-named':
       return {
         ...base,
@@ -250,5 +287,9 @@ export function createWorld(name: ScenarioName): World {
           namedFor: PROFILE_IDS.zosia,
         },
       }
+    case 'admin':
+      return { ...base, me: adminMe('WRITE', base.me) }
+    case 'admin-readonly':
+      return { ...base, me: adminMe('READ', base.me) }
   }
 }

@@ -48,6 +48,17 @@ describe('built service worker', () => {
     expect(sw).not.toContain('.webmanifest')
     expect(sw).not.toContain('"index.html"')
     expect(sw).toContain('NetworkFirst')
+    // The offline shell keeps the design-system fonts; photos stay out of the precache.
+    // Fonts keep their names, so only a content revision lets a deploy replace them.
+    // Minified or not (under Vitest the plugin writes it unminified), keys may be quoted.
+    const fonts = [
+      ...sw.matchAll(
+        /"?url"?:\s*"assets\/fonts\/[^"]+\.woff2",\s*"?revision"?:\s*("[0-9a-f]{32}"|null)/g,
+      ),
+    ]
+    expect(fonts.length).toBeGreaterThan(0)
+    for (const [, revision] of fonts) expect(revision).toMatch(/^"[0-9a-f]{32}"$/)
+    expect(sw).not.toMatch(/assets\/photos\//)
     expect(headers).toContain('immutable')
   }, 120_000)
 

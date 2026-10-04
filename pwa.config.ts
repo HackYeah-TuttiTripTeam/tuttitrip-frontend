@@ -52,8 +52,14 @@ export function workboxOptions(production: boolean): Workbox {
     navigateFallback: undefined,
     // Outside production nothing is precached or cached at runtime, so the browser's own
     // HTTP cache (revalidated, see headersFile) is the only cache.
-    // index.html is never precached; hashed assets and icons are in production.
-    globPatterns: production ? ['**/*.{js,css,svg,png,ico}'] : [],
+    // index.html is never precached; hashed assets, icons and the fonts (about 85 KB, so the
+    // offline shell keeps its typefaces) are in production. Photos are not: they are big and
+    // only the public pages show them.
+    globPatterns: production ? ['**/*.{js,css,svg,png,ico,woff2}'] : [],
+    // Files under assets/ keep revision: null (the hash in the name is the version), except the
+    // fonts and photos: they keep their names (vite.config.ts), so they need a content revision
+    // or a deploy would never replace the precached copy. Overrides the plugin's /^assets\//.
+    dontCacheBustURLsMatching: /^assets\/(?!fonts\/|photos\/)/,
     // Share images are for crawlers only; no need to precache them.
     globIgnores: ['og/*.png'],
     runtimeCaching: production

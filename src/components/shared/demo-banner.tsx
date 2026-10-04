@@ -11,7 +11,7 @@ export function DemoBanner() {
       aria-label={m.demo_banner_label()}
       className="border-b bg-secondary text-secondary-foreground"
     >
-      <p className="mx-auto flex max-w-5xl flex-col px-4 py-1.5 text-xs leading-snug sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 md:px-6 md:text-sm">
+      <p className="mx-auto flex max-w-5xl flex-col px-4 py-1.5 text-sm leading-snug sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 md:px-6">
         {m.demo_banner_text()}{' '}
         <Link
           to="/contact"

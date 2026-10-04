@@ -26,6 +26,13 @@ describe('shellFor', () => {
     }
   })
 
+  it('lets /demo and /glos draw themselves, so no header offers a login in any state', () => {
+    for (const status of ['loading', 'anonymous', 'authenticated', 'disabled'] as const) {
+      expect(shellFor('/demo', status)).toBe('standalone')
+      expect(shellFor('/glos', status)).toBe('standalone')
+    }
+  })
+
   it('uses the app shell everywhere else', () => {
     expect(shellFor('/trips', 'anonymous')).toBe('app')
     expect(shellFor('/trips/abc', 'authenticated')).toBe('app')

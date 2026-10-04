@@ -49,7 +49,7 @@ export function PlanPrintout({ plan, trip }: PlanPrintoutProps) {
         />
         <h1 className="font-semibold text-3xl leading-9">{trip.name}</h1>
         {facts && <p className="text-base">{facts}</p>}
-        <PlanSummary plan={plan} />
+        <PlanSummary plan={plan} hints={false} />
       </header>
 
       <div className="print:[&>section+section]:break-before-page">
@@ -104,6 +104,7 @@ function PrintStop({ stop, currency }: { stop: PlanStop; currency: string }) {
         </time>
         <div className="flex flex-col gap-0.5">
           <h3 className="font-semibold text-lg leading-6">{stop.name}</h3>
+          {stop.address && <p className="text-sm leading-5">{stop.address}</p>}
           <p className="text-sm leading-5">
             {minutes > 0 ? m.plan_kind_duration({ kind, duration: formatDuration(minutes) }) : kind}
           </p>
