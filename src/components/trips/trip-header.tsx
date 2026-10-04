@@ -2,6 +2,7 @@ import { Calendar, ChevronLeft, MapPin, Wallet } from '@keyline-icons/react'
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import type { Trip } from '@/api/queries/trips'
+import { HelpHint } from '@/components/shared/help-hint'
 import { Skeleton } from '@/components/ui/skeleton'
 import { budgetSummary, formatDateRange } from '@/lib/format'
 import { m } from '@/paraglide/messages'
@@ -48,6 +49,7 @@ export function TripHeader({ trip, actions }: { trip: Trip; actions?: ReactNode 
           <span className="rounded-full border px-2.5 py-0.5 font-medium text-foreground text-xs">
             {ROLE_LABELS[trip.my_role]()}
           </span>
+          <HelpHint id="role" />
           {trip.kind === 'outing' && <span>{m.trip_kind_outing()}</span>}
         </li>
       </ul>

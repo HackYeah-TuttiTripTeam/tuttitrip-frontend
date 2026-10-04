@@ -1,5 +1,6 @@
 import { cn } from 'cn'
 import { useId } from 'react'
+import { HelpHint } from '@/components/shared/help-hint'
 import { FieldDescription, FieldError, FieldLegend, FieldSet } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
@@ -61,9 +62,12 @@ export function BudgetRangeField({
 
   return (
     <FieldSet className="gap-4">
-      <FieldLegend variant="label" className="mb-0">
-        {m.trip_form_budget_legend()}
-      </FieldLegend>
+      <div className="flex items-center gap-1">
+        <FieldLegend variant="label" className="mb-0">
+          {m.trip_form_budget_legend()}
+        </FieldLegend>
+        <HelpHint id="budget" />
+      </div>
       <ToggleGroup
         type="single"
         value={scope}

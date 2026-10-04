@@ -3,9 +3,11 @@ import { useState } from 'react'
 import { type FieldErrors, type UseFormReturn, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import type { Profile } from '@/api/queries/profiles'
+import { HelpHint } from '@/components/shared/help-hint'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import type { HelpHintId } from '@/lib/help-hints'
 import { type EditValues, editDefaults, type SaveResult } from '@/lib/people'
 import { m } from '@/paraglide/messages'
 
@@ -200,9 +202,13 @@ export function EditPersonForm({ profile, onSubmit, onDelete }: EditPersonFormPr
     label: string,
     step: string,
     hint?: string,
+    help?: HelpHintId,
   ) => (
     <Field data-invalid={Boolean(errors[key])}>
-      <FieldLabel htmlFor={`person-${key}`}>{label}</FieldLabel>
+      <div className="flex items-center gap-1">
+        <FieldLabel htmlFor={`person-${key}`}>{label}</FieldLabel>
+        {help && <HelpHint id={help} />}
+      </div>
       <Input
         id={`person-${key}`}
         type="number"
@@ -273,7 +279,13 @@ export function EditPersonForm({ profile, onSubmit, onDelete }: EditPersonFormPr
           '5',
           m.people_form_queue_hint(),
         )}
-        {numberField('floor', m.people_form_floor_label(), '5', m.people_form_floor_hint())}
+        {numberField(
+          'floor',
+          m.people_form_floor_label(),
+          '5',
+          m.people_form_floor_hint(),
+          'floor',
+        )}
       </FieldGroup>
       <SubmitError message={error} />
       <div className="flex flex-col gap-3">
