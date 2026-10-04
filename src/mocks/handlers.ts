@@ -62,6 +62,45 @@ const noRealApi = [
   ),
 ]
 
+/** GET /trips like the API: filters, sort and the page come from the query string. */
+function listTrips(all: Trip[], params: URLSearchParams) {
+  const q = params.get('q')?.toLowerCase()
+  const roles = params.getAll('role')
+  const from = params.get('start_from')
+  const to = params.get('start_to')
+  if (from && to && to < from) {
+    return HttpResponse.json({ detail: 'start_to is before start_from' }, { status: 422 })
+  }
+  const matching = all.filter(
+    (t) =>
+      (!q || t.name.toLowerCase().includes(q) || (t.destination ?? '').toLowerCase().includes(q)) &&
+      (!params.get('city') || t.city_slug === params.get('city')) &&
+      (!params.get('kind') || t.kind === params.get('kind')) &&
+      (roles.length === 0 || roles.includes(t.my_role)) &&
+      (!from || (t.start_date != null && t.start_date >= from)) &&
+      (!to || (t.start_date != null && t.start_date <= to)),
+  )
+  const sort = params.get('sort') ?? 'created_at'
+  const sign = params.get('dir') === 'asc' ? 1 : -1
+  const key = (t: Trip) =>
+    sort === 'name' ? t.name : sort === 'start_date' ? t.start_date : t.created_at
+  // Like the backend: a trip without a start date goes last in both directions.
+  matching.sort((a, b) => {
+    const [x, y] = [key(a), key(b)]
+    if (x == null || y == null) return x == null ? (y == null ? 0 : 1) : -1
+    return sign * x.localeCompare(y)
+  })
+  const size = Math.min(100, Math.max(1, Number(params.get('size')) || 20))
+  const page = Math.max(1, Number(params.get('page')) || 1)
+  return HttpResponse.json({
+    items: matching.slice((page - 1) * size, page * size),
+    total: matching.length,
+    page,
+    size,
+    pages: Math.ceil(matching.length / size),
+  })
+}
+
 function brokenHandlers(behaviour: 'server-error' | 'offline', latency: () => Promise<void>) {
   return [
     http.all(`${API}/*`, async () => {
@@ -100,9 +139,9 @@ function normalHandlers(world: World, latency: () => Promise<void>): RequestHand
       return HttpResponse.json(me())
     }),
 
-    http.get(`${API}/trips`, async () => {
+    http.get(`${API}/trips`, async ({ request }) => {
       await latency()
-      return HttpResponse.json(world.trips)
+      return listTrips(world.trips, new URL(request.url).searchParams)
     }),
 
     http.get(`${API}/places/cities`, async () => {

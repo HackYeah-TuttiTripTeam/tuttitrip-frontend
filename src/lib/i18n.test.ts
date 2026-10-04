@@ -17,8 +17,7 @@ describe('messages', () => {
   it('picks the English plural form and fills placeholders', () => {
     overwriteGetLocale(() => 'en')
     expect(m.trips_count({ count: 1 })).toBe('1 trip')
-    expect(m.trips_count_filtered({ count: 2, total: 5 })).toBe('2 trips of 5')
-    expect(m.trips_no_match_title({ query: 'Rome' })).toBe('Nothing matches “Rome”')
+    expect(m.list_range({ from: 21, to: 40, total: 134 })).toBe('21 to 40 of 134')
   })
 
   it('keeps the glossary in both languages', () => {

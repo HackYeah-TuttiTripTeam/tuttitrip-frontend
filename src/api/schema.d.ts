@@ -443,6 +443,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update My Account
+         * @description Change the name of the caller's own account (e-mail and password only).
+         *
+         *     The account is always the one of the access token; a `sub` in the body is
+         *     ignored. The new name shows in tokens after the next login. E-mail and
+         *     password are changed through Auth0 Universal Login, not here.
+         *
+         *     Args:
+         *         data: The new name.
+         *         user: The authenticated caller.
+         *         client: Management API client.
+         *
+         *     Returns:
+         *         The account after the change.
+         *
+         *     Raises:
+         *         HTTPException: 409 for a social account, 503 when unconfigured,
+         *             502 when Auth0 fails.
+         *
+         *     Wymagane uprawnienie: `accounts.profile:WRITE`.
+         */
+        patch: operations["update_my_account_api_v1_me_account_patch"];
+        trace?: never;
+    };
     "/api/v1/jobs/ping": {
         parameters: {
             query?: never;
@@ -609,14 +647,20 @@ export interface paths {
         };
         /**
          * List Trips
-         * @description List the trips the caller belongs to, with their role on each.
+         * @description List a page of the caller's trips, with their role on each.
+         *
+         *     Paged, filtered and sorted on the server: `page`, `size`, `sort`
+         *     (`created_at` by default, `start_date`, `name`), `dir` (`desc` by default),
+         *     and the filters `q`, `city`, `kind`, `start_from`, `start_to` and `role`
+         *     (repeatable). Trips without `start_date` sort last in both directions.
          *
          *     Args:
+         *         query: Paging, sort and filters.
          *         user: The authenticated caller.
          *         session: Database session.
          *
          *     Returns:
-         *         Trips, newest first.
+         *         The page of trips.
          *
          *     Wymagane uprawnienie: `trips.core:READ`.
          */
@@ -2073,6 +2117,39 @@ export interface components {
          */
         AccessTokenState: "active" | "expired" | "revoked";
         /**
+         * AccountRead
+         * @description The caller's account after the change.
+         */
+        AccountRead: {
+            /**
+             * Sub
+             * @description Auth0 user id (always the token's account).
+             */
+            sub: string;
+            /** Name */
+            name?: string | null;
+            /** Email */
+            email?: string | null;
+            source: components["schemas"]["AccountSource"];
+        };
+        /**
+         * AccountSource
+         * @description Login provider that owns the account's data (``email``: e-mail and password).
+         * @enum {string}
+         */
+        AccountSource: "email" | "google" | "discord" | "other";
+        /**
+         * AccountUpdate
+         * @description New data of the caller's account; any other field (e.g. ``sub``) is ignored.
+         */
+        AccountUpdate: {
+            /**
+             * Name
+             * @description Display name, 1 to 100 characters, without control, zero-width or bidi control characters.
+             */
+            name: string;
+        };
+        /**
          * AdminUserRead
          * @description One Auth0 account, reduced to what an administrator needs.
          */
@@ -3382,6 +3459,25 @@ export interface components {
              */
             pages: number;
         };
+        /** Page[TripRead] */
+        Page_TripRead_: {
+            /** Items */
+            items: components["schemas"]["TripRead"][];
+            /**
+             * Total
+             * @description Rows matching the filters.
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /**
+             * Pages
+             * @description Pages in total; 0 when empty.
+             */
+            pages: number;
+        };
         /** Page[VoteLinkRead] */
         Page_VoteLinkRead_: {
             /** Items */
@@ -3608,6 +3704,11 @@ export interface components {
             /** Name */
             name: string;
             category: components["schemas"]["PlaceCategory"];
+            /**
+             * Address
+             * @description Street address; null when unknown.
+             */
+            address?: string | null;
             /** Tags */
             tags: components["schemas"]["PlaceTag"][];
             /** Lat */
@@ -4000,6 +4101,11 @@ export interface components {
             /** Name */
             name: string;
             kind: components["schemas"]["PlaceKind"];
+            /**
+             * Address
+             * @description Street address of the place; null: no data.
+             */
+            address?: string | null;
             /** Lat */
             lat: number;
             /** Lon */
@@ -4319,6 +4425,35 @@ export interface components {
             stage: string;
             /** Percent */
             percent: number;
+        };
+        /**
+         * ProviderManagedDetail
+         * @description Why the account cannot be changed in TuttiTrip.
+         *
+         *     Clients map by ``code`` and ``source``; ``message`` is English text for
+         *     developers, never shown to people as is.
+         */
+        ProviderManagedDetail: {
+            /**
+             * Code
+             * @default account.provider_managed
+             * @constant
+             */
+            code: "account.provider_managed";
+            /** @description Provider that owns the data. */
+            source: components["schemas"]["AccountSource"];
+            /**
+             * Message
+             * @description For developers; clients map by code/source.
+             */
+            message: string;
+        };
+        /**
+         * ProviderManagedError
+         * @description 409 body: the account's data comes from Google, Discord or another provider.
+         */
+        ProviderManagedError: {
+            detail: components["schemas"]["ProviderManagedDetail"];
         };
         /**
          * RatingRead
@@ -4859,6 +4994,12 @@ export interface components {
          * @enum {string}
          */
         TripRole: "member" | "co_host" | "host";
+        /**
+         * TripSort
+         * @description Sort keys of ``GET /trips`` (``id`` is always the last key).
+         * @enum {string}
+         */
+        TripSort: "created_at" | "start_date" | "name";
         /**
          * TripUpdate
          * @description PATCH payload: only the fields that are sent change; ``null`` clears.
@@ -5928,6 +6069,76 @@ export interface operations {
             };
         };
     };
+    update_my_account_api_v1_me_account_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountRead"];
+                };
+            };
+            /** @description Brak tokenu albo zły token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Brak uprawnienia `accounts.profile:WRITE` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The account signs in with Google, Discord or another provider, which owns its data. Nothing changed. Clients map by `detail.code` and `detail.source`; `detail.message` is for developers. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderManagedError"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Auth0 did not answer correctly. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The Management API credentials are not configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ping_api_v1_jobs_ping_post: {
         parameters: {
             query?: never;
@@ -6118,7 +6329,27 @@ export interface operations {
     };
     list_trips_api_v1_trips_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Part of the name or destination, case-insensitive. */
+                q?: string | null;
+                /** @description Exact `city_slug`. */
+                city?: string | null;
+                /** @description `outing` is a single day; `trip` is anything else. */
+                kind?: ("trip" | "outing") | null;
+                /** @description `start_date` on or after this day. */
+                start_from?: string | null;
+                /** @description `start_date` on or before this day. */
+                start_to?: string | null;
+                /** @description The caller's role on the trip; repeat for several. */
+                role?: components["schemas"]["TripRole"][] | null;
+                /** @description Page number, from 1. */
+                page?: number;
+                /** @description Items per page (max 100). */
+                size?: number;
+                /** @description Sort direction. */
+                dir?: components["schemas"]["SortDir"];
+                sort?: components["schemas"]["TripSort"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -6131,7 +6362,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TripRead"][];
+                    "application/json": components["schemas"]["Page_TripRead_"];
                 };
             };
             /** @description Brak tokenu albo zły token */
@@ -6147,6 +6378,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

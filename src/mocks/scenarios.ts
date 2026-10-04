@@ -23,6 +23,7 @@ import {
 
 export const scenarioNames = [
   'family-warsaw',
+  'many-trips',
   'needs-approval',
   'no-plan',
   'member-readonly',
@@ -100,6 +101,27 @@ export interface World {
   }
 }
 
+/** 45 trips for the paginated list: every third is an outing, roles and dates rotate. */
+function manyTrips(count: number): Trip[] {
+  const roles = ['host', 'co_host', 'member'] as const
+  const names = ['Gdańsk', 'Kraków', 'Wrocław', 'Poznań', 'Toruń']
+  return Array.from({ length: count }, (_, index) => {
+    const day = String((index % 28) + 1).padStart(2, '0')
+    const outing = index % 3 === 2
+    return trip({
+      id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      name: `${names[index % names.length]} ${index + 1}`,
+      destination: names[index % names.length] ?? null,
+      city_slug: index % 2 === 0 ? 'warszawa' : null,
+      created_at: `2026-09-${day}T10:00:00Z`,
+      start_date: `2026-11-${day}`,
+      end_date: `2026-11-${day}`,
+      kind: outing ? 'outing' : 'trip',
+      my_role: roles[index % roles.length] ?? 'host',
+    })
+  })
+}
+
 export function createWorld(name: ScenarioName): World {
   const main = trip()
   const base: World = {
@@ -128,6 +150,8 @@ export function createWorld(name: ScenarioName): World {
   switch (name) {
     case 'family-warsaw':
       return base
+    case 'many-trips':
+      return { ...base, trips: manyTrips(45) }
     case 'needs-approval':
       return { ...base, plan: plan(main.id, { budget: needsApprovalBudget() }) }
     case 'no-plan':
