@@ -2,7 +2,9 @@
 
 Cześć! To interfejs aplikacji TuttiTrip, zaprojektowany z myślą o płynnym, błyskawicznym planowaniu podróży na telefonie i komputerze.
 
-![TuttiTrip na laptopie i telefonie, w jasnym i ciemnym motywie.](docs/readme/10-devices.webp)
+![Plansza (makieta): TuttiTrip na laptopie i telefonie, w jasnym i ciemnym motywie.](docs/readme/10-devices.webp)
+
+<sub>Plansza z makietami. Zrzuty działającej aplikacji są w sekcji <a href="#zrzuty-ekranu">Zrzuty ekranu</a>.</sub>
 
 > [!NOTE]
 > Opis całego projektu, plansze i instrukcja uruchomienia wszystkich części są w repozytorium zbiorczym [tuttitrip](https://github.com/HackYeah-TuttiTripTeam/tuttitrip). TuttiTrip powstał z pomocą asystentów kodowania (Claude Code, Codex). Ludzie z zespołu odpowiadali za architekturę rozwiązania, rozplanowanie funkcji, działanie aplikacji i to, jak się z niej korzysta.
@@ -82,7 +84,7 @@ Zrzuty działającego frontendu z gałęzi `develop`, uruchomionego przez `pnpm 
         <source media="(prefers-color-scheme: dark)" srcset="docs/readme/desktop-pl-dark-12-glosowanie-z-linku.webp">
         <img width="100%" src="docs/readme/desktop-pl-light-12-glosowanie-z-linku.webp" alt="Strona głosowania dla osoby bez konta, otwarta z linku, z ocenami miejsc i wetem.">
       </picture>
-      <br><sub>Strona `/glos`: głosowanie z linku bez konta, z wetem.</sub>
+      <br><sub>Strona <code>/glos</code>: głosowanie z linku bez konta, z wetem.</sub>
     </td>
   </tr>
 </table>
@@ -252,7 +254,7 @@ Slug gałęzi to jej nazwa małymi literami, z każdym ciągiem znaków spoza `a
 4. PR do `develop`, z opisem, listą zmian i zrzutami ekranu (desktop i telefon). Wydanie to PR z `develop` do `main`.
 5. Po merge'u gałąź usuwa workflow `Delete merged branch`, a razem z nią znika jej podgląd. `main` i `develop` nie są nigdy usuwane, więc PR wydania idzie prosto z `develop`.
 
-Do `main` i `develop` wchodzimy tylko przez PR z zielonym CI i nigdy nie robimy force-pusha. GitHub nie pozwala włączyć ochrony gałęzi w prywatnym repo organizacji na darmowym planie, więc na razie pilnujemy tego sami.
+Do `main` i `develop` wchodzimy tylko przez PR z zielonym CI i nigdy nie robimy force-pusha.
 
 ## Co dalej
 
