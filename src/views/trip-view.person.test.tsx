@@ -125,7 +125,7 @@ describe('Preferencje osoby, host', () => {
         puts += 1
         if (puts > 1) return undefined // the scenario's own handler saves it
         // Slow enough that the second tap happens before this one fails.
-        await delay(150)
+        await delay(600)
         return HttpResponse.json({ detail: 'boom' }, { status: 500 })
       }),
     )
