@@ -18,6 +18,8 @@ function build(appEnv) {
   return {
     sw: readFileSync(join(out, 'sw.js'), 'utf8'),
     headers: readFileSync(join(out, '_headers'), 'utf8'),
+    index: readFileSync(join(out, 'index.html'), 'utf8'),
+    manifest: JSON.parse(readFileSync(join(out, 'manifest.webmanifest'), 'utf8')),
   }
 }
 
@@ -40,9 +42,21 @@ describe('built service worker', () => {
   it('precaches the assets and asks the network first for navigations on main', () => {
     const { sw, headers } = build('main')
     expect(sw).toContain('precacheAndRoute')
-    expect(sw).toContain('manifest.webmanifest')
+    // The Worker serves the manifest per language, so a precached copy would stay Polish.
+    expect(sw).not.toContain('manifest.webmanifest')
+    expect(sw).toContain('pwa-192x192.png')
+    expect(headers).toContain('/manifest.webmanifest\n  Cache-Control: no-cache')
     expect(sw).not.toContain('"index.html"')
     expect(sw).toContain('NetworkFirst')
     expect(headers).toContain('immutable')
+  }, 120_000)
+
+  it('builds the base manifest and index.html in Polish, with both texts for the language script', () => {
+    const { index, manifest } = build('develop')
+    expect(manifest.lang).toBe('pl')
+    expect(manifest.description).toContain('Planowanie wyjazdów')
+    expect(index).toContain('<html lang="pl">')
+    expect(index).toContain('Group trip planning')
+    expect(index).not.toContain('%DESCRIPTION_')
   }, 120_000)
 })

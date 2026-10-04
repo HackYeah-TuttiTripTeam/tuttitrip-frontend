@@ -39,7 +39,7 @@ export function workboxOptions(production: boolean): Workbox {
     // Outside production nothing is precached or cached at runtime, so the browser's own
     // HTTP cache (revalidated, see headersFile) is the only cache.
     // index.html is never precached; hashed assets and icons are in production.
-    globPatterns: production ? ['**/*.{js,css,svg,png,ico,webmanifest}'] : [],
+    globPatterns: production ? ['**/*.{js,css,svg,png,ico}'] : [],
     // Share images are for crawlers only; no need to precache them.
     globIgnores: ['og/*.png'],
     runtimeCaching: production

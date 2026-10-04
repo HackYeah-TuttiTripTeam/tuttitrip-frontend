@@ -20,6 +20,10 @@ class FakeHTMLRewriter {
             if (selector.startsWith('meta')) out = out.replace(/<meta name="description"[^>]*>/, '')
           },
           setAttribute: (name: string, value: string) => {
+            if (selector.startsWith('link')) {
+              out = out.replace(/(<link rel="manifest" href=")[^"]*/, `$1${value}`)
+              return
+            }
             out = out.replace('<html', `<html ${name}="${value}"`)
           },
           append: (content: string) => {
@@ -108,7 +112,7 @@ describe('missing files', () => {
 describe('public pages', () => {
   const page = () =>
     new Response(
-      '<!doctype html><html><head><title>x</title></head><body><div id="root"></div></body></html>',
+      '<!doctype html><html><head><title>x</title><link rel="manifest" href="/manifest.webmanifest"></head><body><div id="root"></div></body></html>',
       {
         headers: {
           'content-type': 'text/html; charset=utf-8',
@@ -125,6 +129,11 @@ describe('public pages', () => {
     expect(body).toContain('property="og:locale" content="en_US"')
     expect(body).toContain('id="seo-shell"')
     expect(response.headers.get('vary')).toContain('Accept-Language')
+  })
+
+  it('points the manifest link at the same language', async () => {
+    const response = await worker.fetch(new Request('https://app.test/about?lang=en'), env(page))
+    expect(await response.text()).toContain('href="/manifest.webmanifest?lang=en"')
   })
 
   it('never passes the static validators through, and asks the assets for the full file', async () => {
@@ -213,5 +222,54 @@ describe('public pages', () => {
   it('does not touch other navigations', async () => {
     const response = await worker.fetch(new Request('https://app.test/trips'), env(page))
     expect(await response.text()).not.toContain('seo-shell')
+  })
+})
+
+describe('manifest', () => {
+  const file = () =>
+    new Response(
+      JSON.stringify({
+        name: 'TuttiTrip',
+        description: 'pl',
+        lang: 'pl',
+        icons: [{ src: 'a.png' }],
+      }),
+      { headers: { 'content-type': 'application/manifest+json', etag: '"static"' } },
+    )
+  const get = async (url: string, headers: Record<string, string> = {}) => {
+    const response = await worker.fetch(new Request(url, { headers }), env(file))
+    return { response, body: (await response.json()) as Record<string, unknown> }
+  }
+
+  it('is Polish by default and keeps the build fields', async () => {
+    const { body } = await get('https://app.test/manifest.webmanifest')
+    expect(body.lang).toBe('pl')
+    expect(body.description).toContain('Planowanie')
+    expect(body.icons).toEqual([{ src: 'a.png' }])
+  })
+
+  it('follows Accept-Language, and ?lang= wins', async () => {
+    const accept = { 'accept-language': 'en-GB,en;q=0.9' }
+    const english = await get('https://app.test/manifest.webmanifest', accept)
+    expect(english.body.lang).toBe('en')
+    expect(english.body.description).toContain('Group trip planning')
+    const forced = await get('https://app.test/manifest.webmanifest?lang=pl', accept)
+    expect(forced.body.lang).toBe('pl')
+  })
+
+  it('is always revalidated, varies by language and carries no static validators', async () => {
+    const { response } = await get('https://app.test/manifest.webmanifest')
+    expect(response.headers.get('cache-control')).toBe('no-cache')
+    expect(response.headers.get('vary')).toContain('Accept-Language')
+    expect(response.headers.get('content-type')).toContain('manifest+json')
+    expect(response.headers.get('etag')).toBeNull()
+  })
+
+  it('passes a missing manifest on as a 404', async () => {
+    const response = await worker.fetch(
+      new Request('https://app.test/manifest.webmanifest'),
+      env(html),
+    )
+    expect(response.status).toBe(404)
   })
 })

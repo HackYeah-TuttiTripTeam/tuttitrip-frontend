@@ -7,6 +7,8 @@ import { msw } from 'msw/vite'
 import { defineConfig, loadEnv } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { paraglideOptions } from './i18n.config.mjs'
+import en from './messages/en.json' with { type: 'json' }
+import pl from './messages/pl.json' with { type: 'json' }
 import { headersFile, includeAssets, isProductionBuild, workboxOptions } from './pwa.config.ts'
 
 // https://vite.dev/config/
@@ -24,7 +26,11 @@ export default defineConfig(({ mode, command }) => {
   const apiMock =
     loadEnv(mode, process.cwd(), 'VITE_').VITE_API_MOCK === '1' && mode !== 'production'
 
-  let pwaApi: { extendManifestEntries(fn: () => []): void } | undefined
+  let pwaApi:
+    | {
+        extendManifestEntries(fn: (entries: { url: string }[]) => { url: string }[]): void
+      }
+    | undefined
 
   return {
     define: { __API_MOCK__: JSON.stringify(apiMock) },
@@ -61,6 +67,15 @@ export default defineConfig(({ mode, command }) => {
           this.emitFile({ type: 'asset', fileName: '_headers', source: headersFile(production) })
         },
       },
+      {
+        // index.html carries both descriptions for its inline language script, so the texts
+        // stay in messages/*.json (the only place that has them).
+        name: 'tuttitrip:html-messages',
+        transformIndexHtml: (html) =>
+          html
+            .replaceAll('%DESCRIPTION_PL%', pl.app_description)
+            .replaceAll('%DESCRIPTION_EN%', en.app_description),
+      },
       VitePWA({
         registerType: 'autoUpdate',
         injectRegister: false, // registered in src/lib/pwa.ts
@@ -71,7 +86,8 @@ export default defineConfig(({ mode, command }) => {
           id: '/',
           name: 'TuttiTrip',
           short_name: 'TuttiTrip',
-          description: 'Planowanie wyjazdów w grupie: plan, po którym nikt nie czuje, że przegrał.',
+          // Polish (base locale) in the file; the Worker serves it per language (worker/index.ts).
+          description: pl.app_description,
           lang: 'pl',
           start_url: '/',
           scope: '/',
@@ -95,16 +111,21 @@ export default defineConfig(({ mode, command }) => {
       }),
       {
         // The plugin always adds the web manifest to the precache list. Outside production
-        // the service worker precaches nothing (pwa.config.ts), so empty the list. Runs
-        // after VitePWA's own configResolved, which fills it.
+        // the service worker precaches nothing (pwa.config.ts), so empty the list; in production
+        // only the manifest leaves it. Runs after VitePWA's own configResolved, which fills it.
         name: 'tuttitrip:no-precache-outside-production',
         configResolved(config) {
-          if (production) return
           const pwa = config.plugins.find((plugin) => plugin.name === 'vite-plugin-pwa')
           pwaApi = pwa?.api
         },
         buildStart() {
-          pwaApi?.extendManifestEntries(() => [])
+          // Production keeps the icons but not the manifest: the Worker serves it per language,
+          // and a precached copy would answer in Polish for everyone.
+          pwaApi?.extendManifestEntries((entries) =>
+            production
+              ? entries.filter((entry) => !String(entry.url).endsWith('.webmanifest'))
+              : [],
+          )
         },
       },
     ],
