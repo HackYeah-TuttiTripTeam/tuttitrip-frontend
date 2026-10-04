@@ -1,7 +1,8 @@
-import { Map as MapIcon, Plus } from '@keyline-icons/react'
+import { CircleQuestion, Map as MapIcon, Plus } from '@keyline-icons/react'
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
+import { TOUR } from '@/lib/help'
 import { m } from '@/paraglide/messages'
 import { AccountMenu, type AccountState } from './account-menu'
 import { BrandLogo } from './brand-mark'
@@ -17,6 +18,8 @@ interface AppShellProps {
   /** Deployment name; shown as a badge everywhere except production. */
   envLabel: string | null
   onCreateTrip: () => void
+  /** Opens the visual help of the page on screen; null when the page has none (no button). */
+  onHelp: (() => void) | null
   /** Notice above the header bar, e.g. the demo account banner. */
   banner?: ReactNode
   children: ReactNode
@@ -32,6 +35,7 @@ export function AppShell({
   theme,
   envLabel,
   onCreateTrip,
+  onHelp,
   banner,
   children,
 }: AppShellProps) {
@@ -67,15 +71,43 @@ export function AppShell({
             >
               {m.nav_trips()}
             </Link>
+            {account.canAdminUsers && (
+              <Link
+                to="/admin/users"
+                className="ml-6 flex h-full items-center border-transparent border-b-2 text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:underline [&.active]:border-primary [&.active]:text-foreground"
+              >
+                {m.admin_users_link()}
+              </Link>
+            )}
+            {account.showPermissions && (
+              <Link
+                to="/admin/permissions"
+                className="ml-6 flex h-full items-center border-transparent border-b-2 text-muted-foreground text-sm outline-none transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:underline [&.active]:border-primary [&.active]:text-foreground"
+              >
+                {m.perm_title()}
+              </Link>
+            )}
           </nav>
 
           <div className="ml-auto flex items-center gap-1 md:gap-3">
             <LanguageMenu language={language} />
+            {onHelp && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onHelp}
+                aria-label={m.help_open()}
+                title={m.shell_help()}
+                className="size-11 md:size-9"
+              >
+                <CircleQuestion aria-hidden="true" className="size-5" />
+              </Button>
+            )}
             <div className={account.status === 'authenticated' ? 'hidden md:block' : undefined}>
               <ThemeToggle state={theme} />
             </div>
             <div className="hidden items-center gap-3 md:flex">
-              <Button onClick={onCreateTrip}>
+              <Button onClick={onCreateTrip} data-tour={TOUR.newTrip}>
                 <Plus />
                 {m.action_new_trip()}
               </Button>
@@ -87,13 +119,13 @@ export function AppShell({
 
       <main
         id="main"
-        className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-10 md:px-6 md:pt-10 md:pb-12"
+        className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 pt-6 pb-10 md:px-6 md:pt-10 md:pb-12"
       >
         {children}
       </main>
 
       {/* The bottom action bar is fixed on phones; keep the footer clear of it. */}
-      <SiteFooter variant="compact" language={language} className="pb-20 md:pb-0 print:hidden" />
+      <SiteFooter language={language} className="pb-20 md:pb-0 print:hidden" />
 
       <nav
         aria-label={m.shell_nav_actions()}
@@ -107,6 +139,7 @@ export function AppShell({
           <div className="flex justify-center">
             <Button
               onClick={onCreateTrip}
+              data-tour={TOUR.newTrip}
               size="icon-lg"
               aria-label={m.action_new_trip()}
               className="size-14 rounded-full shadow-lg shadow-primary/25 [&_svg:not([class*='size-'])]:size-6"

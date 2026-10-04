@@ -16,9 +16,13 @@ import {
   TRIP_KIND_LABELS,
   TRIP_ROLE_LABELS,
   TRIP_SORT_LABELS,
+  TRIP_STATUS_LABELS,
+  TRIP_WHEN_LABELS,
   type TripKind,
   type TripRole,
   type TripSortKey,
+  type TripStatus,
+  type TripWhen,
 } from './trip-columns'
 
 type Kind = TripKind
@@ -27,6 +31,8 @@ type Role = TripRole
 export interface TripFilters {
   city?: string | undefined
   kind?: Kind | undefined
+  when?: TripWhen | undefined
+  status?: TripStatus | undefined
   role: Role[]
   start_from?: string | undefined
   start_to?: string | undefined
@@ -50,6 +56,8 @@ interface TripsToolbarProps {
 const ALL = 'all'
 const isSortKey = (value: string): value is TripSortKey => value in TRIP_SORT_LABELS
 const isKind = (value: string): value is Kind => value in TRIP_KIND_LABELS
+const isWhen = (value: string): value is TripWhen => value in TRIP_WHEN_LABELS
+const isStatus = (value: string): value is TripStatus => value in TRIP_STATUS_LABELS
 const isRole = (value: string): value is Role => value in TRIP_ROLE_LABELS
 
 export function TripsToolbar({
@@ -154,6 +162,42 @@ export function TripsToolbar({
           <SelectContent>
             <SelectItem value={ALL}>{m.trips_filter_kind_all()}</SelectItem>
             {Object.entries(TRIP_KIND_LABELS).map(([key, label]) => (
+              <SelectItem key={key} value={key}>
+                {label()}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.when ?? ALL}
+          onValueChange={(value) => onFiltersChange({ when: isWhen(value) ? value : undefined })}
+        >
+          <SelectTrigger aria-label={m.trips_filter_when()} className="h-11 w-44 sm:h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>{m.trips_filter_when_all()}</SelectItem>
+            {Object.entries(TRIP_WHEN_LABELS).map(([key, label]) => (
+              <SelectItem key={key} value={key}>
+                {label()}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.status ?? ALL}
+          onValueChange={(value) =>
+            onFiltersChange({ status: isStatus(value) ? value : undefined })
+          }
+        >
+          <SelectTrigger aria-label={m.trips_filter_status()} className="h-11 w-48 sm:h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>{m.trips_filter_status_all()}</SelectItem>
+            {Object.entries(TRIP_STATUS_LABELS).map(([key, label]) => (
               <SelectItem key={key} value={key}>
                 {label()}
               </SelectItem>

@@ -1,5 +1,8 @@
 import type { Schemas } from '@/api/client'
+import type { VotePlace } from '@/api/vote-contract'
 import {
+  type AdminUser,
+  adminUsers,
   type CatalogPlace,
   type City,
   catalogPlaces,
@@ -12,9 +15,13 @@ import {
   familyProfiles,
   type Invitation,
   invitation,
+  type Me,
   type Member,
+  MOCK_USER_NAME,
+  me,
   needsApprovalBudget,
   outing,
+  type PlaceVoteSummary,
   type Plan,
   PROFILE_IDS,
   type Preferences,
@@ -22,7 +29,13 @@ import {
   plan,
   type Trip,
   trip,
+  type VoteLink,
+  voteLink,
+  votePlaces,
+  voteSummary,
 } from './fixtures'
+import { emptyInterviewWorld, emptyTrip, type InterviewWorld, resumedMessages } from './interview'
+import { adminMe, createPermissionsWorld, type PermissionsWorld } from './permissions'
 
 export const scenarioNames = [
   'family-warsaw',
@@ -33,6 +46,11 @@ export const scenarioNames = [
   'no-expenses',
   'many-expenses',
   'settlement-closed',
+  'member-pending',
+  'cohost',
+  'users-admin',
+  'users-admin-read-only',
+  'google-account',
   'preferences-save-error',
   'server-error',
   'offline',
@@ -46,6 +64,13 @@ export const scenarioNames = [
   'join-claim-taken',
   'join-named',
   'join-named-taken',
+  'admin',
+  'admin-readonly',
+  'vote-with-link',
+  'vote-dead',
+  'vote-write-error',
+  'interview-empty',
+  'interview-resumed',
 ] as const
 
 export type ScenarioName = (typeof scenarioNames)[number]
@@ -67,6 +92,10 @@ export function pickScenario(search: string, stored: string | null): ScenarioNam
 export interface World {
   /** How the API behaves: normally, with 500 for everything, or unreachable. */
   behaviour: 'normal' | 'server-error' | 'offline'
+  /** `GET /me`: who the caller is and what the API lets them do. */
+  me: Me
+  /** The roles, users and audit behind `/admin/permissions`. */
+  permissions: PermissionsWorld
   trips: Trip[]
   /** The city catalogue (`GET /places/cities`). */
   cities: City[]
@@ -77,6 +106,10 @@ export interface World {
   profiles: Profile[]
   /** People with an account and their trip role (the Osoby view joins them with profiles on profile_id). */
   members: Member[]
+  /** The accounts of the admin panel (`GET /admin/users`). */
+  adminUsers: AdminUser[]
+  /** The caller's display name, changed by `PATCH /me/account`. */
+  accountName: string
   /** Preferences of everyone on the main trip (constraints, diet, interests). */
   preferences: Preferences[]
   /** The catalog of the main trip's city (`GET /places`). */
@@ -91,6 +124,21 @@ export interface World {
   plan: Plan | null
   /** Invitations of the main trip, newest first (the host's list). */
   invitations: Invitation[]
+  /** Voting links of the main trip, newest first (the host's panel; never holds a token). */
+  voteLinks: VoteLink[]
+  /** The group's answers per place (`GET /vote-summary`). */
+  voteSummary: PlaceVoteSummary[]
+  /** The voting page of a person without an account (`/vote/*`, the contract of backend#81). */
+  vote: {
+    /** "dead": expired or revoked, which the API answers with 401. */
+    link: 'ok' | 'dead'
+    profileName: string
+    places: VotePlace[]
+    /** Every write answers 500. */
+    writeFails: boolean
+  }
+  /** The interview of the main trip: session, scripted assistant, knowledge sources. */
+  interview: InterviewWorld
   /** Whether POST /auth/demo accepts the invitation token (false: switched off, answers 404). */
   demoEnabled: boolean
   /** POST /auth/demo answers 429: too many attempts from this address. */
@@ -153,11 +201,15 @@ export function createWorld(name: ScenarioName): World {
   const main = trip()
   const base: World = {
     behaviour: 'normal',
+    me: me(),
+    permissions: createPermissionsWorld(),
     trips: [main, outing()],
     cities: cities(),
     failures: {},
     profiles: familyProfiles(),
     members: familyMembers(),
+    adminUsers: adminUsers(),
+    accountName: MOCK_USER_NAME,
     preferences: familyPreferences(),
     places: catalogPlaces(),
     preferencesSaveFails: false,
@@ -165,6 +217,10 @@ export function createWorld(name: ScenarioName): World {
     settlementClosed: false,
     plan: plan(main.id),
     invitations: [invitation()],
+    voteLinks: [],
+    voteSummary: voteSummary(),
+    vote: { link: 'ok', profileName: 'Zosia', places: votePlaces(), writeFails: false },
+    interview: emptyInterviewWorld(),
     demoEnabled: true,
     demoRateLimited: false,
     join: {
@@ -197,6 +253,27 @@ export function createWorld(name: ScenarioName): World {
       return { ...base, settlementClosed: true }
     case 'many-expenses':
       return { ...base, expenses: manyExpenses(45) }
+    case 'member-pending': {
+      const members = familyMembers('member')
+      for (const member of members) if (member.is_me) member.status = 'pending'
+      return {
+        ...base,
+        trips: [trip({ my_role: 'member', my_status: 'pending' }), outing({ my_role: 'member' })],
+        members,
+      }
+    }
+    case 'cohost':
+      return {
+        ...base,
+        trips: [trip({ my_role: 'co_host' }), outing({ my_role: 'co_host' })],
+        members: familyMembers('co_host'),
+      }
+    case 'users-admin':
+      return { ...base, me: me({ is_admin: true, roles: ['admin'] }) }
+    case 'users-admin-read-only':
+      return { ...base, me: me({ access: { 'admin.users': 'READ' } }) }
+    case 'google-account':
+      return { ...base, me: me({ sub: 'google-oauth2|mock-user' }) }
     case 'preferences-save-error':
       return { ...base, preferencesSaveFails: true }
     case 'server-error':
@@ -236,6 +313,25 @@ export function createWorld(name: ScenarioName): World {
           namedFor: PROFILE_IDS.zosia,
         },
       }
+    case 'vote-with-link':
+      return { ...base, voteLinks: [voteLink({ last_used_at: '2026-10-02T12:00:00Z' })] }
+    case 'vote-dead':
+      return { ...base, vote: { ...base.vote, link: 'dead' } }
+    case 'vote-write-error':
+      return { ...base, vote: { ...base.vote, writeFails: true } }
+    case 'interview-empty': {
+      const fresh = emptyTrip()
+      return {
+        ...base,
+        trips: [fresh, outing()],
+        profiles: familyProfiles().slice(0, 1),
+        preferences: [],
+      }
+    }
+    case 'interview-resumed': {
+      const messages = resumedMessages(40)
+      return { ...base, interview: { ...emptyInterviewWorld(), started: true, messages } }
+    }
     case 'join-named':
       return {
         ...base,
@@ -245,5 +341,9 @@ export function createWorld(name: ScenarioName): World {
           namedFor: PROFILE_IDS.zosia,
         },
       }
+    case 'admin':
+      return { ...base, me: adminMe('WRITE', base.me) }
+    case 'admin-readonly':
+      return { ...base, me: adminMe('READ', base.me) }
   }
 }

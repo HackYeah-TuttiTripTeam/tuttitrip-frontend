@@ -188,6 +188,12 @@ options from `src/api/queries/`, so a route never touches the API directly.
    or `cva()`; Biome's `noTailwindRawColors` rejects palette colors
    (`bg-red-500`). Runs in `pnpm biome check` / `biome ci`.
 
+9. **The AG-UI client lives in `hooks/` and `api/` only.** `@ag-ui/*` is imported by
+   `api/interview-agent.ts`, `api/interview-events.ts` and `hooks/use-interview.ts`; components,
+   views, routes, loaders, lib and stores get plain types and props. `@copilotkit/*` is not allowed
+   anywhere (spike #24: production needs a licence key, its runtime does not start in a Worker).
+   (`ag-ui-only-in-hooks-and-api`, `no-copilotkit` and a package.json check in `scripts/check-arch.mjs`)
+
 Also enforced: no circular imports, no unresolvable or undeclared packages,
 loaders/stores/api stay UI-free, and only the folders above exist in `src/`.
 Each rule was proven to fail on a deliberate violation. If you need to break
@@ -244,6 +250,30 @@ widoki ani komponenty.
 
 - Poza zakresem: manifest PWA (`vite.config.ts`) i `index.html` mają opis po polsku, bo nie znają
   języka użytkownika.
+
+## Interview (Wywiad tab, AG-UI)
+
+`views/trip-view.interview.tsx` (lazy chunk) wires `hooks/use-interview-session.ts` (session and
+history over REST, newest page first with `dir=desc`), `hooks/use-interview.ts` (the AG-UI run) and
+`hooks/use-knowledge.ts` (the "Co już wiem" panel). The client sends only the latest user text; the
+server keeps the history of the session (`threadId` = session id), one run at a time (409 otherwise).
+The shared state is read defensively (`lib/interview.ts`): `knowledge` (a `KnowledgeRead` snapshot,
+applied to the query cache) and `card` (kind, question, options). A card answers with a sentence
+that carries the numbers (`lib/interview-answers.ts`). The REST answer of `/interview/knowledge`
+is the truth; the panel refetches after every run and edits go through the trips and profiles REST.
+`api/interview-events.ts` folds all 31 AG-UI 1.0 events (8 families) into the run view; RAW and
+CUSTOM land in `unhandled` (logged in dev). Mock: scenarios `interview-empty` and
+`interview-resumed`, `sseResponse()` in `src/mocks/interview.ts` for tests that script a stream.
+A RUN_ERROR carries `code` (`spend_limit`, `timeout`, `unavailable`, `error`), each with its own
+message; 409 means a text turn or a voice call is already running.
+
+Voice (`hooks/use-voice-call.ts`, `components/interview/voice-button.tsx`, `live-captions.tsx`):
+WebRTC straight to the provider, our API only answers the SDP offer
+(`POST …/interview/voice/offer`) and hangs up (`…/{call_id}/hangup`). The microphone and the audio
+start on a tap; stop releases the mic first, then tells the server; closing the page sends a
+`keepalive` hang-up (`api/voice.ts`). Captions come from the data-channel events (`lib/voice-events.ts`,
+keyed by item id, so a late user transcript keeps its place). A call and a text turn exclude each other.
+No microphone or no WebRTC leaves the text field.
 
 ## Data flow for a feature (example: trips)
 
@@ -366,7 +396,7 @@ origin. No CORS, and the same build works in every environment.
 ## PWA updates and caching
 
 Settings live in `pwa.config.ts` (used by `vite.config.ts`, tested in
-`pwa.config.test.ts`; `scripts/pwa-build.test.mjs` builds develop and main and
+`pwa.config.test.ts`; `scripts/pwa-build.int.test.mjs` builds develop and main and
 checks the generated `sw.js` and `_headers`). Production is `VITE_APP_ENV=main`:
 `scripts/resolve-api.sh` turns the branch (`github.head_ref || github.ref_name`)
 into `app_env`, which is `main` only for the push to `main`, and the `checks`
@@ -397,19 +427,49 @@ is not production.
   `defaultOnCatch`, on errors such as "Failed to fetch dynamically imported
   module". A missing file-like path (`/assets/x.js`, any extension but `.html`)
   under `/assets/*` that the SPA fallback would answer with `index.html` is a
-  real 404 from the Worker (`assetsOr404` in `worker/index.ts`).
-  The deploy smoke test checks `/assets/smoke-missing.js` -> 404.
+  real 404 from the Worker (`assetsOr404` in `worker/index.ts`). Only `/assets/*`:
+  the Worker never sees other static paths (they are not in `run_worker_first`), so a
+  missing `/workbox-x.js` still gets the SPA fallback; `sw.js` is `no-cache` and always
+  names the current one. The deploy smoke test checks `/assets/smoke-missing.js` -> 404.
+  Cost: every `/assets/*` request runs the Worker script (free plan: about 100k
+  requests a day). On `main` the precache answers repeat visits without the network,
+  so mostly first visits and deploys count; develop and previews pay on every load.
 - **Production (`main`):** navigations are `NetworkFirst` (3 s timeout,
   `app-shell` cache, one `/index.html` entry) so offline any deep link gets the
-  shell; JS/CSS/icons/manifest are precached; `/assets/*` and `/workbox-*` are
+  shell; JS/CSS/icons and the fonts (`/assets/fonts/*.woff2`, about 85 KB)
+  are precached, so the offline shell keeps the design-system typefaces (they keep their
+  names, so `dontCacheBustURLsMatching` gives them a content revision and a deploy replaces them); photos are
+  not (2.9 MB, public pages only), nor is the manifest (the Worker serves it per language). `/assets/*` and `/workbox-*` are
   immutable for a year; `sw.js`, `sw-activate.js`, `index.html` and the manifest
-  are `no-cache`.
+  are `no-cache`. Offline, the app shows `OfflineBanner` ("Brak połączenia", from
+  `navigator.onLine` and the `online`/`offline` events) above the header on every
+  build; the views keep their own error states for failed API calls.
+- **TTL decision (issue #94):**
+
+  | Path | `main` | develop, previews |
+  | --- | --- | --- |
+  | `/assets/*` (hashed) | `max-age=31536000, immutable` + precache | `no-cache` |
+  | `/assets/photos/*`, `/assets/fonts/*` (unhashed) | `max-age=86400, stale-while-revalidate=604800` (Worker); fonts also precached | `no-cache` |
+  | `/workbox-*` | `max-age=31536000, immutable` | `no-cache` |
+  | `index.html`, navigations | `no-cache`; service worker `NetworkFirst` 3 s, then cache | `no-cache`, network only |
+  | `sw.js`, `sw-activate.js`, manifest | `no-cache` | `no-cache` |
+
+  Why: a hashed name changes with its content, so a year is safe and makes return
+  visits free; anything whose name stays the same across deploys (the shell, the
+  service worker, photos, fonts) is revalidated, so a deploy reaches an installed PWA
+  on the next refresh. 3 s is how long a navigation waits on a weak signal before the
+  cached shell is used. Nothing moves to develop: it exists to show each deploy at
+  once, and offline is checked on a local `VITE_APP_ENV=main` build
+  (`pnpm build && pnpm preview`).
 - **Non-production (develop, previews):** short caching on purpose, so every
   deploy shows on the next load. The built `sw.js` has no `precacheAndRoute`
   (`includeAssets`, manifest icons and the manifest entry are dropped), no
   `app-shell` cache and no navigation route (offline does not work there); its
   only route is a `NetworkOnly` pass-through for `/api/*` (Workbox refuses a worker
   with nothing to do). `_headers` sets `Cache-Control: no-cache` for every path.
+  At start the page deletes `workbox-precache-*` and `app-shell` caches that an
+  older build left behind (`deleteUnusedCaches` in `src/lib/pwa.ts`); the worker
+  never reads them. On `main` Workbox cleans its own precache.
   `_headers` is generated at build time (`vite.config.ts`), there is no
   `public/_headers`.
 - Recovering a browser stuck on an old build (only needed for installs older

@@ -11,11 +11,15 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DemoRouteImport } from './routes/demo'
+import { Route as GlosRouteImport } from './routes/glos'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as PrywatnoscRouteImport } from './routes/prywatnosc'
 import { Route as TripsRouteImport } from './routes/trips'
+import { Route as AdminPermissionsRouteImport } from './routes/admin.permissions'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as TripsTripIdRouteImport } from './routes/trips_.$tripId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -28,6 +32,11 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
@@ -36,6 +45,11 @@ const ContactRoute = ContactRouteImport.update({
 const DemoRoute = DemoRouteImport.update({
   id: '/demo',
   path: '/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GlosRoute = GlosRouteImport.update({
+  id: '/glos',
+  path: '/glos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JoinRoute = JoinRouteImport.update({
@@ -53,6 +67,16 @@ const TripsRoute = TripsRouteImport.update({
   path: '/trips',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminPermissionsRoute = AdminPermissionsRouteImport.update({
+  id: '/admin/permissions',
+  path: '/admin/permissions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TripsTripIdRoute = TripsTripIdRouteImport.update({
   id: '/trips_/$tripId',
   path: '/trips/$tripId',
@@ -62,32 +86,44 @@ const TripsTripIdRoute = TripsTripIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/account': typeof AccountRoute
   '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
+  '/glos': typeof GlosRoute
   '/join': typeof JoinRoute
   '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
+  '/admin/permissions': typeof AdminPermissionsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/trips/$tripId': typeof TripsTripIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/account': typeof AccountRoute
   '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
+  '/glos': typeof GlosRoute
   '/join': typeof JoinRoute
   '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
+  '/admin/permissions': typeof AdminPermissionsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/trips/$tripId': typeof TripsTripIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/account': typeof AccountRoute
   '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
+  '/glos': typeof GlosRoute
   '/join': typeof JoinRoute
   '/prywatnosc': typeof PrywatnoscRoute
   '/trips': typeof TripsRoute
+  '/admin/permissions': typeof AdminPermissionsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/trips_/$tripId': typeof TripsTripIdRoute
 }
 export interface FileRouteTypes {
@@ -95,42 +131,58 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/account'
     | '/contact'
     | '/demo'
+    | '/glos'
     | '/join'
     | '/prywatnosc'
     | '/trips'
+    | '/admin/permissions'
+    | '/admin/users'
     | '/trips/$tripId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
+    | '/account'
     | '/contact'
     | '/demo'
+    | '/glos'
     | '/join'
     | '/prywatnosc'
     | '/trips'
+    | '/admin/permissions'
+    | '/admin/users'
     | '/trips/$tripId'
   id:
     | '__root__'
     | '/'
     | '/about'
+    | '/account'
     | '/contact'
     | '/demo'
+    | '/glos'
     | '/join'
     | '/prywatnosc'
     | '/trips'
+    | '/admin/permissions'
+    | '/admin/users'
     | '/trips_/$tripId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AccountRoute: typeof AccountRoute
   ContactRoute: typeof ContactRoute
   DemoRoute: typeof DemoRoute
+  GlosRoute: typeof GlosRoute
   JoinRoute: typeof JoinRoute
   PrywatnoscRoute: typeof PrywatnoscRoute
   TripsRoute: typeof TripsRoute
+  AdminPermissionsRoute: typeof AdminPermissionsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
   TripsTripIdRoute: typeof TripsTripIdRoute
 }
 
@@ -150,6 +202,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/contact': {
       id: '/contact'
       path: '/contact'
@@ -162,6 +221,13 @@ declare module '@tanstack/react-router' {
       path: '/demo'
       fullPath: '/demo'
       preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/glos': {
+      id: '/glos'
+      path: '/glos'
+      fullPath: '/glos'
+      preLoaderRoute: typeof GlosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/join': {
@@ -185,6 +251,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TripsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/permissions': {
+      id: '/admin/permissions'
+      path: '/admin/permissions'
+      fullPath: '/admin/permissions'
+      preLoaderRoute: typeof AdminPermissionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/trips_/$tripId': {
       id: '/trips_/$tripId'
       path: '/trips/$tripId'
@@ -198,11 +278,15 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AccountRoute: AccountRoute,
   ContactRoute: ContactRoute,
   DemoRoute: DemoRoute,
+  GlosRoute: GlosRoute,
   JoinRoute: JoinRoute,
   PrywatnoscRoute: PrywatnoscRoute,
   TripsRoute: TripsRoute,
+  AdminPermissionsRoute: AdminPermissionsRoute,
+  AdminUsersRoute: AdminUsersRoute,
   TripsTripIdRoute: TripsTripIdRoute,
 }
 export const routeTree = rootRouteImport

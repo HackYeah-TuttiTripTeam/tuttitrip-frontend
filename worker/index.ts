@@ -177,6 +177,16 @@ async function publicPage(request: Request, env: Env, url: URL): Promise<Respons
   return new Response(page.body, { status: page.status, headers: out })
 }
 
+/** The private voting page: the SPA shell with no Referer at all (the _headers rule says same-origin). */
+const VOTE_PATH = '/glos'
+
+async function votePage(request: Request, env: Env): Promise<Response> {
+  const response = await assetsOr404(request, env)
+  const out = new Response(response.body, response)
+  out.headers.set('referrer-policy', 'no-referrer')
+  return out
+}
+
 export default {
   fetch(request: Request, env: Env): Promise<Response> | Response {
     const url = new URL(request.url)
@@ -185,6 +195,7 @@ export default {
     if (pathname.startsWith('/assets/')) return assetsOr404(request, env)
     if (request.method === 'GET' || request.method === 'HEAD') {
       if (pathname === MANIFEST_PATH) return manifest(request, env, url)
+      if (cleanPath(pathname) === VOTE_PATH) return votePage(request, env)
       if (pathname === '/robots.txt') {
         return text(robotsTxt(url.origin, isProduction(env)), 'text/plain')
       }
@@ -196,7 +207,7 @@ export default {
       }
       if (seoPath(pathname)) return publicPage(request, env, url)
     }
-    return assetsOr404(request, env)
+    return env.ASSETS.fetch(request)
   },
 }
 
@@ -237,7 +248,7 @@ async function assetsOr404(request: Request, env: Env): Promise<Response> {
   return response
 }
 
-/** The last segment has an extension other than .html: /assets/a.js, /workbox-1.js. */
+/** The last segment has an extension other than .html: /assets/a.js, /assets/x.css. */
 function isFileLike(pathname: string): boolean {
   const last = pathname.split('/').pop() ?? ''
   return /\.[A-Za-z0-9]+$/.test(last) && !last.endsWith('.html')

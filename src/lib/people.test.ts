@@ -29,6 +29,7 @@ describe('joinPeople', () => {
       profile_id,
       role,
       display_name: profile_id,
+      status: 'confirmed',
       is_me: false,
     })
     const people = joinPeople(

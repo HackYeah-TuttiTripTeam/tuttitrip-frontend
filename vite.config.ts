@@ -68,6 +68,7 @@ export default defineConfig(({ mode, command }) => {
       // Serves /mockServiceWorker.js for `pnpm dev:mock`. Never in a build: dist/ has no MSW.
       ...(command === 'serve' ? [msw({ mode: 'worker-only' })] : []),
       {
+        // The only source of dist/_headers: a public/_headers would be silently replaced.
         name: 'tuttitrip:headers',
         generateBundle() {
           this.emitFile({ type: 'asset', fileName: '_headers', source: headersFile(production) })

@@ -56,7 +56,7 @@ export function TripExpensesView({ trip }: TripExpensesViewProps) {
     name: person.profile.display_name,
   }))
   const myProfileId = joined.find((person) => person.isMe)?.profile.id
-  const { sub } = useMe(session.status)
+  const sub = useMe(session.status).me?.sub
 
   const list = useExpenses(tripId, search, session.status)
   const settlement = useSettlement(tripId, session.status)

@@ -3,7 +3,10 @@ import type { SessionStatus } from '@/hooks/use-session'
 /** Pages open to guests; they use the public layout instead of the app shell. */
 const PUBLIC_PATHS = new Set(['/', '/about', '/contact', '/prywatnosc'])
 
-/** "standalone" is /demo: the page draws all of itself, so no header flashes sign-in buttons. */
+/** Pages that draw all of themselves: no header flashes sign-in buttons (/demo, /glos). */
+const STANDALONE_PATHS = new Set(['/demo', '/glos'])
+
+/** "standalone" is one of STANDALONE_PATHS. */
 export type ShellKind = 'public' | 'bare' | 'standalone' | 'app'
 
 const trimmed = (pathname: string) =>
@@ -29,7 +32,7 @@ export function isHomeWaiting(
  * landing page, so neither flashes before the redirect to /trips.
  */
 export function shellFor(pathname: string, status: SessionStatus, storedSession = true): ShellKind {
-  if (trimmed(pathname) === '/demo') return 'standalone'
+  if (STANDALONE_PATHS.has(trimmed(pathname))) return 'standalone'
   if (!PUBLIC_PATHS.has(trimmed(pathname))) return 'app'
   return isHomeWaiting(pathname, status, storedSession) ? 'bare' : 'public'
 }
