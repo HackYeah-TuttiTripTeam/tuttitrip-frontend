@@ -7,6 +7,7 @@ import {
   sumDecimals,
   toCents,
 } from '@/lib/money'
+import { searchCities } from './city-search'
 import {
   checkin,
   type Expense,
@@ -264,6 +265,17 @@ function normalHandlers(
     http.get(`${API}/trips`, async ({ request }) => {
       await latency()
       return listTrips(world.trips, new URL(request.url).searchParams)
+    }),
+
+    http.get(`${API}/places/cities/search`, async ({ request }) => {
+      await latency()
+      if (world.citySearch === 'error') return serverError()
+      const params = new URL(request.url).searchParams
+      const q = params.get('q') ?? ''
+      if (q.length < 2) return HttpResponse.json({ detail: 'q is too short' }, { status: 422 })
+      return HttpResponse.json(
+        searchCities(world.cities, q, Number(params.get('size') ?? 8), world.citySearch),
+      )
     }),
 
     http.get(`${API}/places/cities`, async () => {

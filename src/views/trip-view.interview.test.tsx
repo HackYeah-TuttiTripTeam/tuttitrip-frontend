@@ -238,9 +238,9 @@ describe('Co już wiem, edycja w obie strony', () => {
       }),
     )
     const dialog = await screen.findByRole('dialog')
-    const field = within(dialog).getByLabelText(m.trip_form_destination_label())
-    await user.clear(field)
-    await user.type(field, 'Sopot')
+    await user.click(within(dialog).getByRole('combobox', { name: /Warszawa/ }))
+    await user.type(await screen.findByPlaceholderText(m.city_search_input_placeholder()), 'Sopot')
+    await user.click(await screen.findByText(m.city_search_use_typed({ query: 'Sopot' })))
     await user.click(within(dialog).getByRole('button', { name: m.trip_settings_save() }))
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())

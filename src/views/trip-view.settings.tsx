@@ -7,6 +7,7 @@ import { DeleteTripConfirm } from '@/components/trips/delete-trip-confirm'
 import { TripForm } from '@/components/trips/trip-form'
 import { Button } from '@/components/ui/button'
 import { useCities } from '@/hooks/use-cities'
+import { useCitySearch } from '@/hooks/use-city-search'
 import { useDeleteTrip } from '@/hooks/use-delete-trip'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
 import { useSaveTrip } from '@/hooks/use-save-trip'
@@ -35,6 +36,7 @@ function TripSettingsEditor({ trip }: { trip: Trip }) {
   const session = useSession()
   const { cities } = useCities(session.status)
   const save = useSaveTrip(trip, cities)
+  const citySearch = useCitySearch(session.status)
   const remove = useDeleteTrip(() => navigate({ to: '/trips' }))
 
   const change = (next: boolean) => {
@@ -63,6 +65,7 @@ function TripSettingsEditor({ trip }: { trip: Trip }) {
         open={open}
         onOpenChange={change}
         isDesktop={isDesktop}
+        wide={step === 'edit'}
         title={step === 'edit' ? m.trip_settings_title() : m.trip_delete_title()}
         description={step === 'edit' ? m.trip_settings_description() : m.trip_delete_description()}
       >
@@ -71,6 +74,7 @@ function TripSettingsEditor({ trip }: { trip: Trip }) {
             initial={tripToFormValues(trip)}
             tripCurrency={trip.currency}
             cities={cities}
+            citySearch={citySearch}
             fieldErrors={save.fieldErrors}
             submitError={save.submitError}
             isSubmitting={save.isPending}

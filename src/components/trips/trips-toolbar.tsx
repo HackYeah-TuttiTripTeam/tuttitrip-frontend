@@ -1,4 +1,5 @@
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, Search, X } from '@keyline-icons/react'
+import { CityCombobox } from '@/components/trips/city-combobox'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { type CitySearch, nameFromSlug } from '@/lib/city-search'
 import { m } from '@/paraglide/messages'
 import {
   type SortDirection,
@@ -49,6 +51,8 @@ interface TripsToolbarProps {
   filters: TripFilters
   onFiltersChange: (patch: Partial<TripFilters>) => void
   cities: { slug: string; name: string }[]
+  /** Live city suggestions for the city filter. */
+  citySearch: CitySearch
   hasFilters: boolean
   onReset: () => void
 }
@@ -70,6 +74,7 @@ export function TripsToolbar({
   filters,
   onFiltersChange,
   cities,
+  citySearch,
   hasFilters,
   onReset,
 }: TripsToolbarProps) {
@@ -205,24 +210,21 @@ export function TripsToolbar({
           </SelectContent>
         </Select>
 
-        {cities.length > 0 && (
-          <Select
-            value={filters.city ?? ALL}
-            onValueChange={(value) => onFiltersChange({ city: value === ALL ? undefined : value })}
-          >
-            <SelectTrigger aria-label={m.trips_filter_city()} className="h-11 w-44 sm:h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>{m.trips_filter_city_all()}</SelectItem>
-              {cities.map((city) => (
-                <SelectItem key={city.slug} value={city.slug}>
-                  {city.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        <CityCombobox
+          id="trips-filter-city"
+          label={m.trips_filter_city()}
+          value={
+            filters.city
+              ? (cities.find((c) => c.slug === filters.city)?.name ?? nameFromSlug(filters.city))
+              : ''
+          }
+          search={citySearch}
+          placeholder={m.trips_filter_city()}
+          clearLabel={m.trips_filter_city_all()}
+          onSelect={(city) => onFiltersChange({ city: city.slug })}
+          onClear={() => onFiltersChange({ city: undefined })}
+          className="w-52 sm:h-9"
+        />
 
         <div className="flex items-end gap-2">
           <div className="flex flex-col gap-1">

@@ -1,5 +1,6 @@
 import type { Schemas } from '@/api/client'
 import type { VotePlace } from '@/api/vote-contract'
+import type { CitySearchMode } from './city-search'
 import {
   type AdminUser,
   adminUsers,
@@ -78,6 +79,8 @@ export const scenarioNames = [
   'vote-write-error',
   'interview-empty',
   'interview-resumed',
+  'city-search-geocoder-down',
+  'city-search-error',
 ] as const
 
 export type ScenarioName = (typeof scenarioNames)[number]
@@ -106,6 +109,8 @@ export interface World {
   trips: Trip[]
   /** The city catalogue (`GET /places/cities`). */
   cities: City[]
+  /** How the live city search (`GET /places/cities/search`) behaves. */
+  citySearch: CitySearchMode
   /** Status the API answers with for one kind of trip write, for a failure no scenario has. */
   failures: { post?: number; patch?: number; delete?: number }
   /** When set, create and PATCH answer 422 with these items (a rule the client cannot see). */
@@ -222,6 +227,7 @@ export function createWorld(name: ScenarioName): World {
     permissions: createPermissionsWorld(),
     trips: [main, outing()],
     cities: cities(),
+    citySearch: 'ok',
     failures: {},
     profiles: familyProfiles(),
     members: familyMembers(),
@@ -275,6 +281,10 @@ export function createWorld(name: ScenarioName): World {
           }),
         ],
       }
+    case 'city-search-geocoder-down':
+      return { ...base, citySearch: 'geocoder-down' }
+    case 'city-search-error':
+      return { ...base, citySearch: 'error' }
     case 'member-readonly':
       return {
         ...base,
