@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { canCallProtectedApi } from '@/api/client'
 import { tripQueryOptions } from '@/api/queries/trips'
 import type { VoteSummarySort } from '@/api/queries/vote-links'
+import { VOICE_START_FLAG } from '@/lib/constants'
 import { TRIP_TABS, type TripTab } from '@/lib/trip-tabs'
 import { VOTE_SOURCES, VOTE_SUMMARY_SORTS } from '@/lib/vote-constants'
 import type { RouterContext } from './router-context'
@@ -24,6 +25,8 @@ export const tripSearchSchema = z.object({
     .enum(VOTE_SUMMARY_SORTS)
     .default(tripSearchDefaults.vsort)
     .catch(tripSearchDefaults.vsort),
+  /** `voice=1`: the trip was just created by voice, the Wywiad tab starts the call (then drops the param). */
+  voice: z.literal(VOICE_START_FLAG).optional().catch(undefined),
   vsource: z.enum(VOTE_SOURCES).optional().catch(undefined),
   vveto: z.literal(true).optional().catch(undefined),
 })

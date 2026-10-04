@@ -28,7 +28,7 @@ const TripInterviewView = lazy(() =>
 
 export function TripView() {
   const { tripId } = route.useParams()
-  const { tab, person } = route.useSearch()
+  const { tab, person, voice } = route.useSearch()
   const navigate = route.useNavigate()
   const session = useSession()
   const { trip, isPending, problem, refetch } = useTrip(tripId, session.status)
@@ -151,6 +151,10 @@ export function TripView() {
               key={trip.id}
               tripId={trip.id}
               canManage={trip.my_role !== 'member'}
+              startVoice={voice !== undefined}
+              onVoiceHandled={() =>
+                void navigate({ search: (prev) => ({ ...prev, voice: undefined }), replace: true })
+              }
               onOpenPerson={(id) =>
                 void navigate({ search: (prev) => ({ ...prev, tab: 'people', person: id }) })
               }

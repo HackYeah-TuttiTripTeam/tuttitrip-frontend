@@ -1219,5 +1219,13 @@
   "interview_voice_problem_budget": "Limit czasu rozmów głosowych został wykorzystany. Wpisz zdanie w polu poniżej.",
   "interview_voice_problem_unavailable": "Rozmowa głosowa jest chwilowo niedostępna. Wpisz zdanie w polu poniżej.",
   "interview_voice_problem_auth": "Sesja wygasła. Zaloguj się ponownie.",
-  "interview_voice_problem_failed": "Nie udało się połączyć głosowo. Wpisz zdanie w polu poniżej albo spróbuj jeszcze raz."
+  "interview_voice_problem_failed": "Nie udało się połączyć głosowo. Wpisz zdanie w polu poniżej albo spróbuj jeszcze raz.",
+  "trip_voice_action": "Utwórz głosowo",
+  "trip_voice_title": "Wyjazd głosem",
+  "trip_voice_description": "Podaj tylko nazwę. Resztę opowiesz asystentowi na żywo.",
+  "trip_voice_hint": "Po zapisaniu przejdziesz do rozmowy z asystentem.",
+  "trip_voice_submit": "Utwórz i zacznij rozmowę",
+  "trip_voice_submitting": "Tworzenie…",
+  "interview_voice_begin": "Rozpocznij rozmowę",
+  "interview_voice_begin_body": "Wyjazd jest gotowy. Włącz mikrofon i opowiedz asystentowi, dokąd i z kim jedziecie."
 }

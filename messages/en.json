@@ -1205,5 +1205,13 @@
   "interview_voice_problem_budget": "The voice time limit has been used up. Type your sentence in the box below.",
   "interview_voice_problem_unavailable": "Voice calls are temporarily unavailable. Type your sentence in the box below.",
   "interview_voice_problem_auth": "Your session expired. Sign in again.",
-  "interview_voice_problem_failed": "The voice connection failed. Type your sentence in the box below, or try again."
+  "interview_voice_problem_failed": "The voice connection failed. Type your sentence in the box below, or try again.",
+  "trip_voice_action": "Create by voice",
+  "trip_voice_title": "Trip by voice",
+  "trip_voice_description": "Just give it a name. You'll tell the assistant the rest live.",
+  "trip_voice_hint": "After saving you'll go straight to the conversation with the assistant.",
+  "trip_voice_submit": "Create and start talking",
+  "trip_voice_submitting": "Creating…",
+  "interview_voice_begin": "Start the conversation",
+  "interview_voice_begin_body": "The trip is ready. Turn on the microphone and tell the assistant where you are going and with whom."
 }
