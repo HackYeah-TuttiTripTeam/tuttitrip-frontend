@@ -1087,5 +1087,7 @@
   "help_join_name_title": "What to call you",
   "help_join_name_body": "The other travellers see this name in the people list. You can change it later.",
   "help_join_submit_title": "Join",
-  "help_join_submit_body": "After joining you land on the People tab, where you fill in your preferences."
+  "help_join_submit_body": "After joining you land on the People tab, where you fill in your preferences.",
+  "help_people_vote_title": "Voting without an account",
+  "help_people_vote_body": "A person without an account gets a link with a QR code. They rate places and veto them through it, without installing anything."
 }

@@ -79,6 +79,13 @@ const peopleSteps: TourStep[] = [
     title: m.help_people_invite_title,
     body: m.help_people_invite_body,
   },
+  {
+    id: 'vote',
+    target: TOUR.voteLinks,
+    optional: true,
+    title: m.help_people_vote_title,
+    body: m.help_people_vote_body,
+  },
 ]
 
 const planSteps: TourStep[] = [

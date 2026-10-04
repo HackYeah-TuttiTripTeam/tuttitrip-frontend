@@ -16,6 +16,7 @@ export const TOUR = {
   tripTabs: 'trip-tabs',
   peopleList: 'people-list',
   peopleInvite: 'people-invite',
+  voteLinks: 'vote-links',
   planEmpty: 'plan-empty',
   planActions: 'plan-actions',
   planSummary: 'plan-summary',

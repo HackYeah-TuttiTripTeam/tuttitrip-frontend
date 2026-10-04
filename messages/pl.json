@@ -1101,5 +1101,7 @@
   "help_join_name_title": "Jak mamy cię nazywać",
   "help_join_name_body": "To imię zobaczą pozostałe osoby na liście uczestników. Możesz je zmienić później.",
   "help_join_submit_title": "Dołącz",
-  "help_join_submit_body": "Po dołączeniu trafisz do zakładki Osoby, gdzie uzupełnisz swoje preferencje."
+  "help_join_submit_body": "Po dołączeniu trafisz do zakładki Osoby, gdzie uzupełnisz swoje preferencje.",
+  "help_people_vote_title": "Głosowanie bez konta",
+  "help_people_vote_body": "Osoba bez konta dostaje link z kodem QR. Przez niego ocenia miejsca i zgłasza weto bez instalowania aplikacji."
 }
