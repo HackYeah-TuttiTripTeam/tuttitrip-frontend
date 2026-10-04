@@ -10,6 +10,7 @@ import {
   type City,
   catalogPlaces,
   cities,
+  type Decision,
   type Expense,
   expense,
   familyCheckins,
@@ -29,6 +30,7 @@ import {
   type Notification,
   needsApprovalBudget,
   notifications,
+  type Offer,
   outing,
   type Photo,
   type PlaceVoteSummary,
@@ -37,6 +39,8 @@ import {
   type Preferences,
   type Profile,
   plan,
+  type RequirementItem,
+  type SearchOpening,
   type Trip,
   trip,
   type VoteLink,
@@ -158,6 +162,16 @@ export interface World {
   settlementClosed: boolean
   /** The latest plan of the main trip; null until "Policz plan" creates one. */
   plan: Plan | null
+  /** Lodging requirements of the main trip and their version (it moves with every change). */
+  requirements: { requirements: RequirementItem[]; version: number }
+  /** Pasted offer texts by document id. */
+  documents: Map<string, string>
+  /** Checked offers of the main trip. */
+  offers: Offer[]
+  /** The log of approved search openings, newest first. */
+  searchOpenings: SearchOpening[]
+  /** The log of host decisions, newest first. */
+  decisions: Decision[]
   /** The inputs the current plan was built from; a POST with the same inputs returns it again. */
   planInputs: PlanInputs
   /** Vetoes in force on the main trip, with their authors. */
@@ -281,6 +295,11 @@ export function createWorld(name: ScenarioName): World {
     expenses: familyExpenses(),
     settlementClosed: false,
     plan: plan(main.id),
+    requirements: { requirements: [], version: 1 },
+    documents: new Map(),
+    offers: [],
+    searchOpenings: [],
+    decisions: [],
     planInputs: neutralInputs(familyProfiles(), main.fairness_alpha),
     vetoes: [],
     ratings: [],
