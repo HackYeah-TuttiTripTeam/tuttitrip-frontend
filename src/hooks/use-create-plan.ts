@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { $api } from '@/api/client'
 import { type PlanCreate, planBeforeQueryKey, planQueryOptions } from '@/api/queries/plans'
 import { proposalQueryOptions } from '@/api/queries/proposals'
+import { classifyPlanFailure } from '@/lib/plan-failure'
 
 /**
  * Builds the plan and puts the answer straight into the "latest plan" cache. Without a body the
@@ -32,8 +33,10 @@ export function useCreatePlan(tripId: string) {
     create: (body: PlanCreate | null = null) => mutation.mutate(request(body)),
     createAsync: (body: PlanCreate | null = null) => mutation.mutateAsync(request(body)),
     isPending: mutation.isPending,
-    // The contract lists no error body for this call; the client throws an ApiError anyway.
+    /** The error of the last try, as thrown by the client (an `ApiError` or a network error). */
     error: mutation.error as Error | null,
+    /** Why the last try failed, and what to ask when the trip lacks data. */
+    failure: classifyPlanFailure(mutation.error),
     reset: mutation.reset,
   }
 }

@@ -26,6 +26,7 @@ import { useProfileActions } from '@/hooks/use-profile-actions'
 import { useSaveTrip } from '@/hooks/use-save-trip'
 import { useSession } from '@/hooks/use-session'
 import { useVoiceCall, type VoiceProblem } from '@/hooks/use-voice-call'
+import { useVoiceCard } from '@/hooks/use-voice-card'
 import { collectedCount, resumeSummary } from '@/lib/interview'
 import { VOICE_KNOWLEDGE_POLL_MS } from '@/lib/interview-constants'
 import { prefersReducedMotion } from '@/lib/motion'
@@ -162,6 +163,12 @@ function InterviewWorkspace({
   })
   const { cities } = useCities(session.status)
   const citySearch = useCitySearch(session.status)
+  const voiceCard = useVoiceCard({
+    tripId,
+    callId: voice.callId,
+    speechStarts: voice.speechStarts,
+    send: voice.sendText,
+  })
   const saveTrip = useSaveTrip(knowledge.knowledge?.trip ?? null, cities)
   const profileActions = useProfileActions(tripId)
   const [editing, setEditing] = useState<Editing>(null)
@@ -352,6 +359,18 @@ function InterviewWorkspace({
           )}
           {(voice.active || voice.captions.length > 0) && (
             <LiveCaptions captions={visibleCaptions(voice.captions)} showNotice />
+          )}
+          {voice.active && voiceCard.card && (
+            <section aria-label={m.interview_voice_card_label()}>
+              <InterviewCard
+                // A new question is a new card: its draft answer starts empty.
+                key={`${voiceCard.card.kind}:${voiceCard.card.question}`}
+                card={voiceCard.card}
+                disabled={false}
+                citySearch={citySearch}
+                onAnswer={voiceCard.answer}
+              />
+            </section>
           )}
           {voice.status === 'ended' && !voice.problem && (
             <p role="status" className="text-muted-foreground text-sm">

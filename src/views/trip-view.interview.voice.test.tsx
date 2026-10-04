@@ -498,3 +498,55 @@ describe('Wywiad głosowy, blokada z innego urządzenia', () => {
     expect(screen.queryByRole('button', { name: m.voice_elsewhere_end() })).toBeNull()
   })
 })
+
+describe('Wywiad głosowy, karta obok napisów', () => {
+  const card = {
+    kind: 'date_range',
+    question: 'Kiedy wyruszacie?',
+    field: 'dates',
+    person_id: null,
+    options: [],
+  }
+
+  it('shows the card the server holds and sends a tapped answer into the call', async () => {
+    scenario('interview-resumed')
+    server.use(
+      http.get('*/api/v1/trips/:tripId/interview/voice/:callId/card', () =>
+        HttpResponse.json({ card }),
+      ),
+    )
+    const user = await startCall()
+    const region = await screen.findByRole('region', { name: m.interview_voice_card_label() })
+    expect(within(region).getByRole('heading', { name: 'Kiedy wyruszacie?' })).toBeTruthy()
+
+    await user.type(within(region).getByLabelText(m.interview_dates_start()), '2026-10-10')
+    await user.type(within(region).getByLabelText(m.interview_dates_end()), '2026-10-12')
+    await user.click(within(region).getByRole('button', { name: m.interview_card_submit() }))
+
+    const answer = m.interview_answer_dates({ from: '2026-10-10', to: '2026-10-12' })
+    const sent = FakePeer.last?.channel.sent ?? []
+    expect(sent.map((event) => event.type)).toContain('conversation.item.create')
+    expect(JSON.stringify(sent)).toContain(answer)
+    expect(sent.at(-1)?.type).toBe('response.create')
+    // The tapped answer is in the transcript, and the card is gone.
+    expect(await screen.findByText(answer)).toBeTruthy()
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: m.interview_voice_card_label() })).toBeNull(),
+    )
+  })
+
+  it('takes the card away when the host starts to speak', async () => {
+    scenario('interview-resumed')
+    server.use(
+      http.get('*/api/v1/trips/:tripId/interview/voice/:callId/card', () =>
+        HttpResponse.json({ card }),
+      ),
+    )
+    await startCall()
+    await screen.findByRole('region', { name: m.interview_voice_card_label() })
+    act(() => FakePeer.last?.channel.emit({ type: 'input_audio_buffer.speech_started' }))
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: m.interview_voice_card_label() })).toBeNull(),
+    )
+  })
+})
