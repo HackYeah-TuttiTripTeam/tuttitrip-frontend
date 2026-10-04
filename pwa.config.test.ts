@@ -41,6 +41,12 @@ describe('workboxOptions', () => {
     expect(workboxOptions(true).globPatterns?.length).toBeGreaterThan(0)
   })
 
+  it('precaches scripts, styles and fonts, but not photos, in production', () => {
+    const patterns = workboxOptions(true).globPatterns?.join() ?? ''
+    for (const ext of ['js', 'css', 'woff2']) expect(patterns).toContain(ext)
+    for (const ext of ['avif', 'webp']) expect(patterns).not.toContain(ext)
+  })
+
   it('treats only non-API navigations as the app shell in production', () => {
     const rule = workboxOptions(true).runtimeCaching?.[0]
     const match = rule?.urlPattern as (ctx: { request: Request; url: URL }) => boolean

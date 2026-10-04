@@ -1,4 +1,5 @@
 import { registerSW } from 'virtual:pwa-register'
+import { appEnv } from '@/lib/env'
 import { installStaleAssetReload } from '@/lib/stale-assets'
 
 const UPDATE_CHECK_MS = 60 * 60 * 1000
@@ -26,6 +27,24 @@ export function reloadOnControllerUpdate(
   })
 }
 
+/** Caches only the production service worker uses (pwa.config.ts): its precache and the app shell. */
+const isProductionCache = (name: string) =>
+  name.startsWith('workbox-precache-') || name === 'app-shell'
+
+/**
+ * Outside production the service worker caches nothing, but a browser may still keep the
+ * precache and app shell of an older build (before #95, or a main build on localhost).
+ * They are never read again; delete them. On main Workbox cleans its own entries.
+ */
+export async function deleteUnusedCaches(
+  production: boolean,
+  storage: Pick<CacheStorage, 'keys' | 'delete'>,
+): Promise<void> {
+  if (production) return
+  const names = await storage.keys()
+  await Promise.all(names.filter(isProductionCache).map((name) => storage.delete(name)))
+}
+
 /**
  * Installs the service worker. A new version skips waiting and claims the page
  * (pwa.config.ts), then the page reloads once so it runs the new bundle. Chunks
@@ -36,6 +55,7 @@ export function registerServiceWorker(): void {
   if (!('serviceWorker' in navigator)) return
 
   reloadOnControllerUpdate(navigator.serviceWorker)
+  if ('caches' in window) void deleteUnusedCaches(appEnv === 'main', caches).catch(() => undefined)
 
   registerSW({
     immediate: true,

@@ -48,6 +48,9 @@ describe('built service worker', () => {
     expect(sw).not.toContain('.webmanifest')
     expect(sw).not.toContain('"index.html"')
     expect(sw).toContain('NetworkFirst')
+    // The offline shell keeps the design-system fonts; photos stay out of the precache.
+    expect(sw).toMatch(/assets\/fonts\/[^"]+\.woff2/)
+    expect(sw).not.toMatch(/assets\/photos\//)
     expect(headers).toContain('immutable')
   }, 120_000)
 

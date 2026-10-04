@@ -742,5 +742,6 @@
   "trips_filter_city": "Miasto",
   "trips_filter_city_all": "Wszystkie miasta",
   "trips_filter_start_from": "Początek od",
-  "trips_filter_start_to": "Początek do"
+  "trips_filter_start_to": "Początek do",
+  "shell_offline_text": "Brak połączenia. Widzisz to, co już się wczytało; zmiany zapiszesz po powrocie sieci."
 }
