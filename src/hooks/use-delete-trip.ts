@@ -1,6 +1,6 @@
 import { type QueryKey, useQueryClient } from '@tanstack/react-query'
 import { $api } from '@/api/client'
-import { tripsQueryOptions } from '@/api/queries/trips'
+import { tripsListKey } from '@/api/queries/trips'
 
 const TRIP_PREFIX = '/api/v1/trips/{trip_id}'
 
@@ -32,7 +32,7 @@ export function useDeleteTrip(onDeleted: () => Promise<void> | void) {
       queryClient.removeQueries({
         predicate: (query) => isQueryOfTrip(query.queryKey, variables.params.path.trip_id),
       })
-      await queryClient.invalidateQueries({ queryKey: tripsQueryOptions().queryKey })
+      await queryClient.invalidateQueries({ queryKey: tripsListKey })
     },
   })
 }

@@ -29,10 +29,20 @@ async function run(): Promise<string | undefined> {
   return findDemoTripId()
 }
 
+const DEMO_CITY = 'warszawa'
+
+async function listOwnTrips(city?: string): Promise<Trip[]> {
+  const { data } = await fetchClient.GET('/api/v1/trips', {
+    params: { query: { kind: 'trip', city, size: 20 } },
+  })
+  return data?.items ?? []
+}
+
 async function findDemoTripId(): Promise<string | undefined> {
   try {
-    const { data } = await fetchClient.GET('/api/v1/trips')
-    return data ? pickDemoTrip(data)?.id : undefined
+    // The Warsaw trip first; an account without one falls back to its first real trip.
+    const trips = await listOwnTrips(DEMO_CITY)
+    return pickDemoTrip(trips.length > 0 ? trips : await listOwnTrips())?.id
   } catch {
     // The list is only a convenience: the session works, the caller falls back to /trips.
     return undefined

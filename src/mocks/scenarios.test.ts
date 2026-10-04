@@ -69,7 +69,7 @@ describe('family-warsaw', () => {
     const created = await fetchClient.POST('/api/v1/trips', { body: { name: 'Gdańsk' } })
     expect(created.data?.name).toBe('Gdańsk')
     const list = await fetchClient.GET('/api/v1/trips')
-    expect(list.data?.[0]?.name).toBe('Gdańsk')
+    expect(list.data?.items[0]?.name).toBe('Gdańsk')
   })
 })
 

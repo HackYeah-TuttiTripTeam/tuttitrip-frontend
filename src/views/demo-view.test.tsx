@@ -63,7 +63,7 @@ describe('/demo', () => {
   it('stores the session in memory and sessionStorage only, and opens the Warsaw trip', async () => {
     const authorization: (string | null)[] = []
     server.events.on('request:start', ({ request }) => {
-      if (request.url.endsWith('/api/v1/trips'))
+      if (new URL(request.url).pathname === '/api/v1/trips')
         authorization.push(request.headers.get('Authorization'))
     })
     openLink(MOCK_DEMO_TOKEN)
@@ -180,11 +180,14 @@ describe('/demo', () => {
   })
 })
 
+const emptyPage = { items: [], total: 0, page: 1, size: 20, pages: 0 }
+
 describe('demo session renewal', () => {
   const tripsCalls = () => {
     const seen: (string | null)[] = []
     server.events.on('request:start', ({ request }) => {
-      if (request.url.endsWith('/api/v1/trips')) seen.push(request.headers.get('Authorization'))
+      if (new URL(request.url).pathname === '/api/v1/trips')
+        seen.push(request.headers.get('Authorization'))
     })
     return seen
   }
@@ -209,13 +212,13 @@ describe('demo session renewal', () => {
     let first = true
     server.use(
       http.get('*/api/v1/trips', () => {
-        if (!first) return HttpResponse.json([])
+        if (!first) return HttpResponse.json(emptyPage)
         first = false
         return HttpResponse.json({ detail: 'expired' }, { status: 401 })
       }),
     )
     const answer = await fetchClient.GET('/api/v1/trips')
-    expect(answer.data).toEqual([])
+    expect(answer.data).toEqual(emptyPage)
     expect(getDemoStatus()).toBe('active')
 
     useScenario('demo-disabled')
@@ -237,11 +240,11 @@ describe('demo session renewal', () => {
           setDemoSession('fresh-token', 3600, MOCK_DEMO_TOKEN)
           return HttpResponse.json({}, { status: 401 })
         }
-        return HttpResponse.json([])
+        return HttpResponse.json(emptyPage)
       }),
     )
     const answer = await fetchClient.GET('/api/v1/trips')
-    expect(answer.data).toEqual([])
+    expect(answer.data).toEqual(emptyPage)
     expect(seen).toEqual(['Bearer old-token', 'Bearer fresh-token'])
     expect(getDemoToken()).toBe('fresh-token')
     expect(getDemoStatus()).toBe('active')
@@ -254,5 +257,42 @@ describe('demo session renewal', () => {
     clearDemoSession()
     expect(getDemoInvitation()).toBeUndefined()
     expect(sessionStorage.getItem('tuttitrip-demo-session')).toBeNull()
+  })
+})
+
+describe('finding the demo trip', () => {
+  const askedFor = () => {
+    const calls: URLSearchParams[] = []
+    server.events.on('request:start', ({ request }) => {
+      const url = new URL(request.url)
+      if (url.pathname === '/api/v1/trips') calls.push(url.searchParams)
+    })
+    return calls
+  }
+
+  it('asks for own trips in the Warsaw city first, one page of 20', async () => {
+    const calls = askedFor()
+    openLink(MOCK_DEMO_TOKEN)
+    const { router } = renderApp('/demo')
+
+    await waitFor(() => expect(router.state.location.pathname).toMatch(/^\/trips\/.+/))
+    expect(calls[0]?.get('kind')).toBe('trip')
+    expect(calls[0]?.get('city')).toBe('warszawa')
+    expect(calls[0]?.get('size')).toBe('20')
+    expect(calls).toHaveLength(1)
+  })
+
+  it('falls back to a call without the city when Warsaw has no trip', async () => {
+    useScenario('family-warsaw', {
+      tweak: (world) => {
+        world.trips = world.trips.map((t) => ({ ...t, city_slug: 'krakow' }))
+      },
+    })
+    const calls = askedFor()
+    openLink(MOCK_DEMO_TOKEN)
+    const { router } = renderApp('/demo')
+
+    await waitFor(() => expect(router.state.location.pathname).toMatch(/^\/trips\/.+/))
+    expect(calls.map((call) => call.get('city'))).toEqual(['warszawa', null])
   })
 })

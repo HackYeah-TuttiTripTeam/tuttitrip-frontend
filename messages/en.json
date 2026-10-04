@@ -29,16 +29,6 @@
       }
     }
   ],
-  "trips_count_filtered": [
-    {
-      "declarations": ["input count", "input total", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
-      "match": {
-        "countPlural=one": "{count} trip of {total}",
-        "countPlural=*": "{count} trips of {total}"
-      }
-    }
-  ],
   "trips_login_failed_title": "Sign-in failed",
   "action_retry": "Try again",
   "trips_login_required_title": "Sign in to see your trips",
@@ -51,8 +41,8 @@
   "trips_load_failed_body": "The server returned an error. Try again in a moment.",
   "trips_empty_title": "Your first trip starts with a name",
   "trips_empty_body": "Say where and when you're going. The interview collects everyone's preferences afterwards, and the plan is built so nobody comes out worse.",
-  "trips_no_match_title": "Nothing matches “{query}”",
-  "trips_no_match_body": "We search trip names and destinations.",
+  "trips_no_match_title": "No trips match your filters",
+  "trips_no_match_body": "We search trip names and destinations. Change the filters or clear them.",
   "trips_no_match_clear": "Clear search",
   "trips_create_description": "A name is enough to start. You'll fill in the rest during the interview.",
   "trip_form_name_label": "Name",
@@ -713,5 +703,22 @@
   "prefs_places_liked": "Liked",
   "prefs_places_disliked": "Disliked",
   "prefs_places_none": "None.",
-  "prefs_places_remove": "Remove: {name}"
+  "prefs_places_remove": "Remove: {name}",
+  "trips_filters_clear": "Clear filters",
+  "trip_sort_start_date": "Start",
+  "trip_kind_trip": "Trip",
+  "trips_filter_role": "Your role",
+  "trips_filter_kind": "Kind",
+  "trips_filter_kind_all": "Trips and outings",
+  "trips_filter_city": "City",
+  "trips_filter_city_all": "All cities",
+  "trips_filter_start_from": "Starts from",
+  "trips_filter_start_to": "Starts until",
+  "list_range": "{from} to {to} of {total}",
+  "list_page_of": "Page {page} of {pages}",
+  "list_pagination_label": "List pages",
+  "list_previous": "Previous page",
+  "list_next": "Next page",
+  "list_go_to_page": "Page {page}",
+  "list_per_page": "Per page"
 }

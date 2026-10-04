@@ -31,18 +31,6 @@
       }
     }
   ],
-  "trips_count_filtered": [
-    {
-      "declarations": ["input count", "input total", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
-      "match": {
-        "countPlural=one": "{count} wyjazd z {total}",
-        "countPlural=few": "{count} wyjazdy z {total}",
-        "countPlural=many": "{count} wyjazdów z {total}",
-        "countPlural=*": "{count} wyjazdu z {total}"
-      }
-    }
-  ],
   "trips_login_failed_title": "Logowanie nie powiodło się",
   "action_retry": "Spróbuj ponownie",
   "trips_login_required_title": "Zaloguj się, żeby zobaczyć wyjazdy",
@@ -55,8 +43,8 @@
   "trips_load_failed_body": "Serwer odpowiedział błędem. Spróbuj za chwilę.",
   "trips_empty_title": "Pierwszy wyjazd zaczyna się od nazwy",
   "trips_empty_body": "Wpisz, dokąd i kiedy jedziecie. Preferencje każdej osoby zbierze potem wywiad, a plan ułoży się tak, żeby nikt nie wyszedł na tym gorzej.",
-  "trips_no_match_title": "Nic nie pasuje do „{query}”",
-  "trips_no_match_body": "Szukamy w nazwach i celach podróży.",
+  "trips_no_match_title": "Żaden wyjazd nie pasuje do filtrów",
+  "trips_no_match_body": "Szukamy w nazwach i celach podróży. Zmień filtry albo wyczyść je.",
   "trips_no_match_clear": "Wyczyść wyszukiwanie",
   "trips_create_description": "Na start wystarczy nazwa. Resztę uzupełnicie w wywiadzie.",
   "trip_form_name_label": "Nazwa",
@@ -725,5 +713,22 @@
   "prefs_places_liked": "Lubiane",
   "prefs_places_disliked": "Nielubiane",
   "prefs_places_none": "Brak.",
-  "prefs_places_remove": "Usuń: {name}"
+  "prefs_places_remove": "Usuń: {name}",
+  "trips_filters_clear": "Wyczyść filtry",
+  "trip_sort_start_date": "Początek",
+  "trip_kind_trip": "Wyjazd",
+  "trips_filter_role": "Twoja rola",
+  "trips_filter_kind": "Rodzaj",
+  "trips_filter_kind_all": "Wyjazdy i wyjścia",
+  "trips_filter_city": "Miasto",
+  "trips_filter_city_all": "Wszystkie miasta",
+  "trips_filter_start_from": "Początek od",
+  "trips_filter_start_to": "Początek do",
+  "list_range": "{from} do {to} z {total}",
+  "list_page_of": "Strona {page} z {pages}",
+  "list_pagination_label": "Strony listy",
+  "list_previous": "Poprzednia strona",
+  "list_next": "Następna strona",
+  "list_go_to_page": "Strona {page}",
+  "list_per_page": "Na stronie"
 }
