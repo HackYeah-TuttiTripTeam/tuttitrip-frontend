@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { OVERRIDE_REASON_MAX_CHARS } from '@/lib/constants'
-import { formatSigned, formatSignedDecimal, formatSignedMinutes } from '@/lib/format'
+import { formatDelta, formatSignedDecimal, formatSignedMinutes } from '@/lib/format'
 import { m } from '@/paraglide/messages'
 import { PersonDeltas } from './decision-effects'
 
@@ -52,7 +52,7 @@ export function OverrideDialog({
 }: OverrideDialogProps) {
   const facts: ApprovalFact[] = effects
     ? [
-        { label: m.override_min_r(), value: formatSigned(effects.d_min_r), mono: true },
+        { label: m.override_min_r(), value: formatDelta(effects.d_min_r), mono: true },
         {
           label: m.override_budget(),
           value: formatSignedDecimal(effects.d_cost, currency),

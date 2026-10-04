@@ -2,14 +2,13 @@
 // after `pnpm api:sync` a contract change breaks `tsc` here instead of silently drifting.
 // Amounts are decimal strings, like in the API.
 import type { Schemas } from '@/api/client'
+import type { Plan, PlanDay, PlanStop, PriceDiscount, PriceLine } from '@/api/queries/plans'
 import type { VotePlace } from '@/api/vote-contract'
 import { allocate, centsToDecimal, toCents } from '@/lib/money'
 
 export type Trip = Schemas['TripRead']
 export type Profile = Schemas['ProfileRead']
-export type Plan = Schemas['PlanRead']
-export type PlanStop = Schemas['PlanStop']
-export type PlanDay = Schemas['PlanDay']
+export type { Plan, PlanDay, PlanStop } from '@/api/queries/plans'
 export type PlanBudget = Schemas['PlanBudget']
 export type PersonFairness = Schemas['PersonFairness']
 export type PlanDomainCode = Schemas['PlanDomainCode']
@@ -153,7 +152,6 @@ export const familyProfiles = (): Profile[] => [
   profile(PROFILE_IDS.tata, 'Marek', 40, 'adult', { user_sub: SUBS.tata }),
   profile(PROFILE_IDS.babcia, 'Babcia Halina', 72, 'senior', {
     user_sub: SUBS.babcia,
-    weight: 1.5,
     segment_km: 0.8,
     daily_km: 4,
     active_min: 420,
@@ -275,9 +273,9 @@ export const familyPreferences = (): Preferences[] => [
   preferences(PROFILE_IDS.antek),
 ]
 
-const DOMAINS: PlanDomainCode[] = ['attractions', 'food', 'pace', 'cost', 'lodging']
+export const DOMAINS: PlanDomainCode[] = ['attractions', 'food', 'pace', 'cost', 'lodging']
 
-const person = (
+export const person = (
   profileId: string,
   name: string,
   u: number,
@@ -324,7 +322,19 @@ const verifiedStop = (overrides: Partial<PlanStop> & Pick<PlanStop, 'place_id' |
     ...overrides,
   }) satisfies PlanStop
 
-const days = (): PlanDay[] => [
+/** One line per person of the family, in the order of the profiles. */
+const priceLines = (
+  prices: [adult: string, senior: string, child: string, toddler: string],
+  discounts: [PriceDiscount, PriceDiscount, PriceDiscount] = ['senior', 'child', 'free'],
+): PriceLine[] => [
+  { profile_id: PROFILE_IDS.mama, price: prices[0], discount: 'none' },
+  { profile_id: PROFILE_IDS.tata, price: prices[0], discount: 'none' },
+  { profile_id: PROFILE_IDS.babcia, price: prices[1], discount: discounts[0] },
+  { profile_id: PROFILE_IDS.zosia, price: prices[2], discount: discounts[1] },
+  { profile_id: PROFILE_IDS.antek, price: prices[3], discount: discounts[2] },
+]
+
+export const days = (): PlanDay[] => [
   {
     index: 1,
     date: '2026-10-10',
@@ -338,6 +348,7 @@ const days = (): PlanDay[] => [
         google_place_id: GOOGLE_PLACE_IDS.zamek,
         start: '10:00:00',
         end: '12:00:00',
+        price_lines: priceLines(['30.00', '15.00', '15.00', '0.00']),
       }),
       // Price not verified: the plan inflated the base price by delta (E6).
       verifiedStop({
@@ -355,6 +366,7 @@ const days = (): PlanDay[] => [
         price_verified: false,
         price_source_url: 'https://example.com/bar-cennik',
         price_verified_at: null,
+        price_lines: priceLines(['28.75', '28.75', '14.38', '0.00'], ['none', 'child', 'free']),
       }),
       verifiedStop({
         place_id: PLACE_IDS.lazienki,
@@ -385,6 +397,12 @@ const days = (): PlanDay[] => [
         cost_per_person: '35.00',
         price_base: '35.00',
         price_inflated: '35.00',
+        // A family ticket for the five of them is cheaper than the single tickets (140 zł).
+        price_lines: priceLines(
+          ['20.00', '20.00', '20.00', '20.00'],
+          ['family', 'family', 'family'],
+        ),
+        family_ticket: { total: '100.00', singles_total: '140.00' },
       }),
       // No source for the opening hours, and the price of the meal is unknown.
       verifiedStop({
@@ -550,6 +568,66 @@ export const explainCastle = (): ExplainEntry[] =>
     utility: Number(utility),
   }))
 
+/** u, u* and the five domain scores of the family at neutral settings (equal weights, alpha 1). */
+export const FAMILY_FAIRNESS: Record<
+  string,
+  { name: string; u: number; uStar: number; scores: number[]; weakest: PlanDomainCode }
+> = {
+  [PROFILE_IDS.mama]: {
+    name: 'Ola',
+    u: 74,
+    uStar: 88,
+    scores: [80, 70, 75, 72, 70],
+    weakest: 'cost',
+  },
+  [PROFILE_IDS.tata]: {
+    name: 'Marek',
+    u: 71,
+    uStar: 85,
+    scores: [78, 72, 68, 70, 66],
+    weakest: 'lodging',
+  },
+  [PROFILE_IDS.babcia]: {
+    name: 'Babcia Halina',
+    u: 62,
+    uStar: 70,
+    scores: [60, 66, 55, 72, 58],
+    weakest: 'pace',
+  },
+  [PROFILE_IDS.zosia]: {
+    name: 'Zosia',
+    u: 77,
+    uStar: 90,
+    scores: [88, 70, 64, 80, 70],
+    weakest: 'pace',
+  },
+  [PROFILE_IDS.antek]: {
+    name: 'Antek',
+    u: 58,
+    uStar: 66,
+    scores: [52, 70, 50, 66, 60],
+    weakest: 'attractions',
+  },
+}
+
+export const familyFairness = (): PersonFairness[] =>
+  Object.entries(FAMILY_FAIRNESS).map(([id, p]) =>
+    person(id, p.name, p.u, p.uStar, p.scores, p.weakest),
+  )
+
+/** The group measure from the people's rows: min r and the Jain index, like the API computes them. */
+export const groupFairness = (people: PersonFairness[]): Plan['fairness'] => {
+  const rs = people.map((p) => p.r)
+  const sum = rs.reduce((a, b) => a + b, 0)
+  const squares = rs.reduce((a, b) => a + b * b, 0)
+  return {
+    group_size: people.length,
+    jain: people.length > 1 ? (sum * sum) / (people.length * squares) : 1,
+    min_r: Math.min(...rs),
+    per_person: people,
+  }
+}
+
 export const plan = (tripId: string = TRIP_ID, overrides: Partial<Plan> = {}): Plan => ({
   id: '5d1c0e77-8a2b-4c3d-9e4f-60718293a4b6',
   trip_id: tripId,
@@ -560,24 +638,22 @@ export const plan = (tripId: string = TRIP_ID, overrides: Partial<Plan> = {}): P
   params: { alpha: 1, weight_preset: 'default', draft: false },
   days: days(),
   lodging: lodging(),
-  fairness: {
-    group_size: 5,
-    jain: 0.94,
-    min_r: 0.81,
-    per_person: [
-      person(PROFILE_IDS.mama, 'Ola', 74, 88, [80, 70, 75, 72, 70], 'cost'),
-      person(PROFILE_IDS.tata, 'Marek', 71, 85, [78, 72, 68, 70, 66], 'lodging'),
-      person(PROFILE_IDS.babcia, 'Babcia Halina', 62, 70, [60, 66, 55, 72, 58], 'pace'),
-      person(PROFILE_IDS.zosia, 'Zosia', 77, 90, [88, 70, 64, 80, 70], 'pace'),
-      person(PROFILE_IDS.antek, 'Antek', 58, 66, [52, 70, 50, 66, 60], 'attractions'),
-    ],
-  },
+  fairness: groupFairness(familyFairness()),
   floors_missed: [],
   violation: 0,
   conflicts: [],
   explain: explainCastle(),
   verdicts: verdicts(),
   budget: withinBudget(),
+  transit_tickets: [
+    {
+      day: 1,
+      ticket: 'day',
+      cost: '15.00',
+      verified: false,
+      source_url: 'https://example.com/ztm',
+    },
+  ],
   telemetry: { solver: 'stub', steps: 120, solo_runs: 5, elapsed_ms: 48 },
   ...overrides,
 })

@@ -7,10 +7,10 @@ import {
   formatDateRange,
   formatDayMonth,
   formatDecimal,
+  formatDelta,
   formatDuration,
   formatMoney,
   formatNumber,
-  formatSigned,
   formatSignedDecimal,
   formatSignedMinutes,
   formatTime,
@@ -120,9 +120,9 @@ describe('plan formats', () => {
 describe('signed formats', () => {
   it('writes a change with its sign, a real minus and no sign for zero', () => {
     useLocale('pl')
-    expect(formatSigned(0.04)).toBe('+0,04')
-    expect(formatSigned(-0.04)).toBe('−0,04')
-    expect(formatSigned(0)).toBe('0')
+    expect(formatDelta(0.04)).toBe('+0,04')
+    expect(formatDelta(-0.04)).toBe('−0,04')
+    expect(formatDelta(0)).toBe('0')
     expect(formatSignedDecimal('120.00')).toMatch(/^\+120\szł$/)
     expect(formatSignedDecimal('-45.50')).toMatch(/^−45,50\szł$/)
     expect(formatSignedMinutes(25)).toBe('+25 min')

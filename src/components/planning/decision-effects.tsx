@@ -1,12 +1,12 @@
 import type { DecisionEffects } from '@/api/queries/decisions'
 import { JAIN_DELTA_DIGITS } from '@/lib/constants'
-import { formatSigned, formatSignedDecimal, formatSignedMinutes } from '@/lib/format'
+import { formatDelta, formatSignedDecimal, formatSignedMinutes } from '@/lib/format'
 import { m } from '@/paraglide/messages'
 
 /** "min r −0,04 · budżet +120 zł · czas +25 min": the three numbers of a decision, in one line. */
 export function effectsSummary(effects: DecisionEffects, currency: string): string {
   return m.decision_effects_line({
-    minR: formatSigned(effects.d_min_r),
+    minR: formatDelta(effects.d_min_r),
     cost: formatSignedDecimal(effects.d_cost, currency),
     time: formatSignedMinutes(effects.d_minutes),
   })
@@ -38,12 +38,12 @@ export function PersonDeltas({ effects, names }: PersonDeltasProps) {
         {effects.d_r.map((delta) => (
           <li key={delta.profile_id} className="flex items-baseline justify-between gap-4 py-1.5">
             <span className="text-sm">{names.get(delta.profile_id) ?? m.verdict_someone()}</span>
-            <span className="font-mono text-sm tabular-nums">{formatSigned(delta.d_r)}</span>
+            <span className="font-mono text-sm tabular-nums">{formatDelta(delta.d_r)}</span>
           </li>
         ))}
       </ul>
       <p className="mt-1 text-muted-foreground text-xs">
-        {m.decision_effects_jain({ value: formatSigned(effects.d_jain, JAIN_DELTA_DIGITS) })}
+        {m.decision_effects_jain({ value: formatDelta(effects.d_jain, JAIN_DELTA_DIGITS) })}
       </p>
     </section>
   )

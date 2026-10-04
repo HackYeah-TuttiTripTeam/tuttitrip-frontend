@@ -1,17 +1,15 @@
 import { MapPin } from '@keyline-icons/react'
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, type ReactNode, Suspense, useEffect, useMemo, useState } from 'react'
 import type { PlanDay, PlanStop } from '@/api/queries/plans'
 import { PlaceCardDialog } from '@/components/planning/place-card-dialog'
 import { PlanTimeline, stopDomId } from '@/components/planning/plan-timeline'
 import { type PlanPane, PlanViewSwitch } from '@/components/planning/plan-view-switch'
-import { VerdictChip } from '@/components/planning/verdict-chip'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useMapsSettings } from '@/hooks/use-maps-settings'
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/use-media-query'
 import { tokenColor } from '@/lib/css-color'
 import { ROUTE_FALLBACK_COLOR } from '@/lib/map-constants'
-import type { VerdictIndex } from '@/lib/verdicts'
 import { m } from '@/paraglide/messages'
 
 // The map pulls in the Google Maps loader; it is fetched only when a map is about to show.
@@ -24,10 +22,8 @@ interface PlanDayPanelProps {
   currency: string
   view: PlanPane
   onViewChange: (view: PlanPane) => void
-  /** The verdicts of the plan, for the chip on each stop. */
-  verdicts: VerdictIndex
-  /** A verdict chip was touched. */
-  onVerdictOpen: (placeId: string) => void
+  /** What a stop gets under its card besides the place-card button: rating, veto, verdict. */
+  renderStopActions?: (stop: PlanStop) => ReactNode
 }
 
 /**
@@ -40,8 +36,7 @@ export function PlanDayPanel({
   currency,
   view,
   onViewChange,
-  verdicts,
-  onVerdictOpen,
+  renderStopActions,
 }: PlanDayPanelProps) {
   const maps = useMapsSettings()
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
@@ -87,32 +82,22 @@ export function PlanDayPanel({
             stops={day.items}
             currency={currency}
             selectedPlaceId={selected}
-            renderActions={(stop) => {
-              const verdict = verdicts.byPlace.get(stop.place_id)
-              const placeCard = config && stop.google_place_id
-              if (!verdict && !placeCard) return null
-              return (
-                <div className="flex flex-wrap items-center gap-2">
-                  {verdict && (
-                    <VerdictChip
-                      verdict={verdict.verdict}
-                      onClick={() => onVerdictOpen(stop.place_id)}
-                    />
-                  )}
-                  {placeCard && (
-                    <Button
-                      variant="outline"
-                      className="h-11 w-fit rounded-full px-4"
-                      onClick={() => setCard(stop)}
-                    >
-                      <MapPin aria-hidden="true" />
-                      {m.place_card_open()}
-                      <span className="sr-only"> {stop.name}</span>
-                    </Button>
-                  )}
-                </div>
-              )
-            }}
+            renderActions={(stop) => (
+              <>
+                {renderStopActions?.(stop)}
+                {config && stop.google_place_id ? (
+                  <Button
+                    variant="outline"
+                    className="h-11 w-fit rounded-full px-4"
+                    onClick={() => setCard(stop)}
+                  >
+                    <MapPin aria-hidden="true" />
+                    {m.place_card_open()}
+                    <span className="sr-only"> {stop.name}</span>
+                  </Button>
+                ) : null}
+              </>
+            )}
           />
         )}
         {config && showMap && (
