@@ -104,6 +104,7 @@ function PrintStop({ stop, currency }: { stop: PlanStop; currency: string }) {
         </time>
         <div className="flex flex-col gap-0.5">
           <h3 className="font-semibold text-lg leading-6">{stop.name}</h3>
+          {stop.address && <p className="text-sm leading-5">{stop.address}</p>}
           <p className="text-sm leading-5">
             {minutes > 0 ? m.plan_kind_duration({ kind, duration: formatDuration(minutes) }) : kind}
           </p>

@@ -38,6 +38,11 @@ describe('Plan printout', () => {
     expect(view.getByRole('heading', { name: /Dzień 1/ })).toBeTruthy()
     expect(view.getByRole('heading', { name: /Dzień 2/ })).toBeTruthy()
     expect(view.getByText('Zamek Królewski')).toBeTruthy()
+    // The address sits under the name; a place without one gets no empty line.
+    expect(view.getByText('Plac Zamkowy 4, 00-277 Warszawa')).toBeTruthy()
+    expect(view.getByText('Bar Mleczny Prasowy').parentElement?.querySelectorAll('p')).toHaveLength(
+      3,
+    )
     expect(view.getAllByText(/^\d{2}:\d{2}$/).length).toBeGreaterThan(1)
     expect(view.getByText(m.plan_print_footer({ n: 1 }))).toBeTruthy()
     expect(printout.querySelector('div[class*="break-before-page"]')).toBeTruthy()
