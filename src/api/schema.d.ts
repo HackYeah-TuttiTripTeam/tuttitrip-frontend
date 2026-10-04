@@ -1596,10 +1596,11 @@ export interface paths {
          * @description Score one candidate plan.
          *
          *     Args:
-         *         request: Utilities and weights of every person.
+         *         request: Utilities and weights of every person, and optionally the
+         *             fairness slider ``alpha`` (0 to 3; omitted means 1, the weighted log).
          *
          *     Returns:
-         *         The weighted log welfare.
+         *         The group welfare ``W``.
          *
          *     Wymagane uprawnienie: `planning.fairness:READ`.
          */
@@ -2468,10 +2469,15 @@ export interface components {
         FairnessRequest: {
             /** People */
             people: components["schemas"]["PersonUtility"][];
+            /**
+             * Alpha
+             * @description Fairness slider 0 to 3; omitted gives the weighted log (alpha 1).
+             */
+            alpha?: number | null;
         };
         /**
          * FairnessScore
-         * @description Objective value of a plan: sum of w_i * log(1 + u_i).
+         * @description Objective value W of a plan: sum of w_i * phi_alpha(u_i).
          */
         FairnessScore: {
             /** Score */
@@ -4676,7 +4682,7 @@ export interface components {
          * @description Who a ticket price is for.
          * @enum {string}
          */
-        TicketCategory: "adult" | "child" | "senior" | "student" | "family";
+        TicketCategory: "adult" | "child" | "senior" | "student" | "reduced" | "family";
         /**
          * TimeRange
          * @description One opening interval in the city's local time (``close`` may be 24:00).
