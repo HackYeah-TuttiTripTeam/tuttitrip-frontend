@@ -7,7 +7,6 @@ import {
   location,
   MOCK_DEMO_TOKEN,
   MOCK_USER_SUB,
-  me,
   type Photo,
   PIXEL_PNG_BASE64,
   type Plan,
@@ -813,6 +812,8 @@ function normalHandlers(
         row.veto_count = row.vetoes.length
       }
       return HttpResponse.json(place)
+    }),
+
     // Check-ins. Like the API: any member reads them all; a member sets their own profile, a
     // co-host or host also profiles without an account.
     http.get(`${API}/trips/:tripId/checkins`, async ({ params, request }) => {
