@@ -116,7 +116,9 @@ export function TripView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <TripHeader trip={trip} actions={<TripSettings trip={trip} />} />
+      <div className="print:hidden">
+        <TripHeader trip={trip} actions={<TripSettings trip={trip} />} />
+      </div>
       <TripTabs
         tab={tab}
         onTabChange={setTab}
@@ -130,7 +132,7 @@ export function TripView() {
             onPersonChange={setPerson}
           />
         }
-        plan={<TripPlanView key={trip.id} tripId={trip.id} role={trip.my_role} />}
+        plan={<TripPlanView key={trip.id} trip={trip} />}
       />
     </div>
   )

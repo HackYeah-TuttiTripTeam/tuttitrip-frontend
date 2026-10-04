@@ -26,6 +26,18 @@ interface TransferRowProps {
   currency: string
 }
 
+/** "On foot · 12 min · 4,00 zł": the leg as words, also used by the printout. */
+export function transferText(transfer: Transfer, currency: string): string {
+  const mode = MODE_LABELS[transfer.mode]()
+  return transfer.cost != null
+    ? m.plan_transfer_line_cost({
+        mode,
+        minutes: transfer.minutes,
+        cost: formatDecimal(transfer.cost, currency),
+      })
+    : m.plan_transfer_line({ mode, minutes: transfer.minutes })
+}
+
 /** The leg to a stop: how, how long and, when the data has it, what the ticket costs. */
 export function TransferRow({ transfer, currency }: TransferRowProps) {
   return (
@@ -33,15 +45,7 @@ export function TransferRow({ transfer, currency }: TransferRowProps) {
       <span aria-hidden="true" className="[&_svg]:size-4">
         {MODE_ICONS[transfer.mode]}
       </span>
-      <span>
-        {transfer.cost != null
-          ? m.plan_transfer_line_cost({
-              mode: MODE_LABELS[transfer.mode](),
-              minutes: transfer.minutes,
-              cost: formatDecimal(transfer.cost, currency),
-            })
-          : m.plan_transfer_line({ mode: MODE_LABELS[transfer.mode](), minutes: transfer.minutes })}
-      </span>
+      <span>{transferText(transfer, currency)}</span>
     </p>
   )
 }
