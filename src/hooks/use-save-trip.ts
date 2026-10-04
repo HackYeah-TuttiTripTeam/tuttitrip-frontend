@@ -40,7 +40,11 @@ export function useSaveTrip(trip: Trip | null, cities: City[]) {
       const currency = effectiveCurrency(values.citySlug, cities, trip?.currency)
       if (!trip) {
         return await create.mutateAsync({
-          body: { ...formValuesToPatch(values, currency), name: values.name.trim() },
+          body: {
+            propose_cheaper_alternatives: null,
+            ...formValuesToPatch(values, currency),
+            name: values.name.trim(),
+          },
         })
       }
       const body = diffPatch(tripToFormValues(trip), values, trip.currency, currency)
