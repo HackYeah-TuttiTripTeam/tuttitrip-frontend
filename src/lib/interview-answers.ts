@@ -23,6 +23,20 @@ export interface FamilyPerson {
   age: number
 }
 
+/**
+ * What a card knows besides the sentence it sends. The interview ignores it (the assistant reads
+ * the sentence); the missing-data dialog saves from it, so it never parses a sentence.
+ */
+export type CardValue =
+  | { kind: 'city'; name: string; slug: string }
+  | { kind: 'date_range'; start: string; end: string }
+  | { kind: 'family_builder'; people: FamilyPerson[] }
+
+export const answerCity = (city: string) => m.interview_answer_city({ city })
+
+/** Dates travel as ISO days, so the assistant reads them without guessing a format. */
+export const answerDates = (from: string, to: string) => m.interview_answer_dates({ from, to })
+
 export const answerFamily = (people: readonly FamilyPerson[]) =>
   m.interview_answer_family({
     people: people

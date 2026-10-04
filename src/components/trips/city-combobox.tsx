@@ -34,6 +34,7 @@ interface CityComboboxProps {
   clearLabel: string
   placeholder: string
   invalid?: boolean
+  disabled?: boolean
   className?: string
 }
 
@@ -53,6 +54,7 @@ export function CityCombobox({
   clearLabel,
   placeholder,
   invalid,
+  disabled,
   className,
 }: CityComboboxProps) {
   const [open, setOpen] = useState(false)
@@ -95,6 +97,7 @@ export function CityCombobox({
           aria-expanded={open}
           aria-haspopup="listbox"
           aria-invalid={invalid}
+          disabled={disabled}
           className={cn(
             'h-11 w-full justify-between px-3 font-normal md:h-9',
             !value && 'text-muted-foreground',

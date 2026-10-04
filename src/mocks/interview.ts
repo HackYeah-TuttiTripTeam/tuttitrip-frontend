@@ -123,6 +123,14 @@ function defaultScript(): ScriptedTurn[] {
       reply: 'To wszystko. Zbudować plan?',
       card: { kind: 'confirm', question: 'Zbudować plan?', options: ['Tak, buduj', 'Jeszcze nie'] },
     },
+    {
+      reply: 'A może inne miasto?',
+      card: { kind: 'city', question: 'Dokąd jedziecie?', options: [], field: 'destination' },
+    },
+    {
+      reply: 'Kiedy to będzie?',
+      card: { kind: 'date_range', question: 'Kiedy jedziecie?', options: [], field: 'dates' },
+    },
   ]
 }
 
